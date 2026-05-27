@@ -213,21 +213,37 @@ h3 {
 .work-list {
   list-style: none;
   padding: 0;
-  margin: 0 0 0 2px;
+  margin: 0;
 }
 .work-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
   font-size: 12px;
-  padding: 2px 0 2px 18px;
-  position: relative;
+  padding: 2px 0;
   line-height: 1.75;
 }
 .work-list li::before {
   content: '—';
-  position: absolute;
-  left: 0;
   color: var(--rule);
   font-size: 11px;
-  line-height: 1.85;
+  flex-shrink: 0;
+  align-self: flex-start;
+  padding-top: 2px;
+}
+.month {
+  width: 2.6em;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: right;
+  align-self: flex-start;
+  padding-top: 2px;
+  white-space: nowrap;
+}
+.entry {
+  flex: 1;
+  min-width: 0;
 }
 
 /* ── TAGS ────────────────────────────────── */

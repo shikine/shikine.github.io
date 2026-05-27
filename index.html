@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -342,6 +342,27 @@
     return 'other';
   }
 
+  function normalizeLists() {
+    var re = /^([u301c\d]+)[\su2002u2003u00a0 ]*/;
+    document.querySelectorAll('#timeline-view .work-list li').forEach(function (li) {
+      var monthSpan = document.createElement('span');
+      monthSpan.className = 'month';
+      var entrySpan = document.createElement('span');
+      entrySpan.className = 'entry';
+      while (li.firstChild) entrySpan.appendChild(li.firstChild);
+      var first = entrySpan.firstChild;
+      if (first && first.nodeType === 3) {
+        var m = first.textContent.match(re);
+        if (m) {
+          monthSpan.textContent = m[1];
+          first.textContent = first.textContent.slice(m[0].length);
+        }
+      }
+      li.appendChild(monthSpan);
+      li.appendChild(entrySpan);
+    });
+  }
+
   function initGenreData() {
     document.querySelectorAll('#timeline-view .year-block .work-list li').forEach(function (li) {
       if (li.textContent.trim()) li.setAttribute('data-genre', detectGenre(li));
@@ -392,6 +413,7 @@
     var genreEl    = document.getElementById('genre-view');
     var built      = false;
 
+    normalizeLists();
     initGenreData();
 
     // 年代順 / ジャンル別 toggle
