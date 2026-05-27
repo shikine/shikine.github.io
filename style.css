@@ -68,6 +68,28 @@ h1 .en  { letter-spacing: 0.1em; }
 .contact a { color: var(--muted); }
 .contact a:hover { text-decoration: underline; }
 
+/* ── SNS ─────────────────────────────────── */
+.sns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 12px;
+}
+.sns a {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  padding: 2px 8px 3px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  color: var(--muted);
+  text-decoration: none;
+}
+.sns a:hover {
+  border-color: var(--muted);
+  color: var(--ink);
+  text-decoration: none;
+}
+
 /* ── SECTIONS ────────────────────────────── */
 section { margin-bottom: 44px; }
 
