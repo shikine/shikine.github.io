@@ -39,7 +39,15 @@
   </section>
 
   <section class="works">
-    <h2>Works</h2>
+    <div class="works-header">
+      <h2>Works</h2>
+      <div class="view-toggle">
+        <button class="toggle-btn active" data-view="timeline">年代順</button>
+        <button class="toggle-btn" data-view="genre">ジャンル別</button>
+      </div>
+    </div>
+
+    <div id="timeline-view">
 
     <div class="year-block">
       <h3>2027</h3>
@@ -251,6 +259,9 @@
       </ul>
     </div>
 
+    </div><!-- /#timeline-view -->
+    <div id="genre-view" hidden></div>
+
   </section>
 
   <section class="reference">
@@ -304,5 +315,71 @@
   </footer>
 
 </div>
+  <script>
+(function () {
+  var GENRES = [
+    { key: 'stage', label: '舞台美術' },
+    { key: 'mv',    label: 'MV / 映像美術' },
+    { key: 'arch',  label: '建築 / 構造設計' },
+    { key: 'other', label: 'その他' }
+  ];
+
+  function detectGenre(li) {
+    if (li.querySelector('.t-stage')) return 'stage';
+    if (li.querySelector('.t-mv'))    return 'mv';
+    if (li.querySelector('.t-arch'))  return 'arch';
+    var t = li.textContent;
+    if (t.indexOf('舞台美術') !== -1) return 'stage';
+    if (/\bMV\b|映像美術/.test(t))    return 'mv';
+    if (/建築設計|構造設計|建築建設|建築構造|建築関係|建築教育/.test(t)) return 'arch';
+    return 'other';
+  }
+
+  function buildGenreView() {
+    var groups = { stage: [], mv: [], arch: [], other: [] };
+    document.querySelectorAll('#timeline-view .year-block').forEach(function (block) {
+      var year = block.querySelector('h3').textContent.trim();
+      block.querySelectorAll('.work-list li').forEach(function (li) {
+        if (!li.textContent.trim()) return;
+        groups[detectGenre(li)].push({ year: year, inner: li.innerHTML });
+      });
+    });
+
+    var html = '';
+    GENRES.forEach(function (g) {
+      var items = groups[g.key];
+      if (!items.length) return;
+      html += '<div class="genre-block"><h3>' + g.label + '</h3><ul class="work-list">';
+      items.forEach(function (item) {
+        html += '<li><span class="year-tag">' + item.year + '</span> ' + item.inner + '</li>';
+      });
+      html += '</ul></div>';
+    });
+    return html;
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var timelineEl = document.getElementById('timeline-view');
+    var genreEl    = document.getElementById('genre-view');
+    var built      = false;
+
+    document.querySelectorAll('.toggle-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('.toggle-btn').forEach(function (b) {
+          b.classList.toggle('active', b === btn);
+        });
+        if (btn.getAttribute('data-view') === 'genre') {
+          if (!built) { genreEl.innerHTML = buildGenreView(); built = true; }
+          timelineEl.setAttribute('hidden', '');
+          genreEl.removeAttribute('hidden');
+        } else {
+          timelineEl.removeAttribute('hidden');
+          genreEl.setAttribute('hidden', '');
+        }
+      });
+    });
+  });
+})();
+  </script>
 </body>
 </html>

@@ -120,6 +120,56 @@ h2 {
   text-decoration: none;
 }
 
+/* ── WORKS TOGGLE ────────────────────────── */
+.works-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 22px;
+}
+.works-header h2 {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+.view-toggle { display: flex; gap: 4px; }
+
+.toggle-btn {
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  padding: 2px 9px 3px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  line-height: 1.4;
+}
+.toggle-btn.active {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.toggle-btn:hover:not(.active) {
+  border-color: var(--muted);
+  color: var(--ink);
+}
+
+/* ── GENRE VIEW ──────────────────────────── */
+.genre-block { margin-bottom: 24px; }
+
+.year-tag {
+  font-size: 10px;
+  color: var(--rule);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin-right: 1px;
+  user-select: none;
+}
+
 /* ── WORKS ───────────────────────────────── */
 .year-block { margin-bottom: 18px; }
 
