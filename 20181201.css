@@ -1,0 +1,79 @@
+@charset "UTF-8";
+/* CSS Document */
+
+<style type="text/css">
+
+a	{color: #017acd}
+
+a:link {
+	color: #000;
+	text-decoration: none;
+	font-style: italic;
+}
+a:visited {
+	text-decoration: none;
+	color: #000;
+}
+a:hover {
+	text-decoration: underline;
+	color: #FF0000;
+}
+a:active {
+	text-decoration: none;
+	color: #333;
+}
+
+
+
+/* コンテナトップ画面用*/
+div#container	{width: 790px; 
+				 heght: 900px;
+	             margin-left: auto;
+	             margin-right: auto}
+
+/* ヘッダー */
+div#header	{background-color:#FFFFFF;
+	         padding: 5px 10px 5px;
+			 width: 760px;
+			 margin-left:auto;
+			 margin-right:auto}
+
+
+	/* コンテンツ_1 */
+div#content_1	{width: 790px;
+             margin-left: auto;
+	         margin-right: auto}
+
+
+div#content_1 h5	{font-size:14px ;
+margin-left:12px;
+margin-right:12px;
+border-bottom:solid #FF9900;
+}
+
+div#content_1 h3 {font-size:14px ;
+margin-left:36px;
+border-bottom:thin;
+margin-right:36px;
+margin-top: 5px;
+color:#663}	
+
+div#content_1 p	{font-size:12px;
+	line-height: 1.6;
+	margin-top: 5px;
+	clear:both}
+
+div#footer	{font-size:12px;
+	line-height: 1.6;
+	margin-top: 5px;
+	clear:both}
+	
+	
+.outlink {color: #000; background-color:#96D2E7;}
+.googlefoto {color: #000; background-color:#F8E514;}
+.profilelink {color: #000; background-color:#CECFCD;}
+.movie {color: #000; background-color:#EFCCD6;}
+.map {color: #000; background-color:#ADD2B3;}
+.timelaps {color: #000; background-color:#CECFCD;}
+
+</style>
