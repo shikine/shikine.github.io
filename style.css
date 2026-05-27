@@ -1,0 +1,212 @@
+/* ─────────────────────────────────────────
+   Shikine Watanabe — Portfolio
+   ───────────────────────────────────────── */
+
+:root {
+  --bg:        #f4f2ed;
+  --ink:       #1c1a17;
+  --muted:     #7a7470;
+  --rule:      #d4cfc6;
+  --tag-ink:   #2a2820;
+  --t-foto:    #e5dd96;
+  --t-movie:   #eac8c8;
+  --t-map:     #b4d8b0;
+  --t-ext:     #b0ccde;
+  --t-gray:    #d4d0c8;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  font-family: 'Helvetica Neue', 'Hiragino Kaku Gothic ProN',
+               'BIZ UDPGothic', 'Meiryo', sans-serif;
+  font-size: 13px;
+  line-height: 1.85;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 56px 24px 80px;
+}
+
+#wrap {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* ── LINKS ──────────────────────────────── */
+a {
+  color: var(--ink);
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+
+/* ── HEADER ─────────────────────────────── */
+header {
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 36px;
+}
+
+h1 {
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  margin: 0 0 10px;
+}
+h1 .sep { color: var(--muted); margin: 0 9px; font-weight: 300; }
+h1 .en  { letter-spacing: 0.1em; }
+
+.contact {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.9;
+}
+.contact a { color: var(--muted); }
+.contact a:hover { text-decoration: underline; }
+
+/* ── SECTIONS ────────────────────────────── */
+section { margin-bottom: 44px; }
+
+h2 {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 22px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+}
+
+/* ── PROFILE ─────────────────────────────── */
+.role-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 12px;
+  line-height: 2.1;
+}
+.role-list a {
+  border-bottom: 1px solid var(--rule);
+}
+.role-list a:hover {
+  border-bottom-color: var(--ink);
+  text-decoration: none;
+}
+
+/* ── WORKS ───────────────────────────────── */
+.year-block { margin-bottom: 18px; }
+
+h3 {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: 0 0 7px;
+}
+
+.work-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0 2px;
+}
+.work-list li {
+  font-size: 12px;
+  padding: 2px 0 2px 18px;
+  position: relative;
+  line-height: 1.75;
+}
+.work-list li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--rule);
+  font-size: 11px;
+  line-height: 1.85;
+}
+
+/* ── TAGS ────────────────────────────────── */
+.tag {
+  display: inline-block;
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  padding: 0 5px 1px;
+  border-radius: 2px;
+  vertical-align: baseline;
+  white-space: nowrap;
+  margin-right: 3px;
+  color: var(--tag-ink);
+  text-decoration: none;
+}
+.tag:hover { opacity: 0.75; text-decoration: none; }
+
+.t-foto  { background: var(--t-foto); }
+.t-movie { background: var(--t-movie); }
+.t-map   { background: var(--t-map); }
+.t-ext   { background: var(--t-ext); }
+.t-gray  { background: var(--t-gray); }
+
+/* ── COLLAB ──────────────────────────────── */
+.collab {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ── REFERENCE ───────────────────────────── */
+h4 {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 24px 0 10px;
+}
+h4:first-child { margin-top: 0; }
+
+.ref-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 12px;
+  line-height: 2.1;
+}
+
+/* ── MISC / LINKS ────────────────────────── */
+.misc-links {
+  font-size: 12px;
+  line-height: 2.2;
+}
+.misc-links a {
+  border-bottom: 1px solid var(--rule);
+}
+.misc-links a:hover {
+  border-bottom-color: var(--ink);
+  text-decoration: none;
+}
+
+.tools {
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.9;
+}
+
+/* ── FOOTER ──────────────────────────────── */
+footer {
+  margin-top: 48px;
+  padding-top: 20px;
+  border-top: 1px solid var(--rule);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+/* ── RESPONSIVE ──────────────────────────── */
+@media (max-width: 480px) {
+  body { padding: 36px 18px 60px; }
+  h1   { font-size: 16px; }
+}
