@@ -116,7 +116,7 @@
     <div class="year-block">
       <h3>2019</h3>
       <ul class="work-list">
-        <li>〜12 &ensp;<a href="https://photos.app.goo.gl/aysoVxTxwjJDnkTB8" target="_blank" class="tag t-foto">舞台美術</a><a href="http://www.komaba-agora.com/play/8691" target="_blank">ハチス企画『まさに世界の終わり』＠池袋・春風舎</a></li>
+        <li>〜12 &ensp;<a href="https://photos.app.goo.gl/iYkLR26D1JGo3ayy8" target="_blank" class="tag t-foto" data-preview="https://lh3.googleusercontent.com/pw/AP1GczOmfUR9QGrxg72wICNCvP8oWLzFlxwRi6oloRN3hEJ8XHLAuj_67mEAKuK9RDwzEvSwx_KNvwQ749fgR66_CIEttRflL_tksMhluVdNKgJWC1EUTQDw=w400-h267-c">舞台美術</a><a href="http://www.komaba-agora.com/play/8691" target="_blank">ハチス企画『まさに世界の終わり』＠池袋・春風舎</a></li>
         <li>11〜 &ensp;<a href="https://photos.app.goo.gl/aysoVxTxwjJDnkTB8" target="_blank" class="tag t-foto">舞台美術</a><a href="http://www.komaba-agora.com/play/8691" target="_blank">ハチス企画『まさに世界の終わり』＠池袋・春風舎</a></li>
         <li>5〜 &ensp;<a href="https://photos.app.goo.gl/x5AHKQYH5GfzCVJy6" target="_blank" class="tag t-foto">舞台美術</a><a href="http://www.komaba-agora.com/play/7968" target="_blank">ヌトミック『お気に召すまま』＠こまばアゴラ劇場</a></li>
         <li>3〜 &ensp;<a href="https://photos.app.goo.gl/hbo34fA8vrfBZvsF7" target="_blank" class="tag t-foto">舞台美術</a><a href="https://youtu.be/8pZKgsf1pic" target="_blank" class="tag t-movie">撮影</a><a href="https://youtu.be/9-fTUpsxAKQ" target="_blank" class="tag t-gray">タイムラプス</a><a href="http://www.geigeki.jp/performance/theater203/" target="_blank">鳥公園のアタマの中展２『おねしょ沼の終わらない温かさについて』＠東京芸術劇場 アトリエイースト</a></li>
@@ -440,6 +440,32 @@
           c.classList.toggle('active', c === chip);
         });
         applyFilter(chip.getAttribute('data-filter'));
+      });
+    });
+
+    // hover preview tooltip
+    var tooltip = document.createElement('div');
+    tooltip.className = 'preview-tooltip';
+    var tooltipImg = document.createElement('img');
+    tooltip.appendChild(tooltipImg);
+    document.body.appendChild(tooltip);
+
+    document.querySelectorAll('[data-preview]').forEach(function (el) {
+      el.addEventListener('mouseenter', function (e) {
+        var src = el.getAttribute('data-preview');
+        if (!src) return;
+        tooltipImg.src = src;
+        var rect = el.getBoundingClientRect();
+        var top  = rect.top - 141;
+        if (top < 8) top = rect.bottom + 8;
+        var left = rect.left;
+        if (left + 200 > window.innerWidth - 8) left = window.innerWidth - 208;
+        tooltip.style.top  = top  + 'px';
+        tooltip.style.left = left + 'px';
+        tooltip.classList.add('visible');
+      });
+      el.addEventListener('mouseleave', function () {
+        tooltip.classList.remove('visible');
       });
     });
   });
