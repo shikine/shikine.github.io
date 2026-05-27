@@ -49,6 +49,13 @@
 
     <div id="timeline-view">
 
+    <div class="filter-bar">
+      <button class="filter-chip active" data-filter="all">全て</button>
+      <button class="filter-chip" data-filter="stage">舞台美術</button>
+      <button class="filter-chip" data-filter="mv">MV</button>
+      <button class="filter-chip" data-filter="arch">建築</button>
+    </div>
+
     <div class="year-block">
       <h3>2027</h3>
       <ul class="work-list">
@@ -335,6 +342,29 @@
     return 'other';
   }
 
+  function initGenreData() {
+    document.querySelectorAll('#timeline-view .year-block .work-list li').forEach(function (li) {
+      if (li.textContent.trim()) li.setAttribute('data-genre', detectGenre(li));
+    });
+  }
+
+  function applyFilter(key) {
+    document.querySelectorAll('#timeline-view .year-block').forEach(function (block) {
+      var items = block.querySelectorAll('.work-list li[data-genre]');
+      if (!items.length) {
+        block.style.display = key === 'all' ? '' : 'none';
+        return;
+      }
+      var visible = 0;
+      items.forEach(function (li) {
+        var show = key === 'all' || li.getAttribute('data-genre') === key;
+        li.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      block.style.display = visible ? '' : 'none';
+    });
+  }
+
   function buildGenreView() {
     var groups = { stage: [], mv: [], arch: [], other: [] };
     document.querySelectorAll('#timeline-view .year-block').forEach(function (block) {
@@ -344,7 +374,6 @@
         groups[detectGenre(li)].push({ year: year, inner: li.innerHTML });
       });
     });
-
     var html = '';
     GENRES.forEach(function (g) {
       var items = groups[g.key];
@@ -363,6 +392,9 @@
     var genreEl    = document.getElementById('genre-view');
     var built      = false;
 
+    initGenreData();
+
+    // 年代順 / ジャンル別 toggle
     document.querySelectorAll('.toggle-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         document.querySelectorAll('.toggle-btn').forEach(function (b) {
@@ -376,6 +408,16 @@
           timelineEl.removeAttribute('hidden');
           genreEl.setAttribute('hidden', '');
         }
+      });
+    });
+
+    // genre filter chips
+    document.querySelectorAll('.filter-chip').forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        document.querySelectorAll('.filter-chip').forEach(function (c) {
+          c.classList.toggle('active', c === chip);
+        });
+        applyFilter(chip.getAttribute('data-filter'));
       });
     });
   });

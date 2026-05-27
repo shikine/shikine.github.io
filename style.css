@@ -158,6 +158,35 @@ h2 {
   color: var(--ink);
 }
 
+/* ── FILTER BAR ─────────────────────────── */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 20px;
+}
+.filter-chip {
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  padding: 2px 8px 3px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  line-height: 1.4;
+}
+.filter-chip:hover:not(.active) {
+  border-color: var(--muted);
+  color: var(--ink);
+}
+.filter-chip.active                      { color: var(--ink); border-color: var(--ink); }
+.filter-chip.active[data-filter="all"]   { background: var(--ink); color: var(--bg); }
+.filter-chip.active[data-filter="stage"] { background: #d0cae8; border-color: #b0a8cc; }
+.filter-chip.active[data-filter="mv"]    { background: #eed8a8; border-color: #c8b070; }
+.filter-chip.active[data-filter="arch"]  { background: #b8d0d8; border-color: #88b0bc; }
+
 /* ── GENRE VIEW ──────────────────────────── */
 .genre-block { margin-bottom: 24px; }
 
