@@ -171,6 +171,9 @@ h3 {
 .t-map   { background: var(--t-map); }
 .t-ext   { background: var(--t-ext); }
 .t-gray  { background: var(--t-gray); }
+.t-stage { background: #d0cae8; } /* 舞台美術 */
+.t-mv    { background: #eed8a8; } /* MV */
+.t-arch  { background: #b8d0d8; } /* 建築 */
 
 /* ── COLLAB ──────────────────────────────── */
 .collab {
