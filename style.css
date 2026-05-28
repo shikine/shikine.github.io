@@ -187,6 +187,9 @@ h2 {
 .filter-chip.active[data-filter="mv"]    { background: #eed8a8; border-color: #c8b070; }
 .filter-chip.active[data-filter="arch"]  { background: #b8d0d8; border-color: #88b0bc; }
 
+.year-filter-bar { margin-top: -12px; }
+.year-chip.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
 /* ── GENRE VIEW ──────────────────────────── */
 .genre-block { margin-bottom: 24px; }
 

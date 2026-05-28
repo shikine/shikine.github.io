@@ -354,6 +354,9 @@
     { key: 'other', label: 'その他' }
   ];
 
+  var activeGenre = 'all';
+  var activeYears = new Set();
+
   function detectGenre(li) {
     if (li.querySelector('.t-stage')) return 'stage';
     if (li.querySelector('.t-mv'))    return 'mv';
@@ -392,21 +395,44 @@
     });
   }
 
-  function applyFilter(key) {
+  function applyFilters() {
     document.querySelectorAll('#timeline-view .year-block').forEach(function (block) {
+      var year = block.querySelector('h3').textContent.trim();
+      if (activeYears.size > 0 && !activeYears.has(year)) {
+        block.style.display = 'none';
+        return;
+      }
       var items = block.querySelectorAll('.work-list li[data-genre]');
       if (!items.length) {
-        block.style.display = key === 'all' ? '' : 'none';
+        block.style.display = activeGenre === 'all' ? '' : 'none';
         return;
       }
       var visible = 0;
       items.forEach(function (li) {
-        var show = key === 'all' || li.getAttribute('data-genre') === key;
+        var show = activeGenre === 'all' || li.getAttribute('data-genre') === activeGenre;
         li.style.display = show ? '' : 'none';
         if (show) visible++;
       });
       block.style.display = visible ? '' : 'none';
     });
+  }
+
+  function buildYearChips() {
+    var bar = document.createElement('div');
+    bar.className = 'filter-bar year-filter-bar';
+    document.querySelectorAll('#timeline-view .year-block').forEach(function (block) {
+      var year = block.querySelector('h3').textContent.trim();
+      var hasEntries = Array.from(block.querySelectorAll('.work-list li')).some(function (li) {
+        return li.textContent.trim();
+      });
+      if (!hasEntries) return;
+      var btn = document.createElement('button');
+      btn.className = 'filter-chip year-chip';
+      btn.setAttribute('data-year', year);
+      btn.textContent = year;
+      bar.appendChild(btn);
+    });
+    return bar;
   }
 
   function buildGenreView() {
@@ -439,6 +465,24 @@
     normalizeLists();
     initGenreData();
 
+    // year filter chips (dynamically built, multi-select)
+    var genreBar = document.querySelector('.filter-bar');
+    var yearBar = buildYearChips();
+    genreBar.parentNode.insertBefore(yearBar, genreBar.nextSibling);
+    yearBar.addEventListener('click', function (e) {
+      var chip = e.target.closest('.year-chip');
+      if (!chip) return;
+      var year = chip.getAttribute('data-year');
+      if (activeYears.has(year)) {
+        activeYears.delete(year);
+        chip.classList.remove('active');
+      } else {
+        activeYears.add(year);
+        chip.classList.add('active');
+      }
+      applyFilters();
+    });
+
     // 年代順 / ジャンル別 toggle
     document.querySelectorAll('.toggle-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -456,13 +500,14 @@
       });
     });
 
-    // genre filter chips
-    document.querySelectorAll('.filter-chip').forEach(function (chip) {
+    // genre filter chips (single-select)
+    document.querySelectorAll('.filter-chip:not(.year-chip)').forEach(function (chip) {
       chip.addEventListener('click', function () {
-        document.querySelectorAll('.filter-chip').forEach(function (c) {
+        document.querySelectorAll('.filter-chip:not(.year-chip)').forEach(function (c) {
           c.classList.toggle('active', c === chip);
         });
-        applyFilter(chip.getAttribute('data-filter'));
+        activeGenre = chip.getAttribute('data-filter');
+        applyFilters();
       });
     });
 
