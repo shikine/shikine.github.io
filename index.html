@@ -37,8 +37,16 @@
       <li>美術・ワークショップ・家具製作・リノベーション</li>
     </ul>
     <div class="newsletter-bar">
-      <span>メールマガジン</span>
-      <a href="https://docs.google.com/forms/d/e/1FAIpQLSe00Lt17T4iWXGUN0LpIW1eQZefDAlV2et_Emu3WZX9xchHjw/viewform" target="_blank" class="newsletter-btn">購読する</a>
+      <p class="nl-label">メールマガジン</p>
+      <form id="nl-form" class="nl-form"
+            action="https://docs.google.com/forms/d/e/1FAIpQLSe00Lt17T4iWXGUN0LpIW1eQZefDAlV2et_Emu3WZX9xchHjw/formResponse"
+            method="POST" target="nl-iframe">
+        <input type="text"  name="entry.967381420" placeholder="お名前" required class="nl-input">
+        <input type="email" name="entry.75757379"  placeholder="メールアドレス" required class="nl-input">
+        <button type="submit" class="newsletter-btn">購読する</button>
+      </form>
+      <div id="nl-thanks" class="nl-thanks" hidden>ご登録ありがとうございます。</div>
+      <iframe name="nl-iframe" style="display:none;" aria-hidden="true"></iframe>
     </div>
   </section>
 
@@ -514,6 +522,19 @@
         applyFilters();
       });
     });
+
+    // newsletter form submit → show thanks
+    var nlForm = document.getElementById('nl-form');
+    if (nlForm) {
+      nlForm.addEventListener('submit', function () {
+        setTimeout(function () {
+          nlForm.style.display = 'none';
+          var thanks = document.getElementById('nl-thanks');
+          thanks.hidden = false;
+          requestAnimationFrame(function () { thanks.classList.add('visible'); });
+        }, 400);
+      });
+    }
 
     // hover preview tooltip
     var tooltip = document.createElement('div');
