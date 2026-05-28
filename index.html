@@ -540,31 +540,33 @@
       });
     }
 
-    // hover preview tooltip
-    var tooltip = document.createElement('div');
-    tooltip.className = 'preview-tooltip';
-    var tooltipImg = document.createElement('img');
-    tooltip.appendChild(tooltipImg);
-    document.body.appendChild(tooltip);
+    // hover preview tooltip (mouse/trackpad only — skip touch devices)
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      var tooltip = document.createElement('div');
+      tooltip.className = 'preview-tooltip';
+      var tooltipImg = document.createElement('img');
+      tooltip.appendChild(tooltipImg);
+      document.body.appendChild(tooltip);
 
-    document.querySelectorAll('[data-preview]').forEach(function (el) {
-      el.addEventListener('mouseenter', function (e) {
-        var src = el.getAttribute('data-preview');
-        if (!src) return;
-        tooltipImg.src = src;
-        var rect = el.getBoundingClientRect();
-        var top  = rect.top - 141;
-        if (top < 8) top = rect.bottom + 8;
-        var left = rect.left;
-        if (left + 200 > window.innerWidth - 8) left = window.innerWidth - 208;
-        tooltip.style.top  = top  + 'px';
-        tooltip.style.left = left + 'px';
-        tooltip.classList.add('visible');
+      document.querySelectorAll('[data-preview]').forEach(function (el) {
+        el.addEventListener('mouseenter', function (e) {
+          var src = el.getAttribute('data-preview');
+          if (!src) return;
+          tooltipImg.src = src;
+          var rect = el.getBoundingClientRect();
+          var top  = rect.top - 141;
+          if (top < 8) top = rect.bottom + 8;
+          var left = rect.left;
+          if (left + 200 > window.innerWidth - 8) left = window.innerWidth - 208;
+          tooltip.style.top  = top  + 'px';
+          tooltip.style.left = left + 'px';
+          tooltip.classList.add('visible');
+        });
+        el.addEventListener('mouseleave', function () {
+          tooltip.classList.remove('visible');
+        });
       });
-      el.addEventListener('mouseleave', function () {
-        tooltip.classList.remove('visible');
-      });
-    });
+    }
   });
 })();
   </script>
