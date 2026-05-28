@@ -269,6 +269,11 @@ h3 {
 .t-mv    { background: #eed8a8; } /* MV */
 .t-arch  { background: #b8d0d8; } /* 建築 */
 
+.entry > .tag:first-child {
+  min-width: 5.5em;
+  text-align: center;
+}
+
 /* ── COLLAB ──────────────────────────────── */
 .collab {
   font-size: 11px;
