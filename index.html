@@ -556,6 +556,7 @@
           if (result.duplicate) {
             errEl.textContent = 'このメールアドレスはすでに登録されています。';
             errEl.hidden = false;
+            requestAnimationFrame(function () { errEl.classList.add('visible'); });
             btn.disabled = false;
             btn.textContent = '購読する';
             return;
@@ -575,6 +576,7 @@
         } catch(err) {
           errEl.textContent = '通信エラーが発生しました。もう一度お試しください。';
           errEl.hidden = false;
+          requestAnimationFrame(function () { errEl.classList.add('visible'); });
           btn.disabled = false;
           btn.textContent = '購読する';
         }
