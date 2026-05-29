@@ -57,13 +57,12 @@ function handleSchedule(subject, html, scheduledAt) {
   // Google カレンダーにイベントを登録
   try {
     var sendDate = new Date(scheduledAt);
-    var endDate  = new Date(sendDate.getTime() + 30 * 60 * 1000); // 30分後
-    CalendarApp.getDefaultCalendar().createEvent(
-      '【karasuletters】配信予約: ' + subject,
-      sendDate,
-      endDate,
-      { description: '件名: ' + subject + '\n予約ID: ' + id }
-    );
+    var endDate  = new Date(sendDate.getTime() + 30 * 60 * 1000);
+    var cal = CalendarApp.getCalendarById('urj4s4v32702jrsemq4aope5d0@group.calendar.google.com');
+    if (cal) {
+      cal.createEvent('【karasuletters】配信予約: ' + subject, sendDate, endDate,
+        { description: '件名: ' + subject + '\n予約ID: ' + id });
+    }
   } catch(e) {}
 
   return respond({ ok: true, id: id });
