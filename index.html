@@ -528,9 +528,8 @@
       });
     });
 
-    // newsletter form submit → 重複チェック → Googleフォームに登録
+    // newsletter form submit → GAS で重複チェック・登録・通知メール送信を一括処理
     var GAS_URL = 'https://script.google.com/macros/s/AKfycbyieDzOkdfRhkqzWx51YnUC6Y-537NnTCfpDkCaXGNOLMYJTDzG36kBhgcllVQu1VV5tQ/exec';
-    var GFORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSe00Lt17T4iWXGUN0LpIW1eQZefDAlV2et_Emu3WZX9xchHjw/formResponse';
 
     var nlForm = document.getElementById('nl-form');
     if (nlForm) {
@@ -549,7 +548,7 @@
           var res    = await fetch(GAS_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify({ action: 'checkEmail', email: email })
+            body: JSON.stringify({ action: 'register', name: name, email: email })
           });
           var result = await res.json();
 
@@ -561,12 +560,6 @@
             btn.textContent = '購読する';
             return;
           }
-
-          // 重複なし → Googleフォームに送信
-          var fd = new FormData();
-          fd.append('entry.967381420', name);
-          fd.append('entry.75757379',  email);
-          await fetch(GFORM_URL, { method: 'POST', body: fd, mode: 'no-cors' });
 
           nlForm.style.display = 'none';
           var thanks = document.getElementById('nl-thanks');
