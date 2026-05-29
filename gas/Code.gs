@@ -53,6 +53,19 @@ function handleSchedule(subject, html, scheduledAt) {
   var id    = 'sched_' + new Date().getTime();
   props.setProperty(id, JSON.stringify({ subject: subject, html: html, scheduledAt: scheduledAt }));
   ensureScheduleTrigger();
+
+  // Google カレンダーにイベントを登録
+  try {
+    var sendDate = new Date(scheduledAt);
+    var endDate  = new Date(sendDate.getTime() + 30 * 60 * 1000); // 30分後
+    CalendarApp.getDefaultCalendar().createEvent(
+      '【karasuletters】配信予約: ' + subject,
+      sendDate,
+      endDate,
+      { description: '件名: ' + subject + '\n予約ID: ' + id }
+    );
+  } catch(e) {}
+
   return respond({ ok: true, id: id });
 }
 
@@ -110,6 +123,7 @@ function getDraftFolder() {
 function handleSaveDraft(data) {
   var folder = getDraftFolder();
   var issue  = data.issue;
+  data.updated = new Date().toISOString();
   var files  = folder.getFilesByName(issue + '.json');
   var content = JSON.stringify(data);
   if (files.hasNext()) {
