@@ -9,23 +9,28 @@ var DRAFT_FOLDER = 'karasuletters_drafts';
 
 // ===== ウェブアプリ エントリーポイント =====
 function doPost(e) {
-  var data = JSON.parse(e.postData.contents);
-  var action = data.action;
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var action = data.action;
 
-  // actionなし + subject/html あり → 即時送信
-  if (!action && data.subject && data.html) return handleSend(data.subject, data.html);
+    // actionなし + subject/html あり → 即時送信
+    if (!action && data.subject && data.html) return handleSend(data.subject, data.html);
 
-  if (action === 'register')          return handleRegister(data.name, data.email);
-  if (action === 'checkEmail')        return respond({ duplicate: isDuplicate(data.email) });
-  if (action === 'schedule')          return handleSchedule(data.subject, data.html, data.scheduledAt);
-  if (action === 'getScheduleStatus') return handleGetSchedules();
-  if (action === 'cancelSchedule')    return handleCancelSchedule(data.id);
-  if (action === 'saveDraft')         return handleSaveDraft(data.data);
-  if (action === 'listDrafts')        return handleListDrafts();
-  if (action === 'loadDraft')         return handleLoadDraft(data.issue);
-  if (action === 'deleteDraft')       return handleDeleteDraft(data.issue);
+    if (action === 'register')          return handleRegister(data.name, data.email);
+    if (action === 'checkEmail')        return respond({ duplicate: isDuplicate(data.email) });
+    if (action === 'schedule')          return handleSchedule(data.subject, data.html, data.scheduledAt);
+    if (action === 'getScheduleStatus') return handleGetSchedules();
+    if (action === 'cancelSchedule')    return handleCancelSchedule(data.id);
+    if (action === 'updateSchedule')    return handleUpdateSchedule(data.id, data.scheduledAt);
+    if (action === 'saveDraft')         return handleSaveDraft(data.data);
+    if (action === 'listDrafts')        return handleListDrafts();
+    if (action === 'loadDraft')         return handleLoadDraft(data.issue);
+    if (action === 'deleteDraft')       return handleDeleteDraft(data.issue);
 
-  return respond({ error: 'unknown action' });
+    return respond({ error: 'unknown action' });
+  } catch(err) {
+    return respond({ error: err.message || 'internal error' });
+  }
 }
 
 function doGet(e) {
@@ -51,21 +56,25 @@ function handleSend(subject, html) {
 function handleSchedule(subject, html, scheduledAt) {
   var props = PropertiesService.getScriptProperties();
   var id    = 'sched_' + new Date().getTime();
-  props.setProperty(id, JSON.stringify({ subject: subject, html: html, scheduledAt: scheduledAt }));
+  var schedData = { subject: subject, html: html, scheduledAt: scheduledAt };
   ensureScheduleTrigger();
 
   // Google カレンダーにイベントを登録
+  var calendarAdded = false;
   try {
     var sendDate = new Date(scheduledAt);
     var endDate  = new Date(sendDate.getTime() + 30 * 60 * 1000);
     var cal = CalendarApp.getCalendarById('urj4s4v32702jrsemq4aope5d0@group.calendar.google.com');
     if (cal) {
-      cal.createEvent('【karasuletters】配信予約: ' + subject, sendDate, endDate,
+      var ev = cal.createEvent('【karasuletters】配信予約: ' + subject, sendDate, endDate,
         { description: '件名: ' + subject + '\n予約ID: ' + id });
+      schedData.calEventId = ev.getId();
+      calendarAdded = true;
     }
   } catch(e) {}
 
-  return respond({ ok: true, id: id });
+  props.setProperty(id, JSON.stringify(schedData));
+  return respond({ ok: true, id: id, calendarAdded: calendarAdded });
 }
 
 function handleGetSchedules() {
@@ -84,7 +93,59 @@ function handleGetSchedules() {
 }
 
 function handleCancelSchedule(id) {
-  PropertiesService.getScriptProperties().deleteProperty(id);
+  var props = PropertiesService.getScriptProperties();
+  var stored = props.getProperty(id);
+  if (stored) {
+    try {
+      var v = JSON.parse(stored);
+      if (v.calEventId) {
+        var ev = CalendarApp.getEventById(v.calEventId);
+        if (ev) ev.deleteEvent();
+      }
+    } catch(e) {}
+  }
+  props.deleteProperty(id);
+  return respond({ ok: true });
+}
+
+function handleUpdateSchedule(id, scheduledAt) {
+  var props = PropertiesService.getScriptProperties();
+  var stored = props.getProperty(id);
+  if (!stored) return respond({ error: 'not found' });
+
+  var v = JSON.parse(stored);
+  v.scheduledAt = scheduledAt;
+
+  // Google カレンダーイベントを更新
+  try {
+    var newDate = new Date(scheduledAt);
+    var newEnd  = new Date(newDate.getTime() + 30 * 60 * 1000);
+    var cal = CalendarApp.getCalendarById('urj4s4v32702jrsemq4aope5d0@group.calendar.google.com');
+    if (cal) {
+      if (v.calEventId) {
+        try {
+          var ev = CalendarApp.getEventById(v.calEventId);
+          if (ev) {
+            ev.setTime(newDate, newEnd);
+          } else {
+            var newEv = cal.createEvent('【karasuletters】配信予約: ' + v.subject, newDate, newEnd,
+              { description: '件名: ' + v.subject + '\n予約ID: ' + id });
+            v.calEventId = newEv.getId();
+          }
+        } catch(calErr) {
+          var newEv2 = cal.createEvent('【karasuletters】配信予約: ' + v.subject, newDate, newEnd,
+            { description: '件名: ' + v.subject + '\n予約ID: ' + id });
+          v.calEventId = newEv2.getId();
+        }
+      } else {
+        var createdEv = cal.createEvent('【karasuletters】配信予約: ' + v.subject, newDate, newEnd,
+          { description: '件名: ' + v.subject + '\n予約ID: ' + id });
+        v.calEventId = createdEv.getId();
+      }
+    }
+  } catch(e) {}
+
+  props.setProperty(id, JSON.stringify(v));
   return respond({ ok: true });
 }
 
