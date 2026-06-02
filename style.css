@@ -418,4 +418,16 @@ footer {
 @media (max-width: 480px) {
   body { padding: 36px 18px 60px; }
   h1   { font-size: 16px; }
+
+  .year-block { margin-bottom: 24px; }
+
+  .work-list li {
+    display: block;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .work-list li:last-child { border-bottom: none; }
+  .work-list li::before { display: none; }
 }
