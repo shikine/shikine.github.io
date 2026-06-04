@@ -359,7 +359,7 @@
   </section>
 
   <footer>
-    <p>&copy; 2012&ndash;2018 WATANABE SHIKINE &ensp; All rights reserved.</p>
+    <p>&copy; 2012&ndash;2026 WATANABE SHIKINE &ensp; All rights reserved.</p>
   </footer>
 
 </div>
@@ -387,7 +387,7 @@
   }
 
   function normalizeLists() {
-    var re = /^([u301c\d]+)[\su2002u2003u00a0 ]*/;
+    var re = /^([〜\d]+)[\s    ]*/;
     document.querySelectorAll('#timeline-view .work-list li').forEach(function (li) {
       var monthSpan = document.createElement('span');
       monthSpan.className = 'month';
