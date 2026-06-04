@@ -17,6 +17,15 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<nav id="site-nav">
+  <div class="nav-inner">
+    <a href="#profile-section"    class="nav-link">Profile</a>
+    <a href="#works-section"      class="nav-link">Works</a>
+    <a href="#reference-section"  class="nav-link">Reference</a>
+    <a href="#newsletter-section" class="nav-link">Newsletter</a>
+    <a href="mailto:watanabeshikine@gmail.com" class="nav-link">Contact</a>
+  </div>
+</nav>
 <div id="wrap">
 
   <header>
@@ -35,7 +44,7 @@
     </div>
   </header>
 
-  <section class="profile">
+  <section class="profile" id="profile-section">
     <ul class="role-list">
       <li>舞台美術・構造設計</li>
       <li><a href="https://www.hachisu-kikaku.com/" target="_blank">演劇 グループ・野原</a> 舞台美術</li>
@@ -45,7 +54,7 @@
     </ul>
   </section>
 
-  <section class="works">
+  <section class="works" id="works-section">
     <div class="works-header">
       <h2>Works</h2>
       <div class="view-toggle">
@@ -306,7 +315,7 @@
 
   </section>
 
-  <section class="reference">
+  <section class="reference" id="reference-section">
     <h2>Reference</h2>
 
     <h4>旅行 WS の行程 / Collaboration</h4>
@@ -352,7 +361,7 @@
     <p class="tools">Adobe CC（Illustrator / Photoshop / Premiere / InDesign）&ensp;&middot;&ensp; SketchUp / Rhinoceros / JWcad / 建築応力計算ソフト</p>
   </section>
 
-  <section class="newsletter-section">
+  <section class="newsletter-section" id="newsletter-section">
     <div class="newsletter-bar">
       <p class="nl-label">メールマガジン</p>
       <form id="nl-form" class="nl-form">
@@ -583,6 +592,22 @@
         }
       });
     }
+
+    // active nav link on scroll
+    var navLinks = document.querySelectorAll('.nav-link[href^="#"]');
+    var navSections = Array.from(navLinks).map(function(l) {
+      return document.querySelector(l.getAttribute('href'));
+    }).filter(Boolean);
+    var navObserver = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          navLinks.forEach(function(l) {
+            l.classList.toggle('active', l.getAttribute('href') === '#' + entry.target.id);
+          });
+        }
+      });
+    }, { rootMargin: '-30% 0px -60% 0px' });
+    navSections.forEach(function(s) { navObserver.observe(s); });
 
     // hover preview tooltip (mouse/trackpad only — skip touch devices)
     if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
