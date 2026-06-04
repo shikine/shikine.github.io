@@ -19,11 +19,23 @@
 <body>
 <nav id="site-nav">
   <div class="nav-inner">
-    <a href="#profile-section"    class="nav-link">Profile</a>
-    <a href="#works-section"      class="nav-link">Works</a>
-    <a href="#reference-section"  class="nav-link">Reference</a>
-    <a href="#newsletter-section" class="nav-link">Newsletter</a>
-    <a href="mailto:watanabeshikine@gmail.com" class="nav-link">Contact</a>
+    <div class="nav-links">
+      <a href="#profile-section"    class="nav-link">Profile</a>
+      <a href="#works-section"      class="nav-link">Works</a>
+      <a href="#reference-section"  class="nav-link">Reference</a>
+      <a href="#newsletter-section" class="nav-link">Newsletter</a>
+      <a href="mailto:watanabeshikine@gmail.com" class="nav-link">Contact</a>
+    </div>
+    <button id="nav-toggle" aria-label="メニュー" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <div id="nav-dropdown">
+    <a href="#profile-section"    class="nav-drop-link">Profile</a>
+    <a href="#works-section"      class="nav-drop-link">Works</a>
+    <a href="#reference-section"  class="nav-drop-link">Reference</a>
+    <a href="#newsletter-section" class="nav-drop-link">Newsletter</a>
+    <a href="mailto:watanabeshikine@gmail.com" class="nav-drop-link">Contact</a>
   </div>
 </nav>
 <div id="wrap">
@@ -593,11 +605,39 @@
       });
     }
 
-    // active nav link on scroll
-    var navLinks = document.querySelectorAll('.nav-link[href^="#"]');
-    var navSections = Array.from(navLinks).map(function(l) {
-      return document.querySelector(l.getAttribute('href'));
-    }).filter(Boolean);
+    // hamburger toggle
+    var navToggle   = document.getElementById('nav-toggle');
+    var siteNav     = document.getElementById('site-nav');
+    var navDropdown = document.getElementById('nav-dropdown');
+    if (navToggle) {
+      navToggle.addEventListener('click', function() {
+        var open = siteNav.classList.toggle('open');
+        navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      // リンククリックで閉じる
+      navDropdown.querySelectorAll('.nav-drop-link').forEach(function(l) {
+        l.addEventListener('click', function() {
+          siteNav.classList.remove('open');
+          navToggle.setAttribute('aria-expanded', 'false');
+        });
+      });
+      // 外側クリックで閉じる
+      document.addEventListener('click', function(e) {
+        if (!siteNav.contains(e.target)) {
+          siteNav.classList.remove('open');
+          navToggle.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+
+    // active nav link on scroll（PC用 .nav-link + SP用 .nav-drop-link 両方対応）
+    var navLinks = document.querySelectorAll('.nav-link[href^="#"], .nav-drop-link[href^="#"]');
+    var navSections = [];
+    var seen = {};
+    navLinks.forEach(function(l) {
+      var href = l.getAttribute('href');
+      if (!seen[href]) { seen[href] = true; var el = document.querySelector(href); if (el) navSections.push(el); }
+    });
     var navObserver = new IntersectionObserver(function(entries) {
       entries.forEach(function(entry) {
         if (entry.isIntersecting) {

@@ -48,9 +48,14 @@ body {
   margin: 0 auto;
   padding: 0 24px;
   display: flex;
-  gap: 20px;
-  height: 36px;
   align-items: center;
+  height: 36px;
+}
+.nav-links {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex: 1;
 }
 .nav-link {
   font-size: 10px;
@@ -62,6 +67,42 @@ body {
 }
 .nav-link:hover  { color: var(--ink); text-decoration: none; }
 .nav-link.active { color: var(--ink); }
+
+/* ハンバーガーボタン（PC では非表示） */
+#nav-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 24px;
+  height: 36px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-left: auto;
+}
+#nav-toggle span {
+  display: block;
+  width: 18px;
+  height: 1px;
+  background: var(--muted);
+  transition: transform 0.2s, opacity 0.2s;
+}
+#nav-toggle[aria-expanded="true"] span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+#nav-toggle[aria-expanded="true"] span:nth-child(2) {
+  opacity: 0;
+}
+#nav-toggle[aria-expanded="true"] span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+/* ドロップダウン（PC では非表示） */
+#nav-dropdown {
+  display: none;
+}
 
 #wrap {
   max-width: 640px;
@@ -449,16 +490,31 @@ footer {
 @media (max-width: 480px) {
   body { padding: 72px 16px 60px; }
 
-  /* nav: 横スクロール・スクロールバー非表示 */
-  .nav-inner {
-    gap: 18px;
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding-right: 16px;
+  /* nav: ハンバーガー表示 */
+  .nav-links { display: none; }
+
+  #nav-toggle { display: flex; }
+
+  #nav-dropdown {
+    display: none;
+    flex-direction: column;
+    background: var(--bg);
+    border-top: 1px solid var(--rule);
+    padding: 6px 0 10px;
   }
-  .nav-inner::-webkit-scrollbar { display: none; }
+  #site-nav.open #nav-dropdown { display: flex; }
+
+  .nav-drop-link {
+    display: block;
+    padding: 10px 16px;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+  }
+  .nav-drop-link:hover,
+  .nav-drop-link.active { color: var(--ink); }
 
   h1 { font-size: 15px; }
   h1 .sep { margin: 0 6px; }
