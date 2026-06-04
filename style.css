@@ -104,6 +104,20 @@ body {
   display: none;
 }
 
+/* スクリム（SP ドロップダウン背景幕） */
+#nav-scrim {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 26, 23, 0.35);
+  z-index: 99;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+#nav-scrim.visible {
+  opacity: 1;
+}
+
 #wrap {
   max-width: 640px;
   margin: 0 auto;

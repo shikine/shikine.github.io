@@ -38,6 +38,7 @@
     <a href="mailto:watanabeshikine@gmail.com" class="nav-drop-link">Contact</a>
   </div>
 </nav>
+<div id="nav-scrim"></div>
 <div id="wrap">
 
   <header>
@@ -616,25 +617,31 @@
     var navToggle   = document.getElementById('nav-toggle');
     var siteNav     = document.getElementById('site-nav');
     var navDropdown = document.getElementById('nav-dropdown');
+    var navScrim    = document.getElementById('nav-scrim');
+
+    function openMenu() {
+      siteNav.classList.add('open');
+      navToggle.setAttribute('aria-expanded', 'true');
+      navScrim.style.display = 'block';
+      requestAnimationFrame(function() { navScrim.classList.add('visible'); });
+    }
+    function closeMenu() {
+      siteNav.classList.remove('open');
+      navToggle.setAttribute('aria-expanded', 'false');
+      navScrim.classList.remove('visible');
+      setTimeout(function() { navScrim.style.display = 'none'; }, 200);
+    }
+
     if (navToggle) {
       navToggle.addEventListener('click', function() {
-        var open = siteNav.classList.toggle('open');
-        navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        siteNav.classList.contains('open') ? closeMenu() : openMenu();
       });
       // リンククリックで閉じる
       navDropdown.querySelectorAll('.nav-drop-link').forEach(function(l) {
-        l.addEventListener('click', function() {
-          siteNav.classList.remove('open');
-          navToggle.setAttribute('aria-expanded', 'false');
-        });
+        l.addEventListener('click', closeMenu);
       });
-      // 外側クリックで閉じる
-      document.addEventListener('click', function(e) {
-        if (!siteNav.contains(e.target)) {
-          siteNav.classList.remove('open');
-          navToggle.setAttribute('aria-expanded', 'false');
-        }
-      });
+      // スクリムタップで閉じる
+      navScrim.addEventListener('click', closeMenu);
     }
 
     // active nav link on scroll（PC用 .nav-link + SP用 .nav-drop-link 両方対応）
