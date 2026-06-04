@@ -447,19 +447,57 @@ footer {
 
 /* ── RESPONSIVE ──────────────────────────── */
 @media (max-width: 480px) {
-  body { padding: 72px 18px 60px; }
-  .nav-inner { gap: 14px; }
-  h1   { font-size: 16px; }
+  body { padding: 72px 16px 60px; }
 
-  .year-block { margin-bottom: 24px; }
+  /* nav: 横スクロール・スクロールバー非表示 */
+  .nav-inner {
+    gap: 18px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-right: 16px;
+  }
+  .nav-inner::-webkit-scrollbar { display: none; }
+
+  h1 { font-size: 15px; }
+  h1 .sep { margin: 0 6px; }
+
+  /* 年チップ: 横スクロール1行 */
+  .year-filter-bar {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    margin-bottom: 16px;
+  }
+  .year-filter-bar::-webkit-scrollbar { display: none; }
+  .year-chip { flex-shrink: 0; }
+
+  /* 作品リスト: flex維持でスッキリ */
+  .year-block { margin-bottom: 20px; }
 
   .work-list li {
-    display: block;
-    padding: 5px 0;
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    padding: 6px 0;
     border-bottom: 1px solid var(--rule);
-    font-size: 13px;
-    line-height: 1.6;
+    font-size: 12px;
+    line-height: 1.7;
   }
   .work-list li:last-child { border-bottom: none; }
   .work-list li::before { display: none; }
+
+  .month {
+    width: 2.4em;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  /* ニュースレター: 縦並び */
+  .nl-form { flex-direction: column; gap: 10px; }
+  .nl-input { min-width: 0; flex: none; width: 100%; }
+  .newsletter-btn { align-self: flex-start; }
 }
