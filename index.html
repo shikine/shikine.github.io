@@ -20,7 +20,7 @@
 <nav id="site-nav">
   <div class="nav-inner">
     <div class="nav-links">
-      <a href="#" class="nav-link">Top</a>
+      <a href="javascript:void(0)" class="nav-link nav-top">Top</a>
       <a href="#works-section"      class="nav-link">Works</a>
       <a href="#reference-section"  class="nav-link">Reference</a>
       <a href="#newsletter-section" class="nav-link">Newsletter</a>
@@ -31,7 +31,7 @@
     </button>
   </div>
   <div id="nav-dropdown">
-    <a href="#" class="nav-drop-link">Top</a>
+    <a href="javascript:void(0)" class="nav-drop-link nav-top">Top</a>
     <a href="#works-section"      class="nav-drop-link">Works</a>
     <a href="#reference-section"  class="nav-drop-link">Reference</a>
     <a href="#newsletter-section" class="nav-drop-link">Newsletter</a>
@@ -605,6 +605,13 @@
       });
     }
 
+    // Top リンク → ページ先頭へスムーズスクロール
+    document.querySelectorAll('.nav-top').forEach(function(el) {
+      el.addEventListener('click', function() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    });
+
     // hamburger toggle
     var navToggle   = document.getElementById('nav-toggle');
     var siteNav     = document.getElementById('site-nav');
@@ -631,12 +638,16 @@
     }
 
     // active nav link on scroll（PC用 .nav-link + SP用 .nav-drop-link 両方対応）
-    var navLinks = document.querySelectorAll('.nav-link[href^="#"], .nav-drop-link[href^="#"]');
+    // .nav-top (Top リンク) を除いたセクションリンクのみ対象
+    var navLinks = document.querySelectorAll('.nav-link:not(.nav-top), .nav-drop-link:not(.nav-top)');
     var navSections = [];
     var seen = {};
     navLinks.forEach(function(l) {
       var href = l.getAttribute('href');
-      if (!seen[href]) { seen[href] = true; var el = document.querySelector(href); if (el) navSections.push(el); }
+      if (href && href.length > 1 && !seen[href]) {
+        seen[href] = true;
+        try { var el = document.querySelector(href); if (el) navSections.push(el); } catch(e) {}
+      }
     });
     var navObserver = new IntersectionObserver(function(entries) {
       entries.forEach(function(entry) {
