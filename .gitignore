@@ -1,1 +1,5 @@
 _notes/
+.DS_Store
+.claude/
+gas/Code.gs
+
