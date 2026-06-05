@@ -965,10 +965,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       };
     }
 
-    // 各 li から最初の foto タグだけ取得（t-ja/t-en の重複を避ける）
+    // 各 li から最初の foto/exhibition タグだけ取得（t-ja/t-en の重複を避ける）
     var allFotoLinks = [];
     document.querySelectorAll('#timeline-view .work-list li').forEach(function (li) {
-      var first = li.querySelector('.tag.t-foto[data-preview]');
+      var first = li.querySelector('.tag.t-foto[data-preview], .tag.t-exhibition[data-preview]');
       if (first) allFotoLinks.push(first);
     });
     var galleryItems = allFotoLinks.map(function (link) {
