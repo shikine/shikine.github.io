@@ -714,23 +714,33 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     var gallery = [];   // [{img, cat, title, year, album}, ...]
     var curIdx  = 0;
 
+    function showGradient() {
+      if (stopLbAnim) { stopLbAnim(); stopLbAnim = null; }
+      imgEl.style.display = 'none';
+      imgEl.src = '';
+      lbCanvas.hidden = false;
+      var cw = lbCanvas.offsetWidth || 780;
+      var ch = Math.round(cw * 9 / 16);
+      lbCanvas.width = cw; lbCanvas.height = ch;
+      lbSeed++;
+      stopLbAnim = startAmbientAnim(lbCanvas, lbSeed * 0.618);
+    }
+
     function setMedia(imgSrc, albumUrl) {
       var isPending = !imgSrc && !albumUrl;
       pendingEl.hidden = !isPending;
       if (stopLbAnim) { stopLbAnim(); stopLbAnim = null; }
       if (isPending) {
-        imgEl.style.display = 'none';
-        imgEl.src = '';
-        lbCanvas.hidden = false;
-        var cw = lbCanvas.offsetWidth || 780;
-        var ch = Math.round(cw * 9 / 16);
-        lbCanvas.width = cw; lbCanvas.height = ch;
-        lbSeed++;
-        stopLbAnim = startAmbientAnim(lbCanvas, lbSeed * 0.618);
+        showGradient();
       } else {
         imgEl.style.display = '';
         imgEl.src = imgSrc || '';
         lbCanvas.hidden = true;
+        // 画像読み込み失敗時はグラデーションにフォールバック
+        imgEl.onerror = function () {
+          imgEl.onerror = null;
+          showGradient();
+        };
       }
     }
 
