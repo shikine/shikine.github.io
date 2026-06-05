@@ -955,7 +955,9 @@ a[target="_blank"]::after {
 .lightbox-footer a[target="_blank"]::after,
 .featured-card a[target="_blank"]::after,
 .nav-link[target="_blank"]::after,
-.nav-drop-link[target="_blank"]::after {
+.nav-drop-link[target="_blank"]::after,
+.toggle-btn a[target="_blank"]::after,
+.filter-chip a[target="_blank"]::after {
   content: none;
 }
 
