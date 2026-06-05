@@ -514,6 +514,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             class="inquiry-input"
             data-placeholder-ja="mail@example.com" data-placeholder-en="mail@example.com"
             placeholder="mail@example.com">
+          <span class="iq-field-error" id="iq-email-error" hidden>
+            <span class="t-ja">正しいメールアドレスを入力してください</span>
+            <span class="t-en">Please enter a valid email address</span>
+          </span>
         </div>
       </div>
       <div class="inquiry-field">
@@ -1161,11 +1165,41 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     // 初期化
     updateSelectLang(document.documentElement.lang || 'ja');
 
+    // メールアドレスのインラインバリデーション
+    var emailInput = document.getElementById('iq-email');
+    var emailError = document.getElementById('iq-email-error');
+    if (emailInput) {
+      emailInput.addEventListener('blur', function () {
+        var hasValue = emailInput.value.trim().length > 0;
+        var isValid  = emailInput.validity.valid;
+        if (hasValue && !isValid) {
+          emailError.hidden = false;
+          emailInput.classList.add('iq-invalid');
+        } else {
+          emailError.hidden = true;
+          emailInput.classList.remove('iq-invalid');
+        }
+      });
+      emailInput.addEventListener('input', function () {
+        if (emailInput.validity.valid) {
+          emailError.hidden = true;
+          emailInput.classList.remove('iq-invalid');
+        }
+      });
+    }
+
     if (iqForm) {
       iqForm.addEventListener('submit', function(e) {
         e.preventDefault();
         iqError.hidden = true;
-        var lang = document.documentElement.lang || 'ja';
+
+        // メールバリデーション（送信時にも確認）
+        if (emailInput && !emailInput.validity.valid) {
+          emailError.hidden = false;
+          emailInput.classList.add('iq-invalid');
+          emailInput.focus();
+          return;
+        }
 
         // バリデーション
         var name  = iqForm.querySelector('[name="entry.496277139"]').value.trim();

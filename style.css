@@ -875,6 +875,14 @@ h4:first-child { margin-top: 0; }
   color: #c07a7a;
   margin-top: -6px;
 }
+.iq-field-error {
+  font-size: 10px;
+  color: #c07a7a;
+  letter-spacing: 0.02em;
+}
+.inquiry-input.iq-invalid {
+  border-bottom-color: #c07a7a;
+}
 .inquiry-btn {
   font-family: inherit;
   font-size: 10px;
