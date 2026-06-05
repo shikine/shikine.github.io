@@ -826,6 +826,28 @@ h4:first-child { margin-top: 0; }
 }
 
 
+/* ── SECTION SEPARATOR ───────────────────── */
+.section-sep {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 52px 0 48px;
+}
+.section-sep::before,
+.section-sep::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+.section-sep-dot {
+  width: 5px;
+  height: 5px;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 /* ── INQUIRY FORM ────────────────────────── */
 .inquiry-form {
   display: grid;
