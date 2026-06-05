@@ -860,8 +860,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       };
     }
 
-    // 全 foto[data-preview] タグをギャラリー配列に
-    var allFotoLinks = Array.from(document.querySelectorAll('#timeline-view .work-list .tag.t-foto[data-preview]'));
+    // 各 li から最初の foto タグだけ取得（t-ja/t-en の重複を避ける）
+    var allFotoLinks = [];
+    document.querySelectorAll('#timeline-view .work-list li').forEach(function (li) {
+      var first = li.querySelector('.tag.t-foto[data-preview]');
+      if (first) allFotoLinks.push(first);
+    });
     var galleryItems = allFotoLinks.map(function (link) {
       return liToItem(link.closest('li'), link);
     });
