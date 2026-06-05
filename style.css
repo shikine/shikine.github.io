@@ -273,8 +273,9 @@ h2 {
 /* ── NEWSLETTER ──────────────────────────── */
 .newsletter-bar {
   margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid var(--rule);
+  padding: 22px 24px 24px;
+  background: #e8e3da;
+  border-radius: 2px;
 }
 .nl-label {
   font-size: 10px;
