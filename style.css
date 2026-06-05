@@ -514,6 +514,7 @@ h4:first-child { margin-top: 0; }
   aspect-ratio: 4 / 3;
   background: var(--rule);
   text-decoration: none;
+  cursor: pointer;
 }
 .featured-card img {
   width: 100%;
@@ -551,6 +552,94 @@ h4:first-child { margin-top: 0; }
   opacity: 0.6;
   margin-top: 2px;
 }
+
+/* ── LIGHTBOX MODAL ──────────────────────── */
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(18,16,14,0.92);
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s;
+}
+.lightbox-overlay.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+.lightbox-inner {
+  position: relative;
+  max-width: min(90vw, 900px);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.lightbox-img {
+  width: 100%;
+  max-height: 72vh;
+  object-fit: contain;
+  display: block;
+}
+.lightbox-footer {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 12px 0 0;
+  gap: 12px;
+}
+.lightbox-meta {
+  color: rgba(244,242,237,0.85);
+}
+.lightbox-cat {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  margin-bottom: 2px;
+}
+.lightbox-title {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #f4f2ed;
+}
+.lightbox-year {
+  font-size: 10px;
+  opacity: 0.5;
+  margin-top: 1px;
+}
+.lightbox-album-link {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: rgba(244,242,237,0.55);
+  border-bottom: 1px solid rgba(244,242,237,0.25);
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.lightbox-album-link:hover {
+  color: #f4f2ed;
+  border-bottom-color: rgba(244,242,237,0.6);
+  text-decoration: none;
+}
+.lightbox-close {
+  position: absolute;
+  top: -38px;
+  right: 0;
+  background: none;
+  border: none;
+  color: rgba(244,242,237,0.6);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 6px;
+  letter-spacing: 0;
+}
+.lightbox-close:hover { color: #f4f2ed; }
 
 /* ── PREVIEW TOOLTIP ─────────────────────── */
 .preview-tooltip {
