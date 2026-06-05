@@ -192,6 +192,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <button class="filter-chip active" data-filter="all"><span class="t-ja">全て</span><span class="t-en">All</span></button>
       <button class="filter-chip" data-filter="stage"><span class="t-ja">舞台美術</span><span class="t-en">Stage Design</span></button>
       <button class="filter-chip" data-filter="mv">MV</button>
+      <button class="filter-chip" data-filter="exhibition"><span class="t-ja">展示</span><span class="t-en">Exhibition</span></button>
       <button class="filter-chip" data-filter="arch"><span class="t-ja">建築</span><span class="t-en">Architecture</span></button>
       <button class="filter-chip" data-filter="other"><span class="t-ja">その他</span><span class="t-en">Other</span></button>
     </div>
@@ -582,6 +583,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   var GENRES = [
     { key: 'stage', label: '舞台美術' },
     { key: 'mv',    label: 'MV / 映像美術' },
+    { key: 'exhibition', label: '展示' },
     { key: 'arch',  label: '建築 / 構造設計' },
     { key: 'other', label: 'その他' }
   ];
@@ -592,10 +594,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   function detectGenre(li) {
     if (li.querySelector('.t-stage')) return 'stage';
     if (li.querySelector('.t-mv'))    return 'mv';
+    if (li.querySelector('.t-exhibition')) return 'exhibition';
     if (li.querySelector('.t-arch'))  return 'arch';
     var t = li.textContent;
     if (t.indexOf('舞台美術') !== -1) return 'stage';
     if (/\bMV\b|映像美術/.test(t))    return 'mv';
+    if (/^展示|^Exhibition|^個展/.test(t) || li.querySelector('.tag.t-exhibition')) return 'exhibition';
     if (/建築設計|構造設計|建築建設|建築構造|建築関係|建築教育/.test(t)) return 'arch';
     return 'other';
   }
@@ -669,7 +673,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   }
 
   function buildGenreView() {
-    var groups = { stage: [], mv: [], arch: [], other: [] };
+    var groups = { stage: [], mv: [], exhibition: [], arch: [], other: [] };
     document.querySelectorAll('#timeline-view .year-block').forEach(function (block) {
       var year = block.querySelector('h3').textContent.trim();
       block.querySelectorAll('.work-list li').forEach(function (li) {
