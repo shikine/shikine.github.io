@@ -604,8 +604,6 @@
 
     function open(imgSrc, catText, titleText, yearText, albumUrl) {
       var isPending = !albumUrl;
-      imgEl.src         = imgSrc;
-      imgEl.alt         = titleText;
       catEl.textContent   = catText;
       titleEl.textContent = titleText;
       yearEl.textContent  = yearText;
@@ -613,14 +611,23 @@
       albumEl.style.display = isPending ? 'none' : '';
       pendingEl.hidden      = !isPending;
 
-      // アンビエントcanvas: pending時だけ表示・アニメーション
+      // pending: canvas アニメーション表示、img は非表示
+      // photo あり: img 表示、canvas は非表示
       if (stopLbAnim) { stopLbAnim(); stopLbAnim = null; }
-      lbCanvas.hidden = !isPending;
+
       if (isPending) {
-        lbSeed++;
+        imgEl.style.display = 'none';
+        imgEl.src = '';
+        lbCanvas.hidden = false;
         lbCanvas.width  = lbCanvas.offsetWidth  || 780;
         lbCanvas.height = lbCanvas.offsetHeight || 440;
+        lbSeed++;
         stopLbAnim = startAmbientAnim(lbCanvas, lbSeed * 0.618);
+      } else {
+        imgEl.style.display = '';
+        imgEl.src = imgSrc;
+        imgEl.alt = titleText;
+        lbCanvas.hidden = true;
       }
 
       overlay.classList.add('visible');
@@ -631,7 +638,11 @@
       overlay.classList.remove('visible');
       document.body.style.overflow = '';
       if (stopLbAnim) { stopLbAnim(); stopLbAnim = null; }
-      setTimeout(function () { imgEl.src = ''; lbCanvas.hidden = true; }, 260);
+      setTimeout(function () {
+        imgEl.src = '';
+        imgEl.style.display = '';
+        lbCanvas.hidden = true;
+      }, 260);
     }
 
     // featured cards
@@ -734,7 +745,8 @@
 
     var canvas = document.createElement('canvas');
     card.insertBefore(canvas, card.firstChild);
-    startAmbientAnim(canvas, i);
+    // レイアウト確定後に開始
+    requestAnimationFrame(function() { startAmbientAnim(canvas, i); });
 
     // 画像なしのカードに「準備中」表示
     if (!hasImg) {
@@ -767,7 +779,7 @@
         var monthSpan = li.querySelector('.month');
         var monthText = monthSpan ? monthSpan.textContent.trim() : '';
         if (monthText) yearText += '　' + monthText;
-        Lightbox.open(ambientDataURL(idx * 1.618, 780, 440), '', titleText, yearText, '');
+        Lightbox.open('', '', titleText, yearText, '');
       });
     });
 
