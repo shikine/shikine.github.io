@@ -692,17 +692,20 @@ h4:first-child { margin-top: 0; }
 .lightbox-media {
   width: 100%;
   position: relative;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
 }
 .lightbox-ambient-canvas {
   width: 100%;
-  max-height: 52vh;
+  height: 100%;
   display: block;
 }
 .lightbox-ambient-canvas[hidden] { display: none; }
 .lightbox-img {
   width: 100%;
-  max-height: 52vh;
+  height: 100%;
   object-fit: cover;
+  object-position: center;
   display: block;
 }
 /* nav arrows — overlay上にabsolute配置 */
@@ -819,7 +822,7 @@ h4:first-child { margin-top: 0; }
 @media (max-width: 480px) {
   .lightbox-inner    { width: 92vw; }
   .lightbox-img,
-  .lightbox-ambient-canvas { max-height: 40vh; }
+  .lightbox-ambient-canvas { max-height: none; }
   #lightbox-prev { left:  6px; }
   #lightbox-next { right: 6px; }
   .lightbox-nav-btn  { width: 32px; height: 32px; font-size: 22px; }
@@ -978,11 +981,9 @@ footer {
 @media (max-width: 480px) {
   body { padding: 72px 16px 60px; }
 
-  /* lightbox: SP版は正方形 */
-  .lightbox-img,
-  .lightbox-ambient-canvas {
-    aspect-ratio: 1 / 1;
-    max-height: 70vw;
+  /* lightbox: SP版も3:4固定 */
+  .lightbox-media {
+    aspect-ratio: 3 / 4;
   }
 
   /* nav: ハンバーガー表示 */
