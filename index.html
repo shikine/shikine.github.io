@@ -708,27 +708,20 @@
 
   // RAF アニメーション起動 (FPS<15 で自動停止)
   function startAmbientAnim(canvas, seed) {
-    // サイズは呼び出し前に確定済みのものを使う（render内でリセットしない）
     var w   = canvas.width  || 400;
     var h   = canvas.height || 300;
     var ctx = canvas.getContext('2d');
-    var t0  = performance.now();
-    var raf;
-    var frameCount = 0, checkAt = t0;
+    var t0  = Date.now();
 
-    function draw(now) {
-      drawAmbient(ctx, w, h, seed, (now - t0) / 1000);
-      frameCount++;
-      // 3秒後にFPS確認、15未満なら停止
-      if (now - checkAt > 3000) {
-        if (frameCount / ((now - checkAt) / 1000) < 15) return;
-        frameCount = 0; checkAt = now;
-      }
-      raf = requestAnimationFrame(draw);
-    }
+    // 初回描画（即時）
+    drawAmbient(ctx, w, h, seed, 0);
 
-    raf = requestAnimationFrame(draw);
-    return function stop() { cancelAnimationFrame(raf); };
+    // ~20fps で更新（重ければブラウザが自動的に間引く）
+    var iv = setInterval(function () {
+      drawAmbient(ctx, w, h, seed, (Date.now() - t0) / 1000);
+    }, 50);
+
+    return function stop() { clearInterval(iv); };
   }
 
   // static dataURL (ライトボックスなど1回描画用)
