@@ -942,6 +942,23 @@ h4:first-child { margin-top: 0; }
   .inquiry-row { grid-template-columns: 1fr; gap: 16px; }
 }
 
+/* ── EXTERNAL LINK INDICATOR ─────────────── */
+a[target="_blank"]::after {
+  content: '↗';
+  display: inline;
+  margin-left: 2px;
+  font-size: 0.7em;
+  opacity: 0.5;
+  vertical-align: super;
+}
+/* 本文リンク以外の特定の場所は表示しない */
+.lightbox-footer a[target="_blank"]::after,
+.featured-card a[target="_blank"]::after,
+.nav-link[target="_blank"]::after,
+.nav-drop-link[target="_blank"]::after {
+  content: none;
+}
+
 /* ── FOOTER ──────────────────────────────── */
 footer {
   margin-top: 48px;
