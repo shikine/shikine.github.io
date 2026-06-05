@@ -516,14 +516,28 @@ h4:first-child { margin-top: 0; }
   text-decoration: none;
   cursor: pointer;
 }
+.featured-card canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  display: block;
+}
 .featured-card img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+  z-index: 1;
   transition: transform 0.4s ease;
 }
 .featured-card:hover img {
+  transform: scale(1.04);
+}
+.featured-card:hover canvas {
   transform: scale(1.04);
 }
 .featured-card-info {
@@ -534,6 +548,7 @@ h4:first-child { margin-top: 0; }
   padding: 16px 12px 12px;
   background: linear-gradient(transparent, rgba(28,26,23,0.72));
   color: #f4f2ed;
+  z-index: 2;
 }
 .featured-card-cat {
   font-size: 9px;
@@ -561,6 +576,7 @@ h4:first-child { margin-top: 0; }
   justify-content: center;
   gap: 7px;
   pointer-events: none;
+  z-index: 2;
 }
 .featured-card-pending .pending-icon {
   font-size: 22px;
@@ -630,6 +646,11 @@ h4:first-child { margin-top: 0; }
 .lightbox-overlay.visible .lightbox-inner {
   transform: translateY(0);
   opacity: 1;
+}
+.lightbox-ambient-canvas {
+  width: 100%;
+  max-height: 52vh;
+  display: block;
 }
 .lightbox-img {
   width: 100%;

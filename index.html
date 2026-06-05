@@ -131,6 +131,7 @@
   <div class="lightbox-overlay" id="lightbox" role="dialog" aria-modal="true">
     <div class="lightbox-inner">
       <button class="lightbox-close" id="lightbox-close" aria-label="閉じる">✕</button>
+      <canvas class="lightbox-ambient-canvas" id="lightbox-canvas" hidden></canvas>
       <img class="lightbox-img" id="lightbox-img" src="" alt="">
       <div class="lightbox-pending" id="lightbox-pending" hidden>
         <span class="pending-icon">○</span>
@@ -589,14 +590,17 @@
 
   // ── ライトボックス ────────────────────────
   var Lightbox = (function () {
-    var overlay   = document.getElementById('lightbox');
-    var imgEl     = document.getElementById('lightbox-img');
-    var catEl     = document.getElementById('lightbox-cat');
-    var titleEl   = document.getElementById('lightbox-title');
-    var yearEl    = document.getElementById('lightbox-year');
-    var albumEl   = document.getElementById('lightbox-album');
-    var pendingEl = document.getElementById('lightbox-pending');
-    var closeBtn  = document.getElementById('lightbox-close');
+    var overlay      = document.getElementById('lightbox');
+    var lbCanvas     = document.getElementById('lightbox-canvas');
+    var imgEl        = document.getElementById('lightbox-img');
+    var catEl        = document.getElementById('lightbox-cat');
+    var titleEl      = document.getElementById('lightbox-title');
+    var yearEl       = document.getElementById('lightbox-year');
+    var albumEl      = document.getElementById('lightbox-album');
+    var pendingEl    = document.getElementById('lightbox-pending');
+    var closeBtn     = document.getElementById('lightbox-close');
+    var stopLbAnim   = null;
+    var lbSeed       = 0;
 
     function open(imgSrc, catText, titleText, yearText, albumUrl) {
       var isPending = !albumUrl;
@@ -608,6 +612,17 @@
       albumEl.href          = albumUrl || '#';
       albumEl.style.display = isPending ? 'none' : '';
       pendingEl.hidden      = !isPending;
+
+      // アンビエントcanvas: pending時だけ表示・アニメーション
+      if (stopLbAnim) { stopLbAnim(); stopLbAnim = null; }
+      lbCanvas.hidden = !isPending;
+      if (isPending) {
+        lbSeed++;
+        lbCanvas.width  = lbCanvas.offsetWidth  || 780;
+        lbCanvas.height = lbCanvas.offsetHeight || 440;
+        stopLbAnim = startAmbientAnim(lbCanvas, lbSeed * 0.618);
+      }
+
       overlay.classList.add('visible');
       document.body.style.overflow = 'hidden';
     }
@@ -615,7 +630,8 @@
     function close() {
       overlay.classList.remove('visible');
       document.body.style.overflow = '';
-      setTimeout(function () { imgEl.src = ''; }, 260);
+      if (stopLbAnim) { stopLbAnim(); stopLbAnim = null; }
+      setTimeout(function () { imgEl.src = ''; lbCanvas.hidden = true; }, 260);
     }
 
     // featured cards
@@ -644,19 +660,19 @@
   })();
 
   // ── アンビエントグラフィック ──────────────
-  function drawAmbient(ctx, w, h, seed) {
-    var d   = new Date();
-    var t   = (d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds()) / 86400;
-    var phi = (seed || 0) * 2.3999; // 黄金角オフセット
-    var a   = t * Math.PI * 2;
-
-    // 時刻ベースの背景色 (24h で色相が一周)
-    var baseH = (t * 360) % 360;
+  function drawAmbient(ctx, w, h, seed, elapsed) {
+    var d    = new Date();
+    var tod  = (d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds()) / 86400;
+    var phi  = (seed || 0) * 2.3999;
+    // 川の流れ: ~120秒で一周する非常にゆっくりした動き
+    var flow = (elapsed || 0) * 0.052;
+    var a    = tod * Math.PI * 2 + flow;
+    var baseH = (tod * 360) % 360;
     var bgH   = Math.round((baseH + 195 + phi * 28) % 360);
+
     ctx.fillStyle = 'hsl(' + bgH + ',13%,91%)';
     ctx.fillRect(0, 0, w, h);
 
-    // 3つの柔らかいグラデーションブロブ
     var blobs = [
       { tx: 0.26 + 0.34 * Math.cos(a        + phi),     ty: 0.40 + 0.28 * Math.sin(a * 1.3  + phi),     r: 0.82, dh: 0   },
       { tx: 0.73 + 0.22 * Math.sin(a * 0.71 + phi * 2), ty: 0.63 + 0.24 * Math.cos(a * 1.1  + phi * 3), r: 0.66, dh: 52  },
@@ -676,24 +692,49 @@
     });
   }
 
+  // RAF アニメーション起動 (FPS<15 で自動停止)
+  function startAmbientAnim(canvas, seed) {
+    var ctx       = canvas.getContext('2d');
+    var t0        = performance.now();
+    var raf, frames = 0, fpsT = t0;
+
+    function render(now) {
+      var w = canvas.offsetWidth || canvas.parentElement && canvas.parentElement.offsetWidth || 400;
+      var h = canvas.offsetHeight || canvas.parentElement && canvas.parentElement.offsetHeight || 300;
+      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+      drawAmbient(ctx, w, h, seed, (now - t0) / 1000);
+
+      // FPS監視: 3秒後に初回チェック、以降は毎3秒
+      frames++;
+      if (now - fpsT > 3000) {
+        var fps = frames / ((now - fpsT) / 1000);
+        frames = 0; fpsT = now;
+        if (fps < 15) return; // 重い → 停止
+      }
+      raf = requestAnimationFrame(render);
+    }
+
+    canvas.width  = canvas.offsetWidth  || 400;
+    canvas.height = canvas.offsetHeight || 300;
+    raf = requestAnimationFrame(render);
+    return function stop() { cancelAnimationFrame(raf); };
+  }
+
+  // static dataURL (ライトボックスなど1回描画用)
   function ambientDataURL(seed, w, h) {
     var c = document.createElement('canvas');
     c.width = w || 400; c.height = h || 300;
-    drawAmbient(c.getContext('2d'), c.width, c.height, seed);
+    drawAmbient(c.getContext('2d'), c.width, c.height, seed, 0);
     return c.toDataURL();
   }
 
-  // featured cards にアンビエント背景を適用
+  // featured cards: canvas を挿入してアニメーション
   document.querySelectorAll('.featured-card').forEach(function (card, i) {
     var hasImg = !!card.getAttribute('data-img');
 
-    function applyBg() {
-      var url = ambientDataURL(i, card.offsetWidth || 400, card.offsetHeight || 300);
-      card.style.backgroundImage = 'url(' + url + ')';
-      card.style.backgroundSize  = 'cover';
-    }
-    applyBg();
-    setInterval(applyBg, 60000); // 1分ごとに更新
+    var canvas = document.createElement('canvas');
+    card.insertBefore(canvas, card.firstChild);
+    startAmbientAnim(canvas, i);
 
     // 画像なしのカードに「準備中」表示
     if (!hasImg) {
