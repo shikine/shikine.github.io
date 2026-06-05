@@ -498,6 +498,60 @@ h4:first-child { margin-top: 0; }
   line-height: 1.9;
 }
 
+/* ── FEATURED WORKS ──────────────────────── */
+.featured-works {
+  margin-bottom: 44px;
+}
+.featured-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.featured-card {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  background: var(--rule);
+  text-decoration: none;
+}
+.featured-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease;
+}
+.featured-card:hover img {
+  transform: scale(1.04);
+}
+.featured-card-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px 12px 12px;
+  background: linear-gradient(transparent, rgba(28,26,23,0.72));
+  color: #f4f2ed;
+}
+.featured-card-cat {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  margin-bottom: 3px;
+}
+.featured-card-title {
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 400;
+}
+.featured-card-year {
+  font-size: 10px;
+  opacity: 0.6;
+  margin-top: 2px;
+}
+
 /* ── PREVIEW TOOLTIP ─────────────────────── */
 .preview-tooltip {
   position: fixed;
@@ -567,6 +621,14 @@ footer {
 
   h1 { font-size: 15px; }
   h1 .sep { margin: 0 6px; }
+
+  /* featured grid: 2列 */
+  .featured-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .featured-grid .featured-card:last-child {
+    display: none;
+  }
 
   /* 年チップ: 横スクロール1行 */
   .year-filter-bar {
