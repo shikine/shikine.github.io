@@ -647,43 +647,46 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       }
     }
 
+    var animating = false;
+
     function showItem(idx, dir) {
       if (idx < 0 || idx >= gallery.length) return;
+      if (animating) return;
       curIdx = idx;
       var item = gallery[idx];
       var lang = document.documentElement.lang || 'ja';
 
-      // スライドアニメーション
-      var mediaEl = imgEl.style.display === 'none' ? lbCanvas : imgEl;
-      if (dir) {
-        var outCls = dir === 'next' ? 'lightbox-slide-out-left' : 'lightbox-slide-out-right';
-        var inCls  = dir === 'next' ? 'lightbox-slide-in-right' : 'lightbox-slide-in-left';
-        mediaEl.classList.add(outCls);
-        setTimeout(function () {
-          mediaEl.classList.remove(outCls);
-          setMedia(item.img, item.album);
-          var newMedia = imgEl.style.display === 'none' ? lbCanvas : imgEl;
-          newMedia.classList.add(inCls);
-          requestAnimationFrame(function () {
-            requestAnimationFrame(function () {
-              newMedia.classList.remove(inCls);
-            });
-          });
-        }, 160);
-      } else {
-        setMedia(item.img, item.album);
-      }
-
+      // メタ・カウンター即時更新
       catEl.textContent   = lang === 'en' ? (item.catEn || item.cat) : item.cat;
       titleEl.textContent = lang === 'en' ? (item.titleEn || item.title) : item.title;
       yearEl.textContent  = item.year;
       albumEl.href          = item.album || '#';
       albumEl.style.display = item.album ? '' : 'none';
-
-      // カウンター & ナビ
       counterEl.textContent = gallery.length > 1 ? (idx + 1) + ' / ' + gallery.length : '';
       prevBtn.hidden = idx === 0;
       nextBtn.hidden = idx === gallery.length - 1;
+
+      if (!dir) {
+        setMedia(item.img, item.album);
+        return;
+      }
+
+      // スライドアニメーション（RAFを使わず強制リフローで実行）
+      animating = true;
+      var outCls = dir === 'next' ? 'lightbox-slide-out-left' : 'lightbox-slide-out-right';
+      var inCls  = dir === 'next' ? 'lightbox-slide-in-right' : 'lightbox-slide-in-left';
+      var el = imgEl.style.display === 'none' ? lbCanvas : imgEl;
+
+      el.classList.add(outCls);
+      setTimeout(function () {
+        el.classList.remove(outCls);
+        setMedia(item.img, item.album);
+        var newEl = imgEl.style.display === 'none' ? lbCanvas : imgEl;
+        newEl.classList.add(inCls);
+        newEl.offsetHeight;        // 強制リフロー → ブラウザに初期状態を認識させる
+        newEl.classList.remove(inCls); // CSSトランジションが発火
+        animating = false;
+      }, 200);
     }
 
     function openGallery(items, startIdx) {
