@@ -831,11 +831,28 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   function drawAmbient(ctx, w, h, seed, elapsed) {
     var d    = new Date();
     var tod  = (d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds()) / 86400;
+    var hour = d.getHours();
     var phi  = (seed || 0) * 2.3999;
     // 川の流れ: ~75秒で一周するゆっくりした動き
     var flow = (elapsed || 0) * 0.085;
     var a    = tod * Math.PI * 2 + flow;
-    var baseH = (tod * 360) % 360;
+
+    // 時間帯別パレット
+    var baseH = 0;
+    if (hour >= 22 || hour < 6) {
+      // 夜～明け方前：深い青紫系（240-270度）
+      var nightHour = hour >= 22 ? hour - 22 : hour + 2;
+      baseH = 240 + (nightHour / 8) * 30;
+    } else if (hour >= 6 && hour < 9) {
+      // 明け方～朝：オレンジピンク系（0-30度）
+      baseH = (hour - 6) * 10 + tod * 360 % 10;
+    } else if (hour >= 9 && hour < 17) {
+      // 昼間：黄緑系（60-120度）
+      baseH = 60 + ((hour - 9) / 8) * 60;
+    } else if (hour >= 17 && hour < 22) {
+      // 夕焼け：オレンジ～赤系（0-30度）
+      baseH = 30 - ((hour - 17) / 5) * 30;
+    }
     var bgH   = Math.round((baseH + 195 + phi * 28) % 360);
 
     ctx.fillStyle = 'hsl(' + bgH + ',13%,91%)';
