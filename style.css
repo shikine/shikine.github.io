@@ -273,9 +273,9 @@ h2 {
 /* ── NEWSLETTER ──────────────────────────── */
 .newsletter-bar {
   margin-top: 16px;
-  padding: 22px 24px 24px;
-  background: #e8e3da;
-  border-radius: 2px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+  opacity: 0.72;
 }
 .nl-label {
   font-size: 10px;
@@ -849,6 +849,13 @@ h4:first-child { margin-top: 0; }
 }
 
 /* ── INQUIRY FORM ────────────────────────── */
+.inquiry-section {
+  background: #e8e3da;
+  border-radius: 2px;
+  padding: 28px 28px 32px;
+  margin-left: -28px;
+  margin-right: -28px;
+}
 .inquiry-form {
   display: grid;
   gap: 20px;
