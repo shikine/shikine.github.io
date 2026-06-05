@@ -619,8 +619,11 @@
         imgEl.style.display = 'none';
         imgEl.src = '';
         lbCanvas.hidden = false;
-        lbCanvas.width  = lbCanvas.offsetWidth  || 780;
-        lbCanvas.height = lbCanvas.offsetHeight || 440;
+        // offsetWidthが確実に取れるよう hidden 解除後に読む
+        var cw = lbCanvas.offsetWidth  || 780;
+        var ch = Math.round(cw * 9 / 16); // 16:9 aspect ratio
+        lbCanvas.width  = cw;
+        lbCanvas.height = ch;
         lbSeed++;
         stopLbAnim = startAmbientAnim(lbCanvas, lbSeed * 0.618);
       } else {
@@ -705,29 +708,26 @@
 
   // RAF アニメーション起動 (FPS<15 で自動停止)
   function startAmbientAnim(canvas, seed) {
-    var ctx       = canvas.getContext('2d');
-    var t0        = performance.now();
-    var raf, frames = 0, fpsT = t0;
+    // サイズは呼び出し前に確定済みのものを使う（render内でリセットしない）
+    var w   = canvas.width  || 400;
+    var h   = canvas.height || 300;
+    var ctx = canvas.getContext('2d');
+    var t0  = performance.now();
+    var raf;
+    var frameCount = 0, checkAt = t0;
 
-    function render(now) {
-      var w = canvas.offsetWidth || canvas.parentElement && canvas.parentElement.offsetWidth || 400;
-      var h = canvas.offsetHeight || canvas.parentElement && canvas.parentElement.offsetHeight || 300;
-      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    function draw(now) {
       drawAmbient(ctx, w, h, seed, (now - t0) / 1000);
-
-      // FPS監視: 3秒後に初回チェック、以降は毎3秒
-      frames++;
-      if (now - fpsT > 3000) {
-        var fps = frames / ((now - fpsT) / 1000);
-        frames = 0; fpsT = now;
-        if (fps < 15) return; // 重い → 停止
+      frameCount++;
+      // 3秒後にFPS確認、15未満なら停止
+      if (now - checkAt > 3000) {
+        if (frameCount / ((now - checkAt) / 1000) < 15) return;
+        frameCount = 0; checkAt = now;
       }
-      raf = requestAnimationFrame(render);
+      raf = requestAnimationFrame(draw);
     }
 
-    canvas.width  = canvas.offsetWidth  || 400;
-    canvas.height = canvas.offsetHeight || 300;
-    raf = requestAnimationFrame(render);
+    raf = requestAnimationFrame(draw);
     return function stop() { cancelAnimationFrame(raf); };
   }
 
@@ -745,8 +745,12 @@
 
     var canvas = document.createElement('canvas');
     card.insertBefore(canvas, card.firstChild);
-    // レイアウト確定後に開始
-    requestAnimationFrame(function() { startAmbientAnim(canvas, i); });
+    // レイアウト確定後にサイズ設定してから開始
+    requestAnimationFrame(function() {
+      canvas.width  = card.offsetWidth  || 400;
+      canvas.height = card.offsetHeight || 300;
+      startAmbientAnim(canvas, i);
+    });
 
     // 画像なしのカードに「準備中」表示
     if (!hasImg) {
