@@ -11,6 +11,7 @@
   --t-foto:    #e5dd96;
   --t-movie:   #eac8c8;
   --t-map:     #b4d8b0;
+  --t-exhibition: #d8c5e8;
   --t-ext:     #b0ccde;
   --t-gray:    #d4d0c8;
 }
@@ -482,6 +483,7 @@ h3 {
 .t-foto  { background: var(--t-foto); }
 .t-movie { background: var(--t-movie); }
 .t-map   { background: var(--t-map); }
+.t-exhibition { background: var(--t-exhibition); }
 .t-ext   { background: var(--t-ext); }
 .t-gray  { background: var(--t-gray); }
 .t-stage { background: #d0cae8; } /* 舞台美術 */
