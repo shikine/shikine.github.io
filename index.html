@@ -584,49 +584,96 @@
   }
 
   // ── ライトボックス ────────────────────────
-  (function () {
-    var overlay = document.getElementById('lightbox');
-    var img     = document.getElementById('lightbox-img');
-    var cat     = document.getElementById('lightbox-cat');
-    var title   = document.getElementById('lightbox-title');
-    var year    = document.getElementById('lightbox-year');
-    var album   = document.getElementById('lightbox-album');
+  var Lightbox = (function () {
+    var overlay  = document.getElementById('lightbox');
+    var imgEl    = document.getElementById('lightbox-img');
+    var catEl    = document.getElementById('lightbox-cat');
+    var titleEl  = document.getElementById('lightbox-title');
+    var yearEl   = document.getElementById('lightbox-year');
+    var albumEl  = document.getElementById('lightbox-album');
     var closeBtn = document.getElementById('lightbox-close');
 
-    function openLightbox(card) {
-      var lang = document.documentElement.lang || 'ja';
-      img.src       = card.getAttribute('data-img');
-      img.alt       = card.getAttribute('data-title-ja');
-      cat.textContent   = lang === 'en'
-        ? card.getAttribute('data-cat-en')
-        : card.getAttribute('data-cat-ja');
-      title.textContent = lang === 'en'
-        ? card.getAttribute('data-title-en')
-        : card.getAttribute('data-title-ja');
-      year.textContent  = card.getAttribute('data-year');
-      album.href        = card.getAttribute('data-album');
+    function open(imgSrc, catText, titleText, yearText, albumUrl) {
+      imgEl.src         = imgSrc;
+      imgEl.alt         = titleText;
+      catEl.textContent   = catText;
+      titleEl.textContent = titleText;
+      yearEl.textContent  = yearText;
+      albumEl.href        = albumUrl || '#';
+      albumEl.style.display = albumUrl ? '' : 'none';
       overlay.classList.add('visible');
       document.body.style.overflow = 'hidden';
     }
 
-    function closeLightbox() {
+    function close() {
       overlay.classList.remove('visible');
       document.body.style.overflow = '';
-      setTimeout(function () { img.src = ''; }, 220);
+      setTimeout(function () { imgEl.src = ''; }, 260);
     }
 
+    // featured cards
     document.querySelectorAll('.featured-card').forEach(function (card) {
-      card.addEventListener('click', function () { openLightbox(card); });
+      card.addEventListener('click', function () {
+        var lang = document.documentElement.lang || 'ja';
+        open(
+          card.getAttribute('data-img'),
+          lang === 'en' ? card.getAttribute('data-cat-en')   : card.getAttribute('data-cat-ja'),
+          lang === 'en' ? card.getAttribute('data-title-en') : card.getAttribute('data-title-ja'),
+          card.getAttribute('data-year'),
+          card.getAttribute('data-album')
+        );
+      });
     });
 
-    closeBtn.addEventListener('click', closeLightbox);
+    closeBtn.addEventListener('click', close);
     overlay.addEventListener('click', function (e) {
-      if (e.target === overlay) closeLightbox();
+      if (e.target === overlay) close();
     });
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'Escape') close();
     });
+
+    return { open: open, close: close };
   })();
+
+  // ── 年表フォトタグ → ライトボックス ──────
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.work-list .tag.t-foto[data-preview]').forEach(function (link) {
+      link.addEventListener('click', function (e) {
+        e.preventDefault();
+        var lang = document.documentElement.lang || 'ja';
+        var li   = link.closest('li');
+
+        // カテゴリ: タグのテキスト
+        var catText = link.textContent.trim();
+
+        // タイトル: エントリのテキストからタグ部分を除いた文字列
+        var entry    = li.querySelector('.entry');
+        var langSpan = entry && entry.querySelector('.t-' + lang);
+        var titleText = '';
+        if (langSpan) {
+          var clone = langSpan.cloneNode(true);
+          clone.querySelectorAll('.tag').forEach(function (t) { t.remove(); });
+          titleText = clone.textContent.replace(/^\s*[　\s]+/, '').trim();
+        }
+
+        // 年 + 月
+        var yearBlock = li.closest('.year-block');
+        var yearText  = yearBlock ? yearBlock.querySelector('h3').textContent.trim() : '';
+        var monthSpan = li.querySelector('.month');
+        var monthText = monthSpan ? monthSpan.textContent.trim() : '';
+        if (monthText) yearText += '  ' + monthText;
+
+        Lightbox.open(
+          link.getAttribute('data-preview'),
+          catText,
+          titleText,
+          yearText,
+          link.href
+        );
+      });
+    });
+  });
 
   document.addEventListener('DOMContentLoaded', function () {
     var timelineEl = document.getElementById('timeline-view');
