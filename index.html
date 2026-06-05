@@ -140,13 +140,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   <!-- ライトボックスモーダル -->
   <div class="lightbox-overlay" id="lightbox" role="dialog" aria-modal="true">
+    <button class="lightbox-nav-btn" id="lightbox-prev" aria-label="前へ">&#8249;</button>
     <div class="lightbox-inner">
       <button class="lightbox-close" id="lightbox-close" aria-label="閉じる">✕</button>
-      <canvas class="lightbox-ambient-canvas" id="lightbox-canvas" hidden></canvas>
-      <img class="lightbox-img" id="lightbox-img" src="" alt="">
-      <div class="lightbox-pending" id="lightbox-pending" hidden>
-        <span class="pending-icon">○</span>
-        <span class="pending-label"><span class="t-ja">準備中</span><span class="t-en">In preparation</span></span>
+      <div class="lightbox-media">
+        <canvas class="lightbox-ambient-canvas" id="lightbox-canvas" hidden></canvas>
+        <img class="lightbox-img" id="lightbox-img" src="" alt="">
+        <div class="lightbox-pending" id="lightbox-pending" hidden>
+          <span class="pending-icon">○</span>
+          <span class="pending-label"><span class="t-ja">準備中</span><span class="t-en">In preparation</span></span>
+        </div>
       </div>
       <div class="lightbox-footer">
         <div class="lightbox-meta">
@@ -154,11 +157,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <div class="lightbox-title" id="lightbox-title"></div>
           <div class="lightbox-year" id="lightbox-year"></div>
         </div>
-        <a class="lightbox-album-link" id="lightbox-album" href="#" target="_blank">
-          <span class="t-ja">アルバムを開く →</span><span class="t-en">Open album →</span>
-        </a>
+        <div class="lightbox-footer-right">
+          <span class="lightbox-counter" id="lightbox-counter"></span>
+          <a class="lightbox-album-link" id="lightbox-album" href="#" target="_blank">
+            <span class="t-ja">アルバムを開く →</span><span class="t-en">Open album →</span>
+          </a>
+        </div>
       </div>
     </div>
+    <button class="lightbox-nav-btn" id="lightbox-next" aria-label="次へ">&#8250;</button>
   </div>
 
   <section class="works" id="works-section">
@@ -601,65 +608,125 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   // ── ライトボックス ────────────────────────
   var Lightbox = (function () {
-    var overlay      = document.getElementById('lightbox');
-    var lbCanvas     = document.getElementById('lightbox-canvas');
-    var imgEl        = document.getElementById('lightbox-img');
-    var catEl        = document.getElementById('lightbox-cat');
-    var titleEl      = document.getElementById('lightbox-title');
-    var yearEl       = document.getElementById('lightbox-year');
-    var albumEl      = document.getElementById('lightbox-album');
-    var pendingEl    = document.getElementById('lightbox-pending');
-    var closeBtn     = document.getElementById('lightbox-close');
-    var stopLbAnim   = null;
-    var lbSeed       = 0;
+    var overlay     = document.getElementById('lightbox');
+    var lbCanvas    = document.getElementById('lightbox-canvas');
+    var imgEl       = document.getElementById('lightbox-img');
+    var catEl       = document.getElementById('lightbox-cat');
+    var titleEl     = document.getElementById('lightbox-title');
+    var yearEl      = document.getElementById('lightbox-year');
+    var albumEl     = document.getElementById('lightbox-album');
+    var pendingEl   = document.getElementById('lightbox-pending');
+    var counterEl   = document.getElementById('lightbox-counter');
+    var closeBtn    = document.getElementById('lightbox-close');
+    var prevBtn     = document.getElementById('lightbox-prev');
+    var nextBtn     = document.getElementById('lightbox-next');
+    var stopLbAnim  = null;
+    var lbSeed      = 0;
 
-    function open(imgSrc, catText, titleText, yearText, albumUrl) {
-      var isPending = !albumUrl;
-      catEl.textContent   = catText;
-      titleEl.textContent = titleText;
-      yearEl.textContent  = yearText;
-      albumEl.href          = albumUrl || '#';
-      albumEl.style.display = isPending ? 'none' : '';
-      pendingEl.hidden      = !isPending;
+    // ギャラリー状態
+    var gallery = [];   // [{img, cat, title, year, album}, ...]
+    var curIdx  = 0;
 
-      // pending: canvas アニメーション表示、img は非表示
-      // photo あり: img 表示、canvas は非表示
+    function setMedia(imgSrc, albumUrl) {
+      var isPending = !imgSrc && !albumUrl;
+      pendingEl.hidden = !isPending;
       if (stopLbAnim) { stopLbAnim(); stopLbAnim = null; }
-
       if (isPending) {
         imgEl.style.display = 'none';
         imgEl.src = '';
         lbCanvas.hidden = false;
-        // offsetWidthが確実に取れるよう hidden 解除後に読む
-        var cw = lbCanvas.offsetWidth  || 780;
-        var ch = Math.round(cw * 9 / 16); // 16:9 aspect ratio
-        lbCanvas.width  = cw;
-        lbCanvas.height = ch;
+        var cw = lbCanvas.offsetWidth || 780;
+        var ch = Math.round(cw * 9 / 16);
+        lbCanvas.width = cw; lbCanvas.height = ch;
         lbSeed++;
         stopLbAnim = startAmbientAnim(lbCanvas, lbSeed * 0.618);
       } else {
         imgEl.style.display = '';
-        imgEl.src = imgSrc;
-        imgEl.alt = titleText;
+        imgEl.src = imgSrc || '';
         lbCanvas.hidden = true;
       }
+    }
 
+    function showItem(idx, dir) {
+      if (idx < 0 || idx >= gallery.length) return;
+      curIdx = idx;
+      var item = gallery[idx];
+      var lang = document.documentElement.lang || 'ja';
+
+      // スライドアニメーション
+      var mediaEl = imgEl.style.display === 'none' ? lbCanvas : imgEl;
+      if (dir) {
+        var outCls = dir === 'next' ? 'lightbox-slide-out-left' : 'lightbox-slide-out-right';
+        var inCls  = dir === 'next' ? 'lightbox-slide-in-right' : 'lightbox-slide-in-left';
+        mediaEl.classList.add(outCls);
+        setTimeout(function () {
+          mediaEl.classList.remove(outCls);
+          setMedia(item.img, item.album);
+          var newMedia = imgEl.style.display === 'none' ? lbCanvas : imgEl;
+          newMedia.classList.add(inCls);
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              newMedia.classList.remove(inCls);
+            });
+          });
+        }, 160);
+      } else {
+        setMedia(item.img, item.album);
+      }
+
+      catEl.textContent   = lang === 'en' ? (item.catEn || item.cat) : item.cat;
+      titleEl.textContent = lang === 'en' ? (item.titleEn || item.title) : item.title;
+      yearEl.textContent  = item.year;
+      albumEl.href          = item.album || '#';
+      albumEl.style.display = item.album ? '' : 'none';
+
+      // カウンター & ナビ
+      counterEl.textContent = gallery.length > 1 ? (idx + 1) + ' / ' + gallery.length : '';
+      prevBtn.hidden = idx === 0;
+      nextBtn.hidden = idx === gallery.length - 1;
+    }
+
+    function openGallery(items, startIdx) {
+      gallery = items;
       overlay.classList.add('visible');
       document.body.style.overflow = 'hidden';
+      showItem(startIdx || 0, null);
+    }
+
+    function open(imgSrc, catText, titleText, yearText, albumUrl) {
+      openGallery([{ img: imgSrc, cat: catText, title: titleText, year: yearText, album: albumUrl }], 0);
     }
 
     function close() {
       overlay.classList.remove('visible');
       document.body.style.overflow = '';
       if (stopLbAnim) { stopLbAnim(); stopLbAnim = null; }
-      setTimeout(function () {
-        imgEl.src = '';
-        imgEl.style.display = '';
-        lbCanvas.hidden = true;
-      }, 260);
+      gallery = [];
+      setTimeout(function () { imgEl.src = ''; imgEl.style.display = ''; lbCanvas.hidden = true; }, 260);
     }
 
-    // featured cards
+    prevBtn.addEventListener('click', function () { showItem(curIdx - 1, 'prev'); });
+    nextBtn.addEventListener('click', function () { showItem(curIdx + 1, 'next'); });
+    closeBtn.addEventListener('click', close);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+
+    // キーボード
+    document.addEventListener('keydown', function (e) {
+      if (!overlay.classList.contains('visible')) return;
+      if (e.key === 'Escape')      close();
+      if (e.key === 'ArrowRight')  showItem(curIdx + 1, 'next');
+      if (e.key === 'ArrowLeft')   showItem(curIdx - 1, 'prev');
+    });
+
+    // タッチスワイプ
+    var touchX = 0;
+    overlay.addEventListener('touchstart', function (e) { touchX = e.changedTouches[0].clientX; }, { passive: true });
+    overlay.addEventListener('touchend', function (e) {
+      var dx = e.changedTouches[0].clientX - touchX;
+      if (Math.abs(dx) > 44) { dx < 0 ? showItem(curIdx + 1, 'next') : showItem(curIdx - 1, 'prev'); }
+    });
+
+    // featured cards（単体）
     document.querySelectorAll('.featured-card').forEach(function (card) {
       card.addEventListener('click', function () {
         var lang = document.documentElement.lang || 'ja';
@@ -673,15 +740,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       });
     });
 
-    closeBtn.addEventListener('click', close);
-    overlay.addEventListener('click', function (e) {
-      if (e.target === overlay) close();
-    });
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') close();
-    });
-
-    return { open: open, close: close };
+    return { open: open, openGallery: openGallery, close: close };
   })();
 
   // ── アンビエントグラフィック ──────────────
@@ -769,63 +828,58 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     }
   });
 
-  // ── 年表フォトタグ → ライトボックス ──────
+  // ── 年表 → ギャラリーライトボックス ────────
   document.addEventListener('DOMContentLoaded', function () {
-    // 画像なしの作品 → クリックでアンビエントライトボックス
-    document.querySelectorAll('#timeline-view .work-list li').forEach(function (li, idx) {
-      if (li.querySelector('.tag.t-foto')) return; // 写真タグあり → 別処理
-      li.style.cursor = 'pointer';
-      li.addEventListener('click', function (e) {
-        if (e.target.closest('a')) return; // 通常リンクはそのまま
-        var lang      = document.documentElement.lang || 'ja';
-        var entry     = li.querySelector('.entry');
-        var langSpan  = entry && entry.querySelector('.t-' + lang);
-        var titleText = langSpan ? langSpan.textContent.trim()
-                                 : (entry ? entry.textContent.trim() : li.textContent.trim());
-        var yearBlock = li.closest('.year-block');
-        var yearText  = yearBlock ? yearBlock.querySelector('h3').textContent.trim() : '';
-        var monthSpan = li.querySelector('.month');
-        var monthText = monthSpan ? monthSpan.textContent.trim() : '';
-        if (monthText) yearText += '　' + monthText;
-        Lightbox.open('', '', titleText, yearText, '');
-      });
+
+    // 全 foto タグ からギャラリー配列を構築するヘルパー
+    function liToItem(li, link) {
+      var lang     = document.documentElement.lang || 'ja';
+      var entry    = li.querySelector('.entry');
+      var jaSpan   = entry && entry.querySelector('.t-ja');
+      var enSpan   = entry && entry.querySelector('.t-en');
+      function extractTitle(span) {
+        if (!span) return entry ? entry.textContent.trim() : '';
+        var clone = span.cloneNode(true);
+        clone.querySelectorAll('.tag').forEach(function (t) { t.remove(); });
+        return clone.textContent.replace(/^\s*[　\s]+/, '').trim();
+      }
+      var yearBlock = li.closest('.year-block');
+      var yearText  = yearBlock ? yearBlock.querySelector('h3').textContent.trim() : '';
+      var monthSpan = li.querySelector('.month');
+      if (monthSpan && monthSpan.textContent.trim()) yearText += '　' + monthSpan.textContent.trim();
+      return {
+        img:     link ? link.getAttribute('data-preview') : '',
+        cat:     link ? link.textContent.trim() : '',
+        title:   extractTitle(jaSpan),
+        titleEn: extractTitle(enSpan),
+        year:    yearText,
+        album:   link ? link.href : ''
+      };
+    }
+
+    // 全 foto[data-preview] タグをギャラリー配列に
+    var allFotoLinks = Array.from(document.querySelectorAll('#timeline-view .work-list .tag.t-foto[data-preview]'));
+    var galleryItems = allFotoLinks.map(function (link) {
+      return liToItem(link.closest('li'), link);
     });
 
-    document.querySelectorAll('.work-list .tag.t-foto[data-preview]').forEach(function (link) {
+    allFotoLinks.forEach(function (link, i) {
       link.addEventListener('click', function (e) {
         e.preventDefault();
-        var lang = document.documentElement.lang || 'ja';
-        var li   = link.closest('li');
-
-        // カテゴリ: タグのテキスト
-        var catText = link.textContent.trim();
-
-        // タイトル: エントリのテキストからタグ部分を除いた文字列
-        var entry    = li.querySelector('.entry');
-        var langSpan = entry && entry.querySelector('.t-' + lang);
-        var titleText = '';
-        if (langSpan) {
-          var clone = langSpan.cloneNode(true);
-          clone.querySelectorAll('.tag').forEach(function (t) { t.remove(); });
-          titleText = clone.textContent.replace(/^\s*[　\s]+/, '').trim();
-        }
-
-        // 年 + 月
-        var yearBlock = li.closest('.year-block');
-        var yearText  = yearBlock ? yearBlock.querySelector('h3').textContent.trim() : '';
-        var monthSpan = li.querySelector('.month');
-        var monthText = monthSpan ? monthSpan.textContent.trim() : '';
-        if (monthText) yearText += '  ' + monthText;
-
-        Lightbox.open(
-          link.getAttribute('data-preview'),
-          catText,
-          titleText,
-          yearText,
-          link.href
-        );
+        Lightbox.openGallery(galleryItems, i);
       });
     });
+
+    // 写真なし作品 → アンビエントで単体表示
+    document.querySelectorAll('#timeline-view .work-list li').forEach(function (li) {
+      if (li.querySelector('.tag.t-foto')) return;
+      li.style.cursor = 'pointer';
+      li.addEventListener('click', function (e) {
+        if (e.target.closest('a')) return;
+        Lightbox.open('', '', liToItem(li, null).title, liToItem(li, null).year, '');
+      });
+    });
+
   }); // DOMContentLoaded
 
   document.addEventListener('DOMContentLoaded', function () {
