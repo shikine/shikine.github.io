@@ -832,8 +832,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     var d    = new Date();
     var tod  = (d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds()) / 86400;
     var phi  = (seed || 0) * 2.3999;
-    // 川の流れ: ~120秒で一周する非常にゆっくりした動き
-    var flow = (elapsed || 0) * 0.052;
+    // 川の流れ: ~75秒で一周するゆっくりした動き
+    var flow = (elapsed || 0) * 0.085;
     var a    = tod * Math.PI * 2 + flow;
     var baseH = (tod * 360) % 360;
     var bgH   = Math.round((baseH + 195 + phi * 28) % 360);
