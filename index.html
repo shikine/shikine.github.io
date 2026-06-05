@@ -35,7 +35,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <a href="#works-section"      class="nav-link">Works</a>
       <a href="#reference-section"  class="nav-link">Reference</a>
       <a href="#newsletter-section" class="nav-link">Newsletter</a>
-      <a href="mailto:watanabeshikine@gmail.com" class="nav-link">Contact</a>
+      <a href="#contact-section" class="nav-link">Contact</a>
       <div class="lang-toggle">
         <button class="lang-btn active" data-lang="ja">JA</button>
         <button class="lang-btn" data-lang="en">EN</button>
@@ -50,7 +50,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <a href="#works-section"      class="nav-drop-link">Works</a>
     <a href="#reference-section"  class="nav-drop-link">Reference</a>
     <a href="#newsletter-section" class="nav-drop-link">Newsletter</a>
-    <a href="mailto:watanabeshikine@gmail.com" class="nav-drop-link">Contact</a>
+    <a href="#contact-section" class="nav-drop-link">Contact</a>
     <div class="nav-drop-lang">
       <div class="lang-toggle">
         <button class="lang-btn active" data-lang="ja">JA</button>
@@ -500,6 +500,67 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </form>
       <div id="nl-thanks" class="nl-thanks" hidden><span class="t-ja">ご登録ありがとうございます。</span><span class="t-en">Thank you for subscribing.</span></div>
       <div id="nl-error" class="nl-thanks" hidden style="color:#c87a7a;"></div>
+    </div>
+  </section>
+
+  <section class="inquiry-section" id="contact-section">
+    <h2><span class="t-ja">お問い合わせ</span><span class="t-en">Contact</span></h2>
+    <form id="inquiry-form" class="inquiry-form" novalidate>
+      <div class="inquiry-row">
+        <div class="inquiry-field">
+          <label class="inquiry-label" for="iq-name">
+            <span class="t-ja">お名前</span><span class="t-en">Name</span><span class="iq-req"> *</span>
+          </label>
+          <input id="iq-name" type="text" name="entry.496277139" required
+            class="inquiry-input"
+            data-placeholder-ja="山田 太郎" data-placeholder-en="Your name"
+            placeholder="山田 太郎">
+        </div>
+        <div class="inquiry-field">
+          <label class="inquiry-label" for="iq-email">
+            <span class="t-ja">メールアドレス</span><span class="t-en">Email</span><span class="iq-req"> *</span>
+          </label>
+          <input id="iq-email" type="email" name="entry.1926177344" required
+            class="inquiry-input"
+            data-placeholder-ja="mail@example.com" data-placeholder-en="mail@example.com"
+            placeholder="mail@example.com">
+        </div>
+      </div>
+      <div class="inquiry-field">
+        <label class="inquiry-label" for="iq-type">
+          <span class="t-ja">ご依頼の種類</span><span class="t-en">Type of inquiry</span><span class="iq-req"> *</span>
+        </label>
+        <select id="iq-type" name="entry.1379912282" required class="inquiry-input inquiry-select">
+          <option value=""   data-ja="選択してください"  data-en="Please select">選択してください</option>
+          <option value="舞台美術"       data-ja="舞台美術"       data-en="Stage Design">舞台美術</option>
+          <option value="構造設計・相談" data-ja="構造設計・相談" data-en="Structural Design">構造設計・相談</option>
+          <option value="MV"             data-ja="MV"             data-en="MV">MV</option>
+          <option value="映像美術"       data-ja="映像美術"       data-en="Film Art">映像美術</option>
+          <option value="空間・展示構成" data-ja="空間・展示構成" data-en="Spatial / Exhibition Design">空間・展示構成</option>
+          <option value="その他"         data-ja="その他"         data-en="Other">その他</option>
+        </select>
+      </div>
+      <div class="inquiry-field">
+        <label class="inquiry-label" for="iq-msg">
+          <span class="t-ja">詳細・ご要望</span><span class="t-en">Details</span>
+        </label>
+        <textarea id="iq-msg" name="entry.1049010443" rows="5"
+          class="inquiry-input inquiry-textarea"
+          data-placeholder-ja="ご予算・時期・内容など、お気軽にどうぞ。"
+          data-placeholder-en="Please share any details: budget, timeline, or project overview."
+          placeholder="ご予算・時期・内容など、お気軽にどうぞ。"></textarea>
+      </div>
+      <div id="iq-error" class="iq-error" hidden>
+        <span class="t-ja">入力内容を確認してください。</span>
+        <span class="t-en">Please check your input.</span>
+      </div>
+      <button type="submit" class="inquiry-btn" id="iq-btn">
+        <span class="t-ja">送信する</span><span class="t-en">Send</span>
+      </button>
+    </form>
+    <div id="inquiry-thanks" class="inquiry-thanks" hidden>
+      <span class="t-ja">ありがとうございます。確認次第ご連絡いたします。</span>
+      <span class="t-en">Thank you. I'll get back to you shortly.</span>
     </div>
   </section>
 
@@ -1087,6 +1148,56 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       });
     }, { rootMargin: '-30% 0px -60% 0px' });
     navSections.forEach(function(s) { navObserver.observe(s); });
+
+    // ── お問い合わせフォーム送信 ──────────────
+    var iqForm   = document.getElementById('inquiry-form');
+    var iqThanks = document.getElementById('inquiry-thanks');
+    var iqError  = document.getElementById('iq-error');
+    var iqBtn    = document.getElementById('iq-btn');
+
+    // select オプションの言語切り替え
+    function updateSelectLang(lang) {
+      document.querySelectorAll('#iq-type option').forEach(function(opt) {
+        var label = opt.getAttribute('data-' + lang);
+        if (label) opt.textContent = label;
+      });
+    }
+    // applyLang を拡張して select も更新
+    var _origApplyLang = applyLang;
+    applyLang = function(lang) {
+      _origApplyLang(lang);
+      updateSelectLang(lang);
+    };
+    // 初期化
+    updateSelectLang(document.documentElement.lang || 'ja');
+
+    if (iqForm) {
+      iqForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        iqError.hidden = true;
+        var lang = document.documentElement.lang || 'ja';
+
+        // バリデーション
+        var name  = iqForm.querySelector('[name="entry.496277139"]').value.trim();
+        var email = iqForm.querySelector('[name="entry.1926177344"]').value.trim();
+        var type  = iqForm.querySelector('[name="entry.1379912282"]').value;
+        if (!name || !email || !type) {
+          iqError.hidden = false;
+          return;
+        }
+
+        iqBtn.disabled = true;
+        var data = new FormData(iqForm);
+        fetch('https://docs.google.com/forms/d/e/1FAIpQLSdV5DgaXVHkYxfF2Itf6el_vgvwtTBh0u6s9YV-LANLgG8JGg/formResponse', {
+          method: 'POST',
+          body: data,
+          mode: 'no-cors'
+        }).finally(function() {
+          iqForm.hidden = true;
+          iqThanks.hidden = false;
+        });
+      });
+    }
 
   });
 })();
