@@ -132,6 +132,10 @@
     <div class="lightbox-inner">
       <button class="lightbox-close" id="lightbox-close" aria-label="閉じる">✕</button>
       <img class="lightbox-img" id="lightbox-img" src="" alt="">
+      <div class="lightbox-pending" id="lightbox-pending" hidden>
+        <span class="pending-icon">○</span>
+        <span class="pending-label"><span class="t-ja">準備中</span><span class="t-en">In preparation</span></span>
+      </div>
       <div class="lightbox-footer">
         <div class="lightbox-meta">
           <div class="lightbox-cat" id="lightbox-cat"></div>
@@ -585,22 +589,25 @@
 
   // ── ライトボックス ────────────────────────
   var Lightbox = (function () {
-    var overlay  = document.getElementById('lightbox');
-    var imgEl    = document.getElementById('lightbox-img');
-    var catEl    = document.getElementById('lightbox-cat');
-    var titleEl  = document.getElementById('lightbox-title');
-    var yearEl   = document.getElementById('lightbox-year');
-    var albumEl  = document.getElementById('lightbox-album');
-    var closeBtn = document.getElementById('lightbox-close');
+    var overlay   = document.getElementById('lightbox');
+    var imgEl     = document.getElementById('lightbox-img');
+    var catEl     = document.getElementById('lightbox-cat');
+    var titleEl   = document.getElementById('lightbox-title');
+    var yearEl    = document.getElementById('lightbox-year');
+    var albumEl   = document.getElementById('lightbox-album');
+    var pendingEl = document.getElementById('lightbox-pending');
+    var closeBtn  = document.getElementById('lightbox-close');
 
     function open(imgSrc, catText, titleText, yearText, albumUrl) {
+      var isPending = !albumUrl;
       imgEl.src         = imgSrc;
       imgEl.alt         = titleText;
       catEl.textContent   = catText;
       titleEl.textContent = titleText;
       yearEl.textContent  = yearText;
-      albumEl.href        = albumUrl || '#';
-      albumEl.style.display = albumUrl ? '' : 'none';
+      albumEl.href          = albumUrl || '#';
+      albumEl.style.display = isPending ? 'none' : '';
+      pendingEl.hidden      = !isPending;
       overlay.classList.add('visible');
       document.body.style.overflow = 'hidden';
     }
@@ -678,6 +685,8 @@
 
   // featured cards にアンビエント背景を適用
   document.querySelectorAll('.featured-card').forEach(function (card, i) {
+    var hasImg = !!card.getAttribute('data-img');
+
     function applyBg() {
       var url = ambientDataURL(i, card.offsetWidth || 400, card.offsetHeight || 300);
       card.style.backgroundImage = 'url(' + url + ')';
@@ -685,6 +694,18 @@
     }
     applyBg();
     setInterval(applyBg, 60000); // 1分ごとに更新
+
+    // 画像なしのカードに「準備中」表示
+    if (!hasImg) {
+      var p = document.createElement('div');
+      p.className = 'featured-card-pending';
+      p.innerHTML = '<span class="pending-icon">○</span>'
+        + '<span class="pending-label">'
+        + '<span class="t-ja">準備中</span>'
+        + '<span class="t-en">In preparation</span>'
+        + '</span>';
+      card.appendChild(p);
+    }
   });
 
   // ── 年表フォトタグ → ライトボックス ──────
