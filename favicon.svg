@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- 空 -->
+  <rect width="32" height="32" fill="#f4f2ed" rx="4"/>
+  <!-- 富士山 本体 -->
+  <polygon points="16,4 28,26 4,26" fill="#6b7c8a"/>
+  <!-- 雪 -->
+  <polygon points="16,4 21,14 11,14" fill="#f4f2ed"/>
+  <!-- 稜線の影 -->
+  <polygon points="16,4 28,26 22,26" fill="#556070"/>
+</svg>
