@@ -981,6 +981,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       var links = [];
       document.querySelectorAll('#timeline-view .work-list li').forEach(function (li) {
         if (li.hidden || li.style.display === 'none') return;
+        // 親の year-block が非表示の場合もスキップ
+        var block = li.closest('.year-block');
+        if (block && block.style.display === 'none') return;
         var first = li.querySelector('.tag.t-foto[data-preview], .tag.t-exhibition[data-preview]');
         if (first) links.push(first);
       });
