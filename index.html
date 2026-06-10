@@ -1003,9 +1003,24 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       });
     });
 
-    // 写真なし作品 → アンビエントで単体表示
+    // data-preview なしのタグ → クリックでグラデーション表示
+    var TAG_SEL = '.tag.t-foto, .tag.t-mv, .tag.t-filmart, .tag.t-spatial, .tag.t-exhibition';
     document.querySelectorAll('#timeline-view .work-list li').forEach(function (li) {
-      if (li.querySelector('.tag.t-foto')) return;
+      li.querySelectorAll(TAG_SEL).forEach(function (tag) {
+        if (tag.getAttribute('data-preview')) return; // data-previewありは別処理済み
+        tag.style.cursor = 'pointer';
+        tag.addEventListener('click', function (e) {
+          e.preventDefault();
+          var item = liToItem(li, null);
+          item.cat = tag.textContent.trim();
+          Lightbox.openGallery([item], 0);
+        });
+      });
+    });
+
+    // 写真なし・タグなし作品 → li全体クリックでグラデーション表示
+    document.querySelectorAll('#timeline-view .work-list li').forEach(function (li) {
+      if (li.querySelector(TAG_SEL)) return;
       li.style.cursor = 'pointer';
       li.addEventListener('click', function (e) {
         if (e.target.closest('a')) return;
