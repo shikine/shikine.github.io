@@ -975,55 +975,58 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       };
     }
 
-    // 表示中の li から foto/exhibition タグを収集してギャラリーを動的構築
-    function buildVisibleGallery() {
+    var TAG_SEL = '.tag.t-foto, .tag.t-mv, .tag.t-filmart, .tag.t-spatial, .tag.t-arch, .tag.t-exhibition';
+    var PREVIEW_SEL = '.tag.t-foto[data-preview], .tag.t-mv[data-preview], .tag.t-filmart[data-preview], .tag.t-spatial[data-preview], .tag.t-arch[data-preview], .tag.t-exhibition[data-preview]';
+
+    // 指定コンテナの表示中 li からギャラリーを構築
+    function buildVisibleGallery(container) {
       var links = [];
-      document.querySelectorAll('#timeline-view .work-list li').forEach(function (li) {
+      container.querySelectorAll('.work-list li').forEach(function (li) {
         if (li.hidden || li.style.display === 'none') return;
-        // 親の year-block が非表示の場合もスキップ
-        var block = li.closest('.year-block');
+        var block = li.closest('.year-block, .genre-block');
         if (block && block.style.display === 'none') return;
-        var first = li.querySelector('.tag.t-foto[data-preview], .tag.t-mv[data-preview], .tag.t-filmart[data-preview], .tag.t-spatial[data-preview], .tag.t-arch[data-preview], .tag.t-exhibition[data-preview]');
+        var first = li.querySelector(PREVIEW_SEL);
         if (first) links.push(first);
       });
       return links;
     }
 
-    // 全 foto/exhibition タグにクリックハンドラを設定
-    document.querySelectorAll('#timeline-view .work-list li').forEach(function (li) {
-      var link = li.querySelector('.tag.t-foto[data-preview], .tag.t-mv[data-preview], .tag.t-filmart[data-preview], .tag.t-spatial[data-preview], .tag.t-arch[data-preview], .tag.t-exhibition[data-preview]');
-      if (!link) return;
-      link.addEventListener('click', function (e) {
-        e.preventDefault();
-        var visibleLinks = buildVisibleGallery();
-        var idx = visibleLinks.indexOf(link);
-        var items = visibleLinks.map(function (l) { return liToItem(l.closest('li'), l); });
-        Lightbox.openGallery(items, idx >= 0 ? idx : 0);
-      });
-    });
+    // イベント委譲：timeline と genre 両方をカバー
+    ['timeline-view', 'genre-view'].forEach(function (viewId) {
+      var view = document.getElementById(viewId);
+      if (!view) return;
 
-    // data-preview なしのタグ → クリックでグラデーション表示
-    var TAG_SEL = '.tag.t-foto, .tag.t-mv, .tag.t-filmart, .tag.t-spatial, .tag.t-arch, .tag.t-exhibition';
-    document.querySelectorAll('#timeline-view .work-list li').forEach(function (li) {
-      li.querySelectorAll(TAG_SEL).forEach(function (tag) {
-        if (tag.getAttribute('data-preview')) return; // data-previewありは別処理済み
-        tag.style.cursor = 'pointer';
-        tag.addEventListener('click', function (e) {
+      view.addEventListener('click', function (e) {
+        // data-preview ありのタグ
+        var tag = e.target.closest(PREVIEW_SEL);
+        if (tag) {
           e.preventDefault();
-          var item = liToItem(li, null);
-          item.cat = tag.textContent.trim();
-          Lightbox.openGallery([item], 0);
-        });
-      });
-    });
+          var visibleLinks = buildVisibleGallery(view);
+          var preview = tag.getAttribute('data-preview');
+          var idx = visibleLinks.findIndex(function (l) {
+            return l.getAttribute('data-preview') === preview;
+          });
+          var items = visibleLinks.map(function (l) { return liToItem(l.closest('li'), l); });
+          Lightbox.openGallery(items, idx >= 0 ? idx : 0);
+          return;
+        }
 
-    // 写真なし・タグなし作品 → li全体クリックでグラデーション表示
-    document.querySelectorAll('#timeline-view .work-list li').forEach(function (li) {
-      if (li.querySelector(TAG_SEL)) return;
-      li.style.cursor = 'pointer';
-      li.addEventListener('click', function (e) {
-        if (e.target.closest('a')) return;
-        Lightbox.open('', '', liToItem(li, null).title, liToItem(li, null).year, '');
+        // data-preview なしのタグ
+        var tagNoPreview = e.target.closest(TAG_SEL);
+        if (tagNoPreview && !tagNoPreview.getAttribute('data-preview')) {
+          e.preventDefault();
+          var li = tagNoPreview.closest('li');
+          var item = liToItem(li, null);
+          item.cat = tagNoPreview.textContent.trim();
+          Lightbox.openGallery([item], 0);
+          return;
+        }
+
+        // タグなし li 全体クリック
+        var li = e.target.closest('.work-list li');
+        if (li && !e.target.closest('a') && !li.querySelector(TAG_SEL)) {
+          Lightbox.open('', '', liToItem(li, null).title, liToItem(li, null).year, '');
+        }
       });
     });
 
