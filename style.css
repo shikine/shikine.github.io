@@ -9,6 +9,7 @@
   --rule:      #d4cfc6;
   --tag-ink:   #2a2820;
   --t-foto:    #e5dd96;
+  --t-mv:      #b8d8e8;
   --t-movie:   #eac8c8;
   --t-map:     #b4d8b0;
   --t-exhibition: #d8c5e8;
@@ -481,6 +482,7 @@ h3 {
 .tag:hover { opacity: 0.75; text-decoration: none; }
 
 .t-foto  { background: var(--t-foto); }
+.t-mv    { background: var(--t-mv); }
 .t-movie { background: var(--t-movie); }
 .t-map   { background: var(--t-map); }
 .t-exhibition { background: var(--t-exhibition); }
