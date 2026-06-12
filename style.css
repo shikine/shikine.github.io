@@ -338,6 +338,18 @@ h2 {
   100% { filter: hue-rotate(-10deg) brightness(0.85); }
 }
 
+.app-icon-field {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(160deg, #0d1f0e 0%, #1a3a1c 35%, #2d5e2f 65%, #4a7c3f 100%);
+  animation: field-shift 8s ease-in-out infinite alternate;
+}
+@keyframes field-shift {
+  0%   { filter: hue-rotate(0deg) brightness(0.85); }
+  50%  { filter: hue-rotate(20deg) brightness(1.05); }
+  100% { filter: hue-rotate(-15deg) brightness(0.9); }
+}
+
 .app-icon-label {
   font-size: 10px;
   text-align: center;
