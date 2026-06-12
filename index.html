@@ -495,17 +495,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <section class="app-section" id="app-section">
     <h2><span class="t-ja">アプリ</span><span class="t-en">Apps</span></h2>
     <div class="app-grid">
-      <div class="app-card" data-app-url="https://shikine.github.io/drone-music-sampler/ambient-drone.html" data-app-title-ja="ドローン・サンプラー" data-app-title-en="Drone Sampler">
-        <div class="app-card-thumb">
-          <div class="app-thumb-ambient"></div>
-          <div class="app-card-play">▶</div>
+      <div class="app-icon" data-app-url="https://shikine.github.io/drone-music-sampler/ambient-drone.html" data-app-title-ja="ドローン・サンプラー" data-app-title-en="Drone Sampler" role="button" tabindex="0">
+        <div class="app-icon-img">
+          <div class="app-icon-ambient"></div>
+          <svg class="app-icon-play" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><polygon points="12,8 26,16 12,24" fill="rgba(255,255,255,0.82)"/></svg>
         </div>
-        <div class="app-card-info">
-          <div class="app-card-tag"><span class="t-ja">サンプラー</span><span class="t-en">Sampler</span></div>
-          <div class="app-card-title"><span class="t-ja">ドローン・サンプラー</span><span class="t-en">Drone Sampler</span></div>
-          <div class="app-card-desc"><span class="t-ja">ドローン音楽のためのアンビエント・サンプラー</span><span class="t-en">Ambient sampler for drone music</span></div>
-          <button class="app-launch-btn"><span class="t-ja">起動する</span><span class="t-en">Launch</span> ▶</button>
-        </div>
+        <div class="app-icon-label"><span class="t-ja">ドローン<br>サンプラー</span><span class="t-en">Drone<br>Sampler</span></div>
       </div>
     </div>
   </section>
@@ -1352,7 +1347,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       document.body.style.overflow = '';
     }
 
-    document.querySelectorAll('.app-card').forEach(function(card) {
+    document.querySelectorAll('.app-icon').forEach(function(card) {
       card.addEventListener('click', function() {
         var url = card.getAttribute('data-app-url');
         var lang = document.documentElement.lang || 'ja';

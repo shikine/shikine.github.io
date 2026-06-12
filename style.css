@@ -1,4 +1,4 @@
-/* ─────────────────────────────────────────
+﻿/* ─────────────────────────────────────────
    Shikine Watanabe — Portfolio
    ───────────────────────────────────────── */
 
@@ -277,30 +277,37 @@ h2 {
 
 /* ── APP SECTION ─────────────────────────── */
 .app-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
 }
 
-.app-card {
+.app-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   cursor: pointer;
-  border: 1px solid var(--rule);
-  border-radius: 3px;
-  overflow: hidden;
-  transition: border-color 0.15s;
+  width: 76px;
+  outline: none;
 }
-.app-card:hover { border-color: var(--muted); }
+.app-icon:focus-visible .app-icon-img { box-shadow: 0 0 0 3px var(--ink); }
 
-.app-card-thumb {
+.app-icon-img {
   position: relative;
-  aspect-ratio: 4/3;
+  width: 76px;
+  height: 76px;
+  border-radius: 18px;
   overflow: hidden;
+  transition: transform 0.15s;
 }
+.app-icon:hover .app-icon-img { transform: scale(1.06); }
+.app-icon:active .app-icon-img { transform: scale(0.95); }
 
-.app-thumb-ambient {
+.app-icon-ambient {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 60%, #533483 100%);
+  background: linear-gradient(140deg, #1a1a2e 0%, #16213e 30%, #0f3460 60%, #533483 100%);
   animation: drone-shift 8s ease-in-out infinite alternate;
 }
 @keyframes drone-shift {
@@ -309,59 +316,22 @@ h2 {
   100% { filter: hue-rotate(-20deg) brightness(0.9); }
 }
 
-.app-card-play {
+.app-icon-play {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  color: rgba(255,255,255,0.75);
-  transition: color 0.15s, transform 0.15s;
-}
-.app-card:hover .app-card-play {
-  color: rgba(255,255,255,1);
-  transform: scale(1.15);
-}
-
-.app-card-info {
-  padding: 10px 12px 12px;
-}
-.app-card-tag {
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 4px;
-}
-.app-card-title {
-  font-size: 12px;
-  font-weight: 500;
-  margin-bottom: 4px;
-}
-.app-card-desc {
-  font-size: 10.5px;
-  color: var(--muted);
-  line-height: 1.6;
-}
-
-.app-launch-btn {
-  display: block;
   width: 100%;
-  margin-top: 10px;
-  padding: 7px 0;
-  background: var(--ink);
-  color: var(--bg);
-  border: none;
-  border-radius: 2px;
-  font-family: inherit;
-  font-size: 10.5px;
-  letter-spacing: 0.1em;
-  cursor: pointer;
+  height: 100%;
+  opacity: 0.65;
   transition: opacity 0.15s;
 }
-.app-launch-btn:hover { opacity: 0.75; }
+.app-icon:hover .app-icon-play { opacity: 1; }
 
+.app-icon-label {
+  font-size: 10px;
+  text-align: center;
+  color: var(--ink);
+  line-height: 1.4;
+}
 /* アプリモーダル */
 .app-modal-overlay {
   display: none;
