@@ -380,6 +380,9 @@ h2 {
   color: var(--ink);
   line-height: 1.4;
 }
+.app-category { margin-bottom: 22px; }
+.app-category-label { font-size: 9px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+
 /* アプリモーダル */
 .app-modal-overlay {
   display: none;
