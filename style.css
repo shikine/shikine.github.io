@@ -345,6 +345,23 @@ h2 {
   line-height: 1.6;
 }
 
+.app-launch-btn {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 7px 0;
+  background: var(--ink);
+  color: var(--bg);
+  border: none;
+  border-radius: 2px;
+  font-family: inherit;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.app-launch-btn:hover { opacity: 0.75; }
+
 /* アプリモーダル */
 .app-modal-overlay {
   display: none;
