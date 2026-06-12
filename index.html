@@ -1362,10 +1362,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     var titleEl = document.getElementById('app-modal-title');
     var closeBtn = document.getElementById('app-modal-close');
 
+    var newtabEl = document.getElementById('app-modal-newtab');
     function openAppModal(url, title) {
       var lang = document.documentElement.lang || 'ja';
       titleEl.textContent = title;
       iframe.src = url;
+      if (newtabEl) newtabEl.href = url;
       overlay.classList.add('open');
       document.body.style.overflow = 'hidden';
     }
