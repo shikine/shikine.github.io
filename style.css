@@ -362,6 +362,18 @@ h2 {
   100% { filter: hue-rotate(-10deg) brightness(0.85); }
 }
 
+.app-icon-geo {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(155deg, #1c1510 0%, #3d2e22 30%, #6b4e35 60%, #8c6e52 100%);
+  animation: geo-shift 8s ease-in-out infinite alternate;
+}
+@keyframes geo-shift {
+  0%   { filter: hue-rotate(0deg) brightness(0.88); }
+  50%  { filter: hue-rotate(12deg) brightness(1.06); }
+  100% { filter: hue-rotate(-8deg) brightness(0.92); }
+}
+
 .app-icon-label {
   font-size: 10px;
   text-align: center;
