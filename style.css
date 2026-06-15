@@ -374,6 +374,18 @@ h2 {
   100% { filter: hue-rotate(-8deg) brightness(0.92); }
 }
 
+.app-icon-farm {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(150deg, #2a1500 0%, #5c3010 35%, #9b5e1a 65%, #c8862a 100%);
+  animation: farm-shift 8s ease-in-out infinite alternate;
+}
+@keyframes farm-shift {
+  0%   { filter: hue-rotate(0deg) brightness(0.88); }
+  50%  { filter: hue-rotate(18deg) brightness(1.06); }
+  100% { filter: hue-rotate(-12deg) brightness(0.9); }
+}
+
 .app-icon-label {
   font-size: 10px;
   text-align: center;
