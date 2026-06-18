@@ -11,6 +11,22 @@
 <meta property="og:url" content="https://shikine.github.io/rpg.html">
 <meta property="og:title" content="あわいの島 — WATANABE Shikine">
 <meta property="og:description" content="ドット絵の村を歩いて、舞台美術・建築・アプリを探索する。">
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-MGHRS2C5');</script>
+<!-- End Google Tag Manager -->
+<!-- Google Analytics 4 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-H74SXF1W59"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-H74SXF1W59');
+</script>
+<!-- End Google Analytics 4 -->
 <style>
   :root{ --gold:#e7c878; --paper:#f4f2ed; --box:#221d16; }
   *{margin:0;padding:0;box-sizing:border-box}
@@ -118,6 +134,10 @@
   #act:active,#eat:active{transform:translateY(3px);box-shadow:none}
   @media (pointer:coarse){#pad,#act,#eat{display:block}.hint{display:none}}
   body.touch #pad, body.touch #act, body.touch #eat{display:block}
+  /* portrait mobile: fill the screen (cover), big character, controls overlap */
+  body.pm #game{inset:0}
+  body.pm canvas{width:100vw;height:100vh;height:100dvh;object-fit:cover;
+    box-shadow:none;max-width:none;max-height:none}
   #toast{position:fixed;left:50%;top:62px;transform:translateX(-50%) translateY(-12px);
     background:rgba(20,18,15,.94);border:2px solid var(--gold);color:var(--paper);
     padding:9px 18px;font-size:14px;z-index:30;opacity:0;pointer-events:none;white-space:nowrap;
@@ -159,6 +179,10 @@
 </style>
 </head>
 <body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MGHRS2C5"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
 <div id="game"><canvas id="cv"></canvas></div>
 
 <div id="hud">
@@ -223,7 +247,7 @@
 <script>
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const TS=16, MW=64, MH=46;          // tile size, world size (tiles)
-const VW=28, VH=18;                 // viewport in tiles
+let VW=28, VH=18;                   // viewport in tiles (portrait mobile overrides)
 cv.width=VW*TS; cv.height=VH*TS;
 ctx.imageSmoothingEnabled=false; ctx.textAlign='center';
 
@@ -1011,6 +1035,18 @@ volEl.addEventListener('input',applyVol);
 
 if(('ontouchstart' in window) || (window.matchMedia && window.matchMedia('(pointer:coarse)').matches))
   document.body.classList.add('touch');
+/* portrait-mobile viewport: fewer tiles -> bigger character, fills the screen */
+function setupViewport(){
+  const pm = document.body.classList.contains('touch') && window.innerHeight>window.innerWidth;
+  document.body.classList.toggle('pm', pm);
+  VW = pm?14:28; VH = pm?22:18;
+  cv.width=VW*TS; cv.height=VH*TS;
+  ctx.imageSmoothingEnabled=false; ctx.textAlign='center';
+  if(running) render();
+}
+addEventListener('resize', setupViewport);
+addEventListener('orientationchange', setupViewport);
+setupViewport();
 updateTimeBtn(); update();render(); // draw a frame behind title
 </script>
 </body>
