@@ -479,7 +479,13 @@ function solidAt(px,py,self){
   const c=(px/TS)|0,r=(py/TS)|0;
   if(r<0||r>=MH||c<0||c>=MW)return true;
   const t=M[r][c];
-  if(SOLID.has(t) && !(t===2 && self===P))return true; // player can swim into water
+  if(SOLID.has(t)){
+    if(self===P){
+      // player passes through water (swim) and interior trees/bushes (slow); outer forest stays solid
+      const interiorBrush=(t===3||t===6)&&c>=2&&c<MW-2&&r<MH-2;
+      if(!(t===2||interiorBrush))return true;
+    } else return true;
+  }
   if(inB(c,r))return true;
   // NPC collision
   for(const n of NPCS){ if(n===self)continue;
@@ -723,9 +729,10 @@ function update(){
     let base=P.speed;
     if(Date.now()<P.boostUntil) base=P.speed*1.8;
     else if(Date.now()<P.slowUntil) base=P.speed*0.5;
-    const inWater=M[((P.py+TS/2)/TS)|0] && M[((P.py+TS/2)/TS)|0][((P.px+TS/2)/TS)|0]===2;
-    moveEnt(P,dx,dy,inWater?base*0.55:base);
-    P.swim=M[((P.py+TS/2)/TS)|0] && M[((P.py+TS/2)/TS)|0][((P.px+TS/2)/TS)|0]===2;
+    const ctile=(M[((P.py+TS/2)/TS)|0]||[])[((P.px+TS/2)/TS)|0];
+    const inWater=ctile===2, inBrush=(ctile===3||ctile===6);
+    moveEnt(P,dx,dy, base*(inWater?0.55:(inBrush?0.6:1)));
+    P.swim=inWater; P.inBrush=inBrush;
   } else P.moving=false;
   // camera
   cam.x=Math.max(0,Math.min(MW*TS-VW*TS, P.px+TS/2-VW*TS/2));
@@ -736,6 +743,7 @@ function update(){
   for(const n of NPCS){const d=Math.hypot(n.px-P.px,n.py-P.py);if(d<nd-4){nd=d+999;}}
   let label;
   if(P.swim){ label='🏊 <b>泳いでいる！</b>'; }
+  else if(P.inBrush){ label='🌳 <b>茂みの中</b> — すこしゆっくり'; }
   else if(nd<40){ label=`📍 <b>${near.label}</b> の前 — 調べてみよう`; }
   else {
     const pc=((P.px+TS/2)/TS)|0, pr=((P.py+TS-2)/TS)|0;
@@ -974,9 +982,13 @@ function render(){
   ANIMALS.forEach(a=>ents.push({y:a.py+TS,fn:()=>drawAnimal(a.px-cam.x,a.py-cam.y,a.dir,a.frame,a.moving,a.type)}));
   PROPS.forEach(p=>ents.push({y:p.y*TS+TS,fn:()=>drawFire(p.x*TS-cam.x,p.y*TS-cam.y)}));
   const wob=Date.now()<P.slowUntil?Math.sin(Date.now()/110)*1.6:0;
-  ents.push({y:P.py+TS,fn:()=> P.swim
-    ? drawSwimmer(P.px-cam.x+wob,P.py-cam.y,P.dir,P.frame)
-    : drawChar(P.px-cam.x+wob,P.py-cam.y,P.dir,P.frame,P.moving,'#3a4a8a','#e8c39a','#3a2a1a')});
+  ents.push({y:P.py+TS,fn:()=>{
+    if(P.swim){ drawSwimmer(P.px-cam.x+wob,P.py-cam.y,P.dir,P.frame); return; }
+    drawChar(P.px-cam.x+wob,P.py-cam.y,P.dir,P.frame,P.moving,'#3a4a8a','#e8c39a','#3a2a1a');
+    if(P.inBrush){ const sx=Math.round(P.px-cam.x+wob), sy=Math.round(P.py-cam.y); // 茂みが手前に
+      px(sx+1,sy+11,4,4,'#2f6b3a'); px(sx+10,sy+12,4,3,'#27592f'); px(sx+5,sy+13,5,3,'#3a7d45');
+      px(sx+3,sy+13,1,2,'#4f9a57'); px(sx+12,sy+12,1,2,'#4f9a57'); }
+  }});
   ents.sort((a,b)=>a.y-b.y).forEach(e=>e.fn());
   // vignette
   const grd=ctx.createRadialGradient(cv.width/2,cv.height/2,cv.height*0.4,cv.width/2,cv.height/2,cv.height*0.8);
