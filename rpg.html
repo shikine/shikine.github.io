@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>渡邊織音 — あわいの島</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.ico" sizes="any">
+<meta name="description" content="渡邊織音のポートフォリオを「歩いて」探索する2D RPG風ランディングページ。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://shikine.github.io/rpg.html">
+<meta property="og:title" content="あわいの島 — WATANABE Shikine">
+<meta property="og:description" content="ドット絵の村を歩いて、舞台美術・建築・アプリを探索する。">
+<style>
+  :root{ --gold:#e7c878; --paper:#f4f2ed; --box:#221d16; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#0c0f0a;overflow:hidden;
+    font-family:'BIZ UDPGothic','Hiragino Kaku Gothic ProN','Meiryo',monospace;
+    color:var(--paper);-webkit-user-select:none;user-select:none;touch-action:none}
+  #game{position:fixed;inset:0;display:grid;place-items:center}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;
+    box-shadow:0 0 0 4px #000,0 16px 64px rgba(0,0,0,.65);
+    width:min(96vw, calc(92vh * 28 / 18)); height:auto;
+    max-width:96vw; max-height:92vh}
+
+  #hud{position:fixed;top:14px;left:14px;right:64px;display:flex;flex-wrap:wrap;
+    align-items:flex-start;gap:8px;pointer-events:none;z-index:5}
+  .tag{background:rgba(20,18,15,.82);border:2px solid var(--gold);
+    padding:7px 12px;font-size:13px;letter-spacing:.05em;line-height:1.5}
+  .tag b{color:var(--gold)}
+  .hint{font-size:11px;color:#d8d2c4;opacity:.9}
+
+  #dlg{position:fixed;left:50%;bottom:18px;transform:translateX(-50%) translateY(150%);
+    width:min(700px,94vw);background:var(--box);border:3px solid var(--gold);
+    box-shadow:0 0 0 3px #000;padding:16px 20px 16px;z-index:20;
+    transition:transform .26s cubic-bezier(.16,1,.3,1)}
+  #dlg.show{transform:translateX(-50%) translateY(0)}
+  #dlg .who{position:absolute;top:-14px;left:16px;background:var(--gold);color:#221d16;
+    font-size:12px;font-weight:bold;padding:2px 10px;letter-spacing:.05em}
+  #dlg h2{color:var(--gold);font-size:17px;margin-bottom:8px;letter-spacing:.04em}
+  #dlg .body{font-size:14px;line-height:1.85;max-height:44vh;overflow:auto}
+  #dlg .body a{color:var(--gold)}
+  #dlg .body ul{list-style:none;display:flex;flex-direction:column;gap:6px;margin-top:8px}
+  #dlg .body li{border-left:3px solid var(--gold);padding-left:10px}
+  #dlg .close{position:absolute;top:8px;right:12px;color:var(--paper);font-size:18px;cursor:pointer;opacity:.7}
+  #dlg .close:hover{opacity:1}
+  #dlg .more{display:inline-block;margin-top:12px;border:2px solid var(--gold);
+    padding:6px 14px;color:var(--gold);text-decoration:none;font-size:13px}
+  #dlg .next{position:absolute;right:14px;bottom:10px;color:var(--gold);font-size:13px;
+    animation:bl 1s steps(2) infinite}
+
+  /* ── centered panel popup (works / apps) ── */
+  #panel{position:fixed;inset:0;z-index:25;display:none;place-items:center;
+    background:rgba(8,11,7,.74);padding:18px}
+  #panel.show{display:grid}
+  #panel .pbox{background:var(--box);border:3px solid var(--gold);box-shadow:0 0 0 3px #000;
+    width:min(720px,96vw);max-height:86vh;display:flex;flex-direction:column}
+  #panel .phead{display:flex;justify-content:space-between;align-items:center;
+    padding:13px 18px;border-bottom:2px solid #4a4030;flex:0 0 auto}
+  #panel .phead h2{color:var(--gold);font-size:17px;letter-spacing:.04em}
+  #panel .phead .close{cursor:pointer;font-size:20px;opacity:.7;padding:0 4px}
+  #panel .phead .close:hover{opacity:1}
+  #panel .pbody{overflow:auto;padding:14px 18px 20px}
+  .wyear{margin-top:16px}.wyear:first-child{margin-top:0}
+  .wyear h3{color:var(--gold);font-size:15px;border-bottom:1px solid #4a4030;
+    padding-bottom:4px;margin-bottom:8px;position:sticky;top:-14px;background:var(--box);z-index:1}
+  .witem{display:flex;gap:9px;align-items:baseline;padding:4px 0;font-size:13.5px;line-height:1.65}
+  .witem .wm{flex:0 0 32px;color:#b7ad97;font-size:12px}
+  .witem .wc{flex:0 0 auto;font-size:11px;padding:1px 7px;border-radius:3px;white-space:nowrap}
+  .witem .wt{flex:1}
+  .agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .acat{grid-column:1/-1;color:#b7ad97;font-size:12px;margin-top:6px;border-left:3px solid var(--gold);padding-left:8px}
+  .acard{border:2px solid #4a4030;padding:12px;text-decoration:none;color:var(--paper);display:block;transition:border-color .15s,transform .15s}
+  .acard:hover{border-color:var(--gold);transform:translateY(-2px)}
+  .acard .an{color:var(--gold);font-size:14px}
+  .acard .au{font-size:10px;color:#8a8378;margin-top:5px;word-break:break-all}
+  /* newsletter form */
+  .nlform{display:flex;flex-direction:column;gap:13px;font-size:14px}
+  .nlform p{line-height:1.85}
+  .nlform label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:#d8d2c4}
+  .nlform input{background:#15120d;border:2px solid #4a4030;color:var(--paper);
+    padding:10px 11px;font-family:inherit;font-size:14px}
+  .nlform input:focus{outline:none;border-color:var(--gold)}
+  .nlform button{background:var(--gold);color:#221d16;border:none;font-weight:bold;
+    padding:12px;font-size:14px;cursor:pointer;font-family:inherit;letter-spacing:.06em;margin-top:2px}
+  .nlform button:disabled{opacity:.55;cursor:default}
+  .nlerr{color:#f09c9c;font-size:13px}
+  .nlthanks{font-size:15px;line-height:2;color:var(--gold);text-align:center;padding:24px 6px}
+
+  #title{position:fixed;inset:0;z-index:40;background:rgba(8,11,7,.95);
+    display:grid;place-items:center;text-align:center;transition:opacity .5s}
+  #title.hide{opacity:0;pointer-events:none}
+  #title .t-kick{font-size:clamp(12px,3vw,15px);color:#cdbf9a;letter-spacing:.34em;
+    opacity:.85;margin-bottom:14px}
+  #title .t-kick b{color:var(--gold);font-weight:normal}
+  #title .t-jp{font-size:clamp(28px,6.4vw,52px);color:var(--gold);letter-spacing:.16em;
+    text-shadow:0 4px 0 #6b5526;line-height:1.2}
+  #title .t-en{font-size:12px;letter-spacing:.38em;opacity:.8;margin-top:12px}
+  #title .desc{font-size:13px;opacity:.85;margin:22px auto 26px;max-width:360px;line-height:2}
+  #title button{background:var(--gold);color:#221d16;border:none;font-weight:bold;
+    padding:13px 34px;font-size:15px;letter-spacing:.1em;cursor:pointer;
+    font-family:inherit;box-shadow:0 4px 0 #9c8244}
+  #title button:active{transform:translateY(3px);box-shadow:none}
+  #title .blink{margin-top:18px;font-size:11px;opacity:.7;animation:bl 1.1s steps(2) infinite}
+  @keyframes bl{50%{opacity:.15}}
+
+  #pad{position:fixed;left:18px;bottom:18px;width:156px;height:156px;z-index:10;display:none;touch-action:none}
+  #pad button{position:absolute;width:52px;height:52px;background:rgba(231,200,120,.22);
+    border:2px solid var(--gold);color:var(--gold);font-size:20px;border-radius:8px}
+  #pad .up{left:52px;top:0}#pad .dn{left:52px;top:104px}
+  #pad .lf{left:0;top:52px}#pad .rt{left:104px;top:52px}
+  #act{position:fixed;right:22px;bottom:42px;z-index:10;display:none;
+    width:76px;height:76px;border-radius:50%;background:var(--gold);color:#221d16;
+    border:none;font-weight:bold;font-size:14px;box-shadow:0 4px 0 #9c8244}
+  #eat{position:fixed;right:30px;bottom:128px;z-index:10;display:none;
+    width:60px;height:60px;border-radius:50%;background:#e23b4a;color:#fff;
+    border:none;font-weight:bold;font-size:11px;box-shadow:0 4px 0 #9c2530}
+  #act:active,#eat:active{transform:translateY(3px);box-shadow:none}
+  @media (pointer:coarse){#pad,#act,#eat{display:block}.hint{display:none}}
+  body.touch #pad, body.touch #act, body.touch #eat{display:block}
+  #toast{position:fixed;left:50%;top:62px;transform:translateX(-50%) translateY(-12px);
+    background:rgba(20,18,15,.94);border:2px solid var(--gold);color:var(--paper);
+    padding:9px 18px;font-size:14px;z-index:30;opacity:0;pointer-events:none;white-space:nowrap;
+    transition:opacity .2s,transform .2s}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  /* settings menu (gear) */
+  #menuBtn{position:fixed;top:14px;right:14px;z-index:31;width:42px;height:42px;
+    background:rgba(20,18,15,.85);border:2px solid var(--gold);color:var(--gold);
+    font-size:19px;cursor:pointer;line-height:1}
+  #menuBtn:active{transform:translateY(1px)}
+  #menuScrim{position:fixed;inset:0;z-index:29;background:rgba(0,0,0,.45);
+    opacity:0;pointer-events:none;transition:opacity .2s}
+  #menuScrim.open{opacity:1;pointer-events:auto}
+  #menu{position:fixed;top:0;right:0;z-index:30;width:min(290px,86vw);height:100%;
+    background:var(--box);border-left:3px solid var(--gold);padding:18px 18px 24px;
+    transform:translateX(100%);transition:transform .26s cubic-bezier(.16,1,.3,1);
+    display:flex;flex-direction:column;gap:18px;overflow:auto}
+  #menu.open{transform:translateX(0)}
+  #menu .m-head{display:flex;justify-content:space-between;align-items:center;color:var(--gold);
+    font-size:16px;letter-spacing:.1em;border-bottom:2px solid #4a4030;padding-bottom:10px}
+  #menu .m-head .close{cursor:pointer;font-size:18px;opacity:.8}
+  #menu .m-row{display:flex;flex-direction:column;gap:8px}
+  #menu .m-label{font-size:12px;color:#b7ad97;letter-spacing:.08em}
+  #menu .m-seg{display:flex;gap:4px;flex-wrap:wrap}
+  #menu .m-seg button{flex:1;min-width:46px;background:rgba(231,200,120,.10);
+    border:2px solid #4a4030;color:var(--paper);font-family:inherit;font-size:14px;padding:13px 4px;cursor:pointer}
+  #menu .m-seg button.on{background:var(--gold);color:#221d16;border-color:var(--gold);font-weight:bold}
+  #menu .m-audio{display:flex;align-items:center;gap:10px}
+  #menu .m-audio button{background:none;border:none;color:var(--gold);font-size:20px;cursor:pointer;line-height:1}
+  #menu #vol{flex:1;accent-color:var(--gold)}
+  #menu .m-help{font-size:12px;line-height:1.9;color:#d8d2c4}
+  #menu .m-link{margin-top:auto;color:var(--gold);font-size:13px;text-decoration:none;
+    border:2px solid var(--gold);text-align:center;padding:11px}
+  @media (pointer:coarse){
+    #hud{right:60px;gap:6px}
+    .tag{font-size:12px;padding:5px 9px}
+    #menuBtn{top:12px;right:12px}
+  }
+</style>
+</head>
+<body>
+<div id="game"><canvas id="cv"></canvas></div>
+
+<div id="hud">
+  <div class="tag" id="loc">📍 <b>あわいの島</b></div>
+  <div class="tag" id="crops">🍓 <b>×0</b>&ensp;🍇 <b>×0</b>&ensp;🥬 <b>×0</b></div>
+</div>
+<div id="toast"></div>
+
+<button id="menuBtn" aria-label="メニュー">☰</button>
+<div id="menuScrim"></div>
+<div id="menu">
+  <div class="m-head"><span>せってい</span><span class="close" id="menuClose">✕</span></div>
+  <div class="m-row">
+    <div class="m-label">時間帯（時刻に関係なく固定）</div>
+    <div class="m-seg" id="timeSeg">
+      <button data-m="auto">自動</button><button data-m="morning">朝</button><button data-m="day">昼</button><button data-m="evening">夕</button><button data-m="night">夜</button>
+    </div>
+  </div>
+  <div class="m-row">
+    <div class="m-label">BGM（アンビエント）</div>
+    <div class="m-audio"><button id="audioBtn" title="BGM オン/オフ">🔊</button>
+      <input id="vol" type="range" min="0" max="100" value="45" aria-label="BGM音量"></div>
+  </div>
+  <div class="m-row">
+    <div class="m-label">操作</div>
+    <div class="m-help">移動: 矢印 / WASD（スマホは左下キー）<br>調べる・収穫・話す: スペース ／「しらべる」<br>食べる: E ／ 🍴ボタン<br>時間帯切替: T</div>
+  </div>
+  <a class="m-link" href="index.html">通常サイトへ →</a>
+</div>
+
+<div id="dlg">
+  <span class="who" id="dlgWho"></span>
+  <span class="close" onclick="closeDlg()">✕</span>
+  <h2 id="dlgTitle"></h2>
+  <div class="body" id="dlgBody"></div>
+  <span class="next" id="dlgNext">▼ Space</span>
+</div>
+
+<div id="panel"><div class="pbox">
+  <div class="phead"><h2 id="panelTitle"></h2><span class="close" onclick="closePanel()">✕</span></div>
+  <div class="pbody" id="panelBody"></div>
+</div></div>
+
+<div id="pad">
+  <button class="up" data-d="up">▲</button>
+  <button class="dn" data-d="down">▼</button>
+  <button class="lf" data-d="left">◀</button>
+  <button class="rt" data-d="right">▶</button>
+</div>
+<button id="act">しらべる</button>
+<button id="eat">🍴食べる</button>
+
+<div id="title"><div>
+  <div class="t-kick">― <b>烏帽子</b>ともののけの棲む ―</div>
+  <div class="t-jp">あわいの島</div>
+  <div class="t-en">AWAI ISLAND &middot; SHIKINE</div>
+  <div class="desc">建築・舞台美術・構造設計の渡邊織音。<br>村を歩き、村人と話し、作品とアプリを見つけてください。</div>
+  <button onclick="startGame()">▶ はじめる</button>
+  <div class="blink">PRESS START</div>
+</div></div>
+
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const TS=16, MW=64, MH=46;          // tile size, world size (tiles)
+const VW=28, VH=18;                 // viewport in tiles
+cv.width=VW*TS; cv.height=VH*TS;
+ctx.imageSmoothingEnabled=false; ctx.textAlign='center';
+
+/* ── deterministic RNG ── */
+let _s=20260618; const rnd=()=>{_s=(_s*1103515245+12345)&0x7fffffff;return _s/0x7fffffff;};
+
+/* ── tile codes: 0 grass 1 path 2 water 3 tree 4 flower 5 dirt
+   6 bush 7 sand 8 lava 9 rock 10 cactus 11 mountain(八ヶ岳) ── */
+const M=[];
+for(let r=0;r<MH;r++){M[r]=[];for(let c=0;c<MW;c++)M[r][c]=0;}
+function set(c,r,v){if(r>=0&&r<MH&&c>=0&&c<MW)M[r][c]=v;}
+// 八ヶ岳 — mountain range across the north
+for(let r=0;r<5;r++)for(let c=0;c<MW;c++)M[r][c]=11;
+// side & bottom forest border
+for(let r=0;r<MH;r++)for(let c=0;c<MW;c++){
+  if((c<2||c>=MW-2||r>=MH-2)&&M[r][c]!==11)M[r][c]=3;
+}
+// scattered trees / flowers / bushes (central plains)
+for(let r=5;r<MH-3;r++)for(let c=3;c<MW-3;c++){
+  const v=rnd();
+  if(v>.93)M[r][c]=3; else if(v>.88)M[r][c]=6; else if(v>.80)M[r][c]=4;
+}
+// pond (north-west, below the mountains)
+for(let r=6;r<13;r++)for(let c=5;c<14;c++)
+  if((r-9)*(r-9)/9+(c-9)*(c-9)/16<1.1)set(c,r,2);
+// 2nd pond (east)
+for(let r=20;r<26;r++)for(let c=51;c<60;c++)
+  if((r-23)*(r-23)/9+(c-55)*(c-55)/16<1.05)set(c,r,2);
+// desert (south-west corner) + cacti & rocks
+for(let r=34;r<MH-2;r++)for(let c=3;c<19;c++)set(c,r,7);
+for(let r=34;r<MH-2;r++)for(let c=3;c<19;c++){
+  const v=rnd(); if(v>.94)set(c,r,10); else if(v>.88)set(c,r,9);
+}
+// lava lake (south-east corner) ringed with rock
+for(let r=33;r<MH-2;r++)for(let c=44;c<MW-2;c++){
+  const d=(r-39)*(r-39)/16+(c-52)*(c-52)/40;
+  if(d<1)set(c,r,8); else if(d<1.5)set(c,r,9);
+}
+// field rows (north-east plains)
+for(let r=13;r<17;r++)for(let c=40;c<48;c++)set(c,r, r%2?5:0);
+// strawberry field (いちご畑) — plant rows (12) alternate with walkable dirt (5)
+for(let r=29;r<34;r++)for(let c=17;c<28;c++)set(c,r,(r-29)%2===0?12:5);
+// vineyard (ぶどう畑 / ワイン用) — north-central
+for(let r=8;r<13;r++)for(let c=34;c<45;c++)set(c,r,(r-8)%2===0?14:5);
+// lettuce field (レタス畑) — central
+for(let r=20;r<24;r++)for(let c=34;c<45;c++)set(c,r,(r-20)%2===0?16:5);
+// hippie meadow (自由の広場) — top-left, east of the pond: grass + flowers
+for(let r=6;r<12;r++)for(let c=15;c<23;c++)set(c,r, rnd()>.62?4:0);
+
+/* ── buildings: tile col,row, size, roof color, icon, label, key ── */
+const SPOTS=[
+ {x:24,y:7, w:5,h:4, roof:'#b0503e', wall:'#d8b486', icon:'🏛', label:'美術館',  key:'works'},
+ {x:9, y:30,w:4,h:3, roof:'#6b8cb0', wall:'#d8b486', icon:'🏠', label:'アトリエ',key:'profile'},
+ {x:50,y:9, w:4,h:3, roof:'#7a9c52', wall:'#cdaa70', icon:'🔧', label:'工房',    key:'apps'},
+ {x:30,y:24,w:4,h:3, roof:'#c08a4c', wall:'#d8b486', icon:'📮', label:'郵便屋',  key:'contact'},
+ {x:46,y:26,w:4,h:3, roof:'#9c6cb0', wall:'#d8b486', icon:'📜', label:'掲示板',  key:'news'},
+];
+/* decorative houses (non-interactive, village atmosphere) */
+const DECO=[
+ {x:16,y:13,w:3,h:3, roof:'#8a5a3c', wall:'#d2ab74'},
+ {x:38,y:13,w:3,h:3, roof:'#5a7a8a', wall:'#cdaa70'},
+ {x:8, y:25,w:3,h:3, roof:'#7a8a4c', wall:'#d2ab74'},
+ {x:40,y:31,w:3,h:3, roof:'#a06a4c', wall:'#cdaa70'},
+];
+/* large boulders (solid, decorative) — between 美術館 and 郵便屋 */
+const BOULDERS=[{x:28,y:15,w:3,h:2}];
+/* placed objects (solid, decorative) — vehicles + stage set under construction */
+const OBJS=[
+ // アトリエの横に横付け
+ {x:14,y:30,w:2,h:1,type:'kei'},      // 軽トラック
+ {x:14,y:32,w:2,h:1,type:'fiat'},     // 青いFiat
+ // アトリエ前の砂漠で制作中の舞台セット
+ {x:6, y:35,w:2,h:2,type:'flat'},     // 背景パネル（描きかけ）
+ {x:9, y:37,w:3,h:1,type:'platform'}, // 舞台の平台
+ {x:6, y:38,w:1,h:1,type:'scaffold'}, // 単管の枠
+ {x:13,y:36,w:1,h:1,type:'ladder'},   // 脚立
+ {x:12,y:39,w:1,h:1,type:'lumber'},   // 木材
+ {x:8, y:40,w:1,h:1,type:'paint'},    // 塗料
+];
+// carve path tiles & clear footprints
+function clear(c,r){if(r>=0&&r<MH&&c>=0&&c<MW)M[r][c]=0;}
+[...SPOTS,...DECO,...BOULDERS].forEach(s=>{
+  for(let r=s.y-1;r<s.y+s.h+1;r++)for(let c=s.x-1;c<s.x+s.w+1;c++)clear(c,r);
+});
+// prep ground under placed objects: sand in the desert, grass elsewhere
+OBJS.forEach(o=>{ for(let r=o.y;r<o.y+o.h;r++)for(let c=o.x;c<o.x+o.w;c++)
+  set(c,r,(r>=34&&c>=3&&c<19)?7:0); });
+// simple paths: a horizontal main road + spurs to each door
+function road(c1,r1,c2,r2){ // L-shaped
+  for(let c=Math.min(c1,c2);c<=Math.max(c1,c2);c++)if(M[r1][c]!==2)M[r1][c]=1;
+  for(let r=Math.min(r1,r2);r<=Math.max(r1,r2);r++)if(M[r][c2]!==2)M[r][c2]=1;
+}
+const HUB=[32,18];
+SPOTS.forEach(s=>road(HUB[0],HUB[1],s.x+((s.w/2)|0),s.y+s.h));
+for(let c=8;c<58;c++)if(M[18][c]!==2)M[18][c]=1;     // main road
+
+/* ── content (buildings) ── */
+const CONTENT={
+ works:{who:'美術館',t:'🏛 Works — これまでの仕事',pages:[`手がけた仕事の一部です。
+   <ul>
+     <li>舞台美術 — ハチス企画『ハッピーな日々』(2019)</li>
+     <li>舞台美術 — ヌトミック『ぼんやりブルース』(2021)</li>
+     <li>建築・構造設計 / インストール / 空間構成</li>
+     <li>演劇グループ・野原 舞台美術</li>
+   </ul>
+   <a class="more" href="index.html#works-section">作品一覧をすべて見る →</a>`]},
+ profile:{who:'アトリエ',t:'🏠 渡邊織音',pages:[
+   `「構造と物語のあいだに、空間をつくる。」`,
+   `舞台美術・構造設計・建築・インストールを手がけています。`,
+   `NPO野馬土 理事。<br>長野県・富士見町（八ヶ岳のふもと）を拠点に活動しています。`]},
+ apps:{who:'工房',t:'🔧 Apps — 自作の道具',pages:[`サウンド・地図・自然観察ツールなど、小さな道具を作っています。
+   <a class="more" href="index.html#app-section">アプリを試す →</a>`]},
+ contact:{who:'郵便屋',t:'📮 Contact',pages:[`お仕事のご相談はこちらから。
+   <ul>
+     <li>✉ <a href="mailto:watanabeshikine@gmail.com">watanabeshikine@gmail.com</a></li>
+     <li>LINE: watanabeshikine</li>
+     <li><a href="https://www.instagram.com/watanabeshikine/" target="_blank">Instagram</a> /
+         <a href="https://twitter.com/watanabeshikine" target="_blank">X</a></li>
+   </ul>`]},
+ news:{who:'掲示板',t:'📜 Newsletter',pages:[`不定期のメルマガ「karasuletters」。制作の裏側や活動のお知らせを綴っています。
+   <a class="more" href="mailto:watanabeshikine@gmail.com?subject=karasuletters%20%E8%B3%BC%E8%AA%AD%E5%B8%8C%E6%9C%9B">メールで購読希望を送る →</a>`]},
+};
+
+/* ── apps (工房) ── */
+const APPS=[
+ {cat:'サウンド',items:[{n:'ドローン・サンプラー',u:'https://shikine.github.io/drone-music-sampler/ambient-drone.html'},{n:'フィールドレコーダー',u:'https://mountain-field-recorder.vercel.app/'}]},
+ {cat:'マップ・自然',items:[{n:'たけのこマップ',u:'https://shikine.github.io/takenoko-map/'},{n:'八ヶ岳地質図',u:'https://shikine.github.io/yatsugatake-geo/'}]},
+ {cat:'ツール',items:[{n:'ワイナリー管理',u:'https://shikine.github.io/winery-manage/'},{n:'ファミリーファーム',u:'https://shikine.github.io/family-farm/'}]},
+];
+
+/* ── works (美術館) — index.html から抽出 ── */
+const WORKS=[{y:'2026',items:[{m:'4〜',c:'空間構成',t:'たまに葡萄 ワンマンライブ＠長野市芸術館アクトスペース・長野県'},{m:'4〜',c:'舞台美術',t:'バブシュカブシュカ×宮坂遼太郎『ちちち』＠西山のころりん劇場・長野県'},{m:'4〜',c:'空間構成',t:'某映画展示会場設営・スピーカー展示＠旧小学校・諏訪市・長野県'}]},
+{y:'2025',items:[{m:'10〜',c:'MV',t:'GOOD BYE APRIL『SYMPATHY』＠佐久市観光協会・佐久市子ども未来館サクモ・JAXA臼田宇宙空間観測所・長野県佐久市'},{m:'4〜',c:'MV',t:'TOOBOE『初恋』＠群馬県立自然史博物館・群馬県'},{m:'4〜',c:'MV',t:'TOOBOE『あなたはかいぶつ』＠ステンドグラス博物館・栃木県'},{m:'2〜',c:'展示',t:'『EFFECTOR』＠GALLERY K・銀座・東京'},{m:'1〜',c:'舞台美術',t:'劇団のような『おおきなトガリネズミ』＠商店街・長野県富士見町'}]},
+{y:'2024',items:[{m:'9〜',c:'舞台美術',t:'円盤に乗る派『仮想的な失調』＠東京芸術劇場・東京'},{m:'1〜',c:'MV',t:'TOOBOE『咆哮』＠海城学園 那須キャンパス'},{m:'6〜',c:'展示制作',t:'某映画の展示インストール＠長野・間欠泉センター'},{m:'3〜',c:'舞台美術',t:'劇団のような『やってみないとわからないでしょ』＠長野・富士見町ホール'}]},
+{y:'2023',items:[{m:'2〜',c:'映像美術',t:'坂本悠花里『白い花果』パイロット版＠旧清里高原ホテル・山梨県（北杜市）'},{m:'3〜',c:'',t:'長野県・富士見町に移住'},{m:'3〜',c:'展示',t:'『BREATHE』＠GALLERY K・銀座・東京'}]},
+{y:'2022',items:[{m:'11〜',c:'舞台美術',t:'ミニセレ企画 ヌトミック『ぼんやりブルース』＠愛知県芸術劇場小ホール'},{m:'11〜',c:'',t:'構造設計  久我原の歯科医院＠東京（看板部分・鉄骨）'},{m:'11〜',c:'空間構成',t:'国分寺エシカルファッションショー＠国分寺・東京'},{m:'10〜',c:'舞台美術',t:'ヌトミック『SUPERHUMAN2022』＠東京タワー・芝公園・東京'},{m:'9〜',c:'舞台美術',t:'豊岡演劇祭 ヌトミック『ぼんやりブルース』＠静思堂シアター・兵庫県豊岡市'},{m:'9〜',c:'',t:'構造設計  『川口の住宅』＠埼玉県川口市（木造）'},{m:'8〜',c:'舞台美術',t:'円盤に乗る派『MORAL』＠北千住BUOY・東京'},{m:'6〜',c:'舞台美術',t:'円盤に乗る派『仮想的な失調』＠吉祥寺シアター・東京'},{m:'5〜',c:'舞台美術',t:'TACT Festival 2022 ヌトミック『ここ！』＠中池袋公園・東京'},{m:'5〜',c:'展示',t:'『YELLOW』＠GALLERY K・銀座・東京'},{m:'2〜',c:'舞台美術',t:'亜人間都市『草、生える』＠早稲田小劇場どらま館・東京'},{m:'2〜',c:'舞台美術',t:'鳥公園『昼の街を歩く』＠PARA・東京'},{m:'11〜',c:'',t:'構造設計  飯能の住宅＠埼玉県飯能（木造）'}]},
+{y:'2021',items:[{m:'12〜',c:'舞台美術',t:'ヌトミックの広場『何事もチューン』＠飯島商店・神奈川（横須賀）'},{m:'12〜',c:'構造設計',t:'『田端の住宅』＠東京 住宅改修設計（木造）'},{m:'10〜',c:'舞台美術',t:'キュイ『まだなにもはなしていないのに』音響上演＠アトリエ春風舎・東京'},{m:'10〜',c:'舞台美術',t:'東京芸術祭From the Farm『フレ フレ Ostrich!! Hayupang Die-Bow-Ken!』＠南大塚ホール・東京'},{m:'9〜',c:'舞台美術',t:'ヌトミック『ぼんやりブルース』＠こまばアゴラ劇場・東京'},{m:'7〜',c:'',t:'舞台美術BangkokDesignweek2021『The City & The City 1.5 (Bangkok version)』＠バンコク・タイ王国'},{m:'4〜',c:'舞台美術',t:'グループ・野原『自由の国のイフィゲーニエ』＠こまばアゴラ劇場・東京'},{m:'4〜',c:'舞台美術',t:'ヌトミック『波のような人』＠愛知県芸術劇場 小ホール'},{m:'4〜',c:'構造設計',t:'『グランアーブル』＠東京 テラス部分'}]},
+{y:'2020',items:[{m:'12〜',c:'舞台美術',t:'読書の夕べ『授業』＠アンスティチュフランセ'},{m:'11〜',c:'舞台美術',t:'フェスティバル／トーキョー20『The City & The City: Divided Senses』＠東京芸術劇場シアターウェスト'},{m:'10〜',c:'舞台美術',t:'女の子には内緒『老いは煙の森を駆ける』＠こまばアゴラ劇場・東京'},{m:'6〜',c:'舞台美術',t:'吉祥寺シアター『吉祥寺からっぽの劇場祭』＠吉祥寺シアター・東京・奥多摩'},{m:'3〜',c:'',t:'WHO、COVID-19のパンデミックを宣言'},{m:'2〜',c:'舞台美術',t:'ヌトミック『それからの街』＠STスポット・横浜'},{m:'1〜',c:'舞台美術',t:'円盤に乗る派『おはようクラブ』＠吉祥寺シアター・東京'}]},
+{y:'2019',items:[{m:'10〜',c:'構造設計',t:'HONEST HOUSE＠東京（コンクリート造）'},{m:'11〜',c:'舞台美術',t:'ハチス企画『まさに世界の終わり』＠池袋・春風舎'},{m:'5〜',c:'舞台美術',t:'ヌトミック『お気に召すまま』＠こまばアゴラ劇場'},{m:'3〜',c:'舞台美術',t:'鳥公園のアタマの中展２『おねしょ沼の終わらない温かさについて』＠東京芸術劇場 アトリエイースト'},{m:'1〜',c:'舞台美術',t:'ハチス企画『ハッピーな日々』＠池袋・春風舎'}]},
+{y:'2018',items:[{m:'12〜',c:'舞台美術',t:'某C舞台・舞台美術＠神奈川県・横須賀'},{m:'10〜',c:'企画・運営・撮影',t:'コットンプロジェクト収穫祭＠福島県・小高'},{m:'10〜',c:'模型製作',t:'SUSKENERGY 風力発電用模型の製作＠福島県・小高'},{m:'9〜',c:'',t:'舞台手伝 S舞台の運搬手伝い＠福島県'},{m:'9〜',c:'模型製作',t:'SUSKENERGY オーガニックライフスタイルエキスポ出展＠東京・国際フォーラム'},{m:'9〜',c:'',t:'建築設計 O物件の構造設計＠東京'},{m:'8〜',c:'',t:'建築関係 Kプロジェクト見学＠京都・中川'},{m:'8〜',c:'',t:'映画撮影 野沢プロジェクト＠早稲田大学'},{m:'8〜',c:'',t:'学校業務 早稲田大学芸術学校TA'},{m:'7〜',c:'',t:'ワークショップ・舞台美術 わくわくのびのびえこども塾『ライオンキング』＠長野県小諸市エコビレッジ'},{m:'〜6',c:'',t:'建築設計・構造設計 F邸＠神奈川県'},{m:'6〜',c:'舞台美術・スケッチ',t:'グループ・野原 2018利賀演劇人コンクール『冒した者』＠利賀芸術公演 岩舞台'},{m:'5〜',c:'舞台美術・記録・スケッチ',t:'Ank『キリグス』＠北千住BUoY'},{m:'5〜',c:'',t:'映像美術 関取花『蛍』MV'},{m:'4〜',c:'',t:'NPO野馬土の理事に再任（４期目）'},{m:'4〜',c:'',t:'構造設計・舞台美術を中心に活動を本格化'}]},
+{y:'2017',items:[{m:'12〜',c:'舞台美術',t:'『愛するとき死ぬとき』より 青春/合唱 公開稽古＠北千住BUoY'},{m:'12〜',c:'稽古スケッチ',t:'『愛するとき死ぬとき』より 青春/合唱＠早稲田どらま館'},{m:'11〜',c:'舞台美術・スケッチ',t:'『雷鳴とアンジェリカ』＠中野テルプシコール'},{m:'11〜',c:'',t:'ワークショップ お面作り＠福島県・相馬 カフェ野馬土'},{m:'10〜',c:'',t:'建築構造 シェアハウスのお茶室自力建設 技術的お手伝い＠鎌倉'},{m:'4〜',c:'',t:'家具製作 洗濯機収納場所'},{m:'4〜',c:'',t:'舞台美術 グループ・野原を蜂巣ももによる呼びかけで参加・旗揚げ'},{m:'2〜',c:'映像美術',t:'タイムマシーン自転車'},{m:'1〜',c:'舞台美術',t:'ハチス企画『木に花咲く』'}]},
+{y:'2016',items:[{m:'9〜',c:'',t:'建築教育 早稲田大学芸術学校TA'},{m:'8〜',c:'',t:'久之浜・大久のじゃんがら祭りに踊り手として参加＠福島県いわき市'},{m:'8〜',c:'',t:'日墨学生交流プログラム ホームステイ受け入れ'},{m:'4〜',c:'',t:'NPO野馬土の理事に再任（３期目）'},{m:'3〜',c:'舞台美術',t:'カゲヤマ気象台『水』'},{m:'1〜',c:'',t:'建築設計 あたらしい宿泊空間の設計'}]},
+{y:'2015',items:[{m:'4〜',c:'',t:'建築建設 共同空間の試験拡張'},{m:'2〜5',c:'',t:'建築設計 シェアハウス改築→５月引越し'},{m:'2〜',c:'',t:'あたらしい生活が始まりました'}]},
+{y:'2014',items:[{m:'12〜',c:'',t:'楽譜・レコードのデータベース化'},{m:'11〜',c:'',t:'舞台美術開始'},{m:'10〜',c:'',t:'車取得・池袋引越'},{m:'9〜',c:'',t:'構造事務所に勤務・結婚'},{m:'8〜',c:'',t:'美術製作 瀬戸内国際芸術祭参加'},{m:'4〜',c:'',t:'NPO野馬土の理事に再任（２期目）'},{m:'1〜3',c:'',t:'WS 田んぼアート企画＠福島県・相馬市'},{m:'1〜6',c:'',t:'WS 福島相馬滞在'}]},
+{y:'2013',items:[{m:'4〜',c:'',t:'NPO団体に所属し福島に滞在'},{m:'〜3',c:'',t:'大学卒業'}]},
+{y:'2012',items:[{m:'11〜',c:'',t:'NPO法人 野馬土 発足→理事（１期目）'},{m:'11〜',c:'展示',t:'個展２開催＠銀座ギャラリーK'},{m:'8〜',c:'',t:'建設 自力建設ワークショップ企画＠福島県・相馬市'},{m:'4〜',c:'',t:'NPO法人 有形デザイン機構 理事'},{m:'1〜3',c:'ワークショップ',t:'建築ワークショップ参加＠ナント・フランス'}]},
+{y:'2011',items:[{m:'9〜',c:'展示',t:'個展１開催＠銀座ギャラリーK'},{m:'8〜',c:'企画・運営・展示',t:'海外建築ワークショップ企画・運営＠イタリア・ギリシャ・トルコ with Nobuhiko Utsumi'},{m:'8〜',c:'建設',t:'日本和船を作るワークショップコラボ＠青森県'},{m:'6〜',c:'ツアー記録',t:'東北地方 被災地ツアー企画（全５回）'},{m:'5〜',c:'',t:'建設 東北地方 被災地 風呂の自力建設参加（全２箇所）＠岩手県'},{m:'3〜',c:'',t:'東日本大震災'}]},
+{y:'2010',items:[{m:'8〜',c:'WS・スケッチ・記録',t:'海外ワークショップの企画・運営＠イタリア with Nobuhiko Utsumi'}]},
+{y:'2009',items:[{m:'9〜',c:'記録',t:'外務省日墨交流研修生としてメキシコへ'},{m:'8〜',c:'撮影',t:'フランス・ナントビエンナーレに参加・滞在 with Kinya Maruyama'},{m:'〜3',c:'',t:'書籍編集 「かたちの劇場」編集・出版イベント企画運営 with Kinya Maruyama'}]},
+{y:'2008',items:[{m:'12〜',c:'企画・運営・展示・記録',t:'クリスマスハンガーを作ろうWS＠世田谷ものづくり学校 with 中田工芸'},{m:'11〜',c:'',t:'美術製作 早稲田大学にてインスタレーション作品制作２ with Kinya Maruyama'}]},
+{y:'2007',items:[{m:'12〜',c:'企画・展示',t:'オリジナルハンガーを作ろうWS＠早稲田大学 with 中田工芸'},{m:'11〜',c:'美術製作',t:'早稲田大学にてインスタレーション作品制作１ with Yusuke Kambayashi'},{m:'2〜',c:'記録',t:'Estuaire Jardin Etoire, Nantes, France フランス・ナントビエンナーレ学生WS参加'}]},
+{y:'2006',items:[{m:'8〜',c:'WS',t:'海外ワークショップへ参加＠スペイン with Nobuhiko Utsumi'},{m:'11〜',c:'美術製作',t:'帰国制作報告会の展示空間の制作・施工 with Masaki Ogasawara'}]}];
+
+/* ── NPCs (villagers) ── */
+const NPCS=[
+ {x:32,y:20, c1:'#7a5cae',c2:'#e8c39a',hair:'#cfcfcf',name:'村長',
+  pages:['ようこそ、あわいの島へ。','ここでは作品や道具が、建物の中で待っておる。','気になる建物の前で「調べる」を押すとよい。']},
+ {x:27,y:13, c1:'#c8504a',c2:'#e8c39a',hair:'#3a2a1a',name:'子ども',
+  pages:['美術館にはね、織音さんの舞台美術があるんだって！','ぼく、お芝居みるの好き。']},
+ {x:49,y:14, c1:'#3a7a5c',c2:'#e8c39a',hair:'#5a3a1a',name:'旅の職人',
+  pages:['工房では小さなアプリ道具を作っているそうだ。','音や地図、自然を観るための道具さ。']},
+ {x:53,y:35, c1:'#a8742c',c2:'#d8b486',hair:'#3a2a1a',name:'畑の人',
+  pages:['富士見町は八ヶ岳のふもと。','空気がうまいぞ。だから移り住む人も多い。']},
+ {x:14,y:30, c1:'#444',c2:'#444',hair:'#444',name:'ねこ',cat:true,
+  pages:['（にゃあ）','（すりすり）']},
+ // ── 富士見町の語り部たち（家の前に立つ・移動しない） ──
+ {x:17,y:16, still:true, c1:'#8a6a3a',c2:'#e8c39a',hair:'#9a9a9a',name:'富士見の古老',
+  pages:['ここ長野県・富士見町は、その名のとおり——晴れた日には富士山が見える町じゃ。',
+         '八ヶ岳と入笠山にいだかれた、標高千メートルの高原の町でな。',
+         '空気が澄んで、夜には星がこぼれるほど見える。よい土地じゃよ。']},
+ {x:39,y:16, still:true, c1:'#4f7a8a',c2:'#e8c39a',hair:'#3a2a1a',name:'井戸尻の語り部',
+  pages:['富士見には『井戸尻遺跡』という、縄文時代のムラの跡がある。',
+         '五千年も前から、人がこの土地で暮らしてきたのだ。',
+         '土器に刻まれた文様は、まるで古い物語のよう。構造と物語は、ここでも結ばれている。']},
+ {x:9, y:28, still:true, c1:'#6a9a4c',c2:'#e8c39a',hair:'#5a3a1a',name:'高原の農婦',
+  pages:['標高が高くて夏は涼しい。だから高原野菜やいちごがよく育つのよ。',
+         'セロリにルバーブ、そして甘いいちご。富士見の自慢の味。',
+         '畑で摘みたてを食べてごらん。とびきり甘いから。']},
+ {x:41,y:34, still:true, c1:'#a85c7a',c2:'#e8c39a',hair:'#2a2a2a',name:'移住者',
+  pages:['近ごろ、この町へ移り住む人が増えてきた。',
+         '織音さんも、2023年に東京からこの富士見町へ移ってきた一人だよ。',
+         '〈構造と物語のあいだ〉に、ここで新しい空間が生まれている。']},
+ // ── 自由の広場のヒッピーたち（左上・ワイワイ徘徊） ──
+ {x:16,y:7, c1:'#d4624a',c2:'#e8c39a',hair:'#7a3a1a',name:'ギター弾き',
+  pages:['よう、来たね！ ここは自由の広場さ。','火を囲んで、音楽でワイワイやってる。','きみも一緒にどう？ ラブ＆ピース！']},
+ {x:20,y:7, c1:'#e0a93a',c2:'#e8c39a',hair:'#3a2a1a',name:'踊り子',
+  pages:['くるくる踊ろう！ 風も星も踊ってる。','むずかしいことは抜き。心のままに〜♪']},
+ {x:16,y:10,c1:'#4aa86a',c2:'#e8c39a',hair:'#2a2a2a',name:'旅の絵描き',
+  pages:['世界中を旅して、ここにたどり着いた。','八ヶ岳の空気は、絵の具より色が濃いんだ。']},
+ {x:20,y:10,c1:'#6a6ad0',c2:'#e8c39a',hair:'#5a3a1a',name:'自由人',
+  pages:['畑を耕して、歌って、また旅に出る。','富士見には、そういう仲間が集まってくるのさ。']},
+];
+NPCS.forEach(n=>{n.px=n.x*TS;n.py=n.y*TS;n.hx=n.px;n.hy=n.py;n.dir='down';n.frame=0;n.t=rnd()*120;n.mdir=null;n.moving=false;});
+
+/* ── animals (放牧されている生きもの) ── */
+const ANIMALS=[
+ {x:20,y:16,type:'goat',  say:'メェ〜'},
+ {x:22,y:17,type:'sheep', say:'メェ〜'},
+ {x:35,y:29,type:'sheep', say:'メェ〜'},
+ {x:47,y:33,type:'goat',  say:'メェ〜'},
+ {x:43,y:21,type:'rabbit',say:'（ぴょん、と跳ねた）'},
+ {x:14,y:21,type:'rabbit',say:'（鼻をひくひく動かしている）'},
+ {x:45,y:19,type:'deer',  say:'（じっとこちらを見ている）'},
+ {x:40,y:9, type:'deer',  say:'（静かに草を食んでいる）'},
+];
+const ANAME={goat:'ヤギ',sheep:'ひつじ',rabbit:'うさぎ',deer:'しか'};
+ANIMALS.forEach(a=>{a.px=a.x*TS;a.py=a.y*TS;a.hx=a.px;a.hy=a.py;a.dir=rnd()<.5?'left':'right';a.frame=0;a.t=rnd()*120;a.mdir=null;a.moving=false;});
+
+/* ── props (decorative, e.g. campfire) ── */
+const PROPS=[{x:18,y:9,type:'fire'}];
+
+/* ── player ── */
+const P={px:HUB[0]*TS, py:HUB[1]*TS+TS, dir:'down', speed:1.5, frame:0, moving:false,
+         swim:false, berries:0, grapes:0, lettuce:0, lastCrop:'', boostUntil:0, slowUntil:0};
+const SOLID=new Set([2,3,6,8,9,10,11,12,13,14,15,16,17]);
+const PICKED=[]; // {c,r,at,ripe} for crop regrow
+/* harvestable crops: ripe tile -> info */
+const CROP={
+ 12:{name:'いちご',icon:'🍓',picked:13,key:'berries'},
+ 14:{name:'ぶどう',icon:'🍇',picked:15,key:'grapes'},
+ 16:{name:'レタス',icon:'🥬',picked:17,key:'lettuce'},
+};
+const PICKEDTILE=new Set([13,15,17]);
+const inB=(c,r)=>{for(const s of SPOTS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
+  for(const s of DECO)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
+  for(const s of BOULDERS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
+  for(const s of OBJS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;return false;};
+function solidAt(px,py,self){
+  const c=(px/TS)|0,r=(py/TS)|0;
+  if(r<0||r>=MH||c<0||c>=MW)return true;
+  const t=M[r][c];
+  if(SOLID.has(t) && !(t===2 && self===P))return true; // player can swim into water
+  if(inB(c,r))return true;
+  // NPC collision
+  for(const n of NPCS){ if(n===self)continue;
+    if(Math.abs(px-(n.px+TS/2))<11&&Math.abs(py-(n.py+TS-3))<10)return true;}
+  if(self&&self!==P&&Math.abs(px-(P.px+TS/2))<11&&Math.abs(py-(P.py+TS-3))<10)return true; // player blocks npc
+  return false;
+}
+function canMove(nx,ny,self){
+  const m=3;
+  return !solidAt(nx+m,ny+TS-2,self)&&!solidAt(nx+TS-m,ny+TS-2,self)
+       &&!solidAt(nx+m,ny+TS/2,self)&&!solidAt(nx+TS-m,ny+TS/2,self);
+}
+
+/* ── input ── */
+const keys={};
+addEventListener('keydown',e=>{
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();
+  keys[e.key.toLowerCase()]=true;
+  if(e.key===' '||e.key==='Enter'){ if(!running)startGame(); else interact(); }
+  if((e.key==='e'||e.key==='E')&&running&&!dlgOpen&&!panelOpen) eatCrop();
+  if((e.key==='t'||e.key==='T')&&running) cycleTime();
+  if(e.key==='Escape'){ closePanel(); closeDlg(); closeMenu(); }
+});
+addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
+document.querySelectorAll('#pad button').forEach(b=>{
+  const d=b.dataset.d,on=e=>{e.preventDefault();keys['_'+d]=true},off=e=>{e.preventDefault();keys['_'+d]=false};
+  b.addEventListener('touchstart',on);b.addEventListener('touchend',off);
+  b.addEventListener('mousedown',on);b.addEventListener('mouseup',off);b.addEventListener('mouseleave',off);
+});
+document.getElementById('act').addEventListener('touchstart',e=>{e.preventDefault();interact()});
+document.getElementById('act').addEventListener('click',interact);
+document.getElementById('eat').addEventListener('touchstart',e=>{e.preventDefault();eatCrop()});
+document.getElementById('eat').addEventListener('click',eatCrop);
+
+/* ── dialog (paged) ── */
+let dlgOpen=false,curPages=[],curIdx=0;
+const dlg=document.getElementById('dlg');
+function openDialog(who,title,pages){
+  curPages=pages;curIdx=0;
+  document.getElementById('dlgWho').textContent=who||'';
+  document.getElementById('dlgTitle').innerHTML=title||'';
+  renderPage(); dlg.classList.add('show'); dlgOpen=true;
+}
+function renderPage(){
+  document.getElementById('dlgBody').innerHTML=curPages[curIdx];
+  document.getElementById('dlgNext').style.display=(curIdx<curPages.length-1)?'block':'none';
+}
+function advance(){ if(curIdx<curPages.length-1){curIdx++;renderPage();}else closeDlg(); }
+function closeDlg(){dlg.classList.remove('show');dlgOpen=false;}
+dlg.addEventListener('click',e=>{if(e.target.closest('a,.close'))return;advance();});
+
+/* ── centered panel (works / apps) ── */
+let panelOpen=false;
+const panel=document.getElementById('panel');
+function openPanel(title,html){
+  document.getElementById('panelTitle').innerHTML=title;
+  document.getElementById('panelBody').innerHTML=html;
+  panel.classList.add('show'); panelOpen=true;
+}
+function closePanel(){panel.classList.remove('show');panelOpen=false;}
+panel.addEventListener('click',e=>{if(e.target===panel)closePanel();});
+
+/* ── strawberry: toast / counter / eat ── */
+let _toastT;
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg;
+  t.classList.add('show'); clearTimeout(_toastT); _toastT=setTimeout(()=>t.classList.remove('show'),1700); }
+function updateCropHud(){ document.getElementById('crops').innerHTML=
+  '🍓 <b>×'+P.berries+'</b>&ensp;🍇 <b>×'+P.grapes+'</b>&ensp;🥬 <b>×'+P.lettuce+'</b>'; }
+function eatCrop(){
+  let key=P.lastCrop;
+  if(!key||P[key]<=0) key=['berries','grapes','lettuce'].find(k=>P[k]>0);
+  if(!key){ showToast('🍴 食べるものを持っていない'); return; }
+  P[key]--; updateCropHud();
+  if(key==='berries'){ P.boostUntil=Date.now()+5000; P.slowUntil=0; showToast('🍓 もぐもぐ… あまい！ すこし速くなった！'); }
+  else if(key==='grapes'){ P.slowUntil=Date.now()+6000; P.boostUntil=0; showToast('🍇 ほろ酔い… ふらふら〜（少し遅くなった）'); }
+  else { showToast('🥬 みずみずしい！'); }
+}
+/* ── time-of-day tint + manual switch ── */
+let timeMode='auto';
+const TINT={morning:'rgba(255,176,120,0.15)',day:null,evening:'rgba(255,108,40,0.27)',night:'rgba(10,14,44,0.58)'};
+const TORDER=['auto','morning','day','evening','night'];
+const STARS=[]; for(let i=0;i<46;i++) STARS.push([(Math.random()*cv.width)|0,(Math.random()*cv.height*0.62)|0,Math.random()<.3?2:1]);
+function curMode(){ if(timeMode!=='auto')return timeMode; const h=new Date().getHours();
+  if(h>=5&&h<10)return 'morning'; if(h>=10&&h<16)return 'day'; if(h>=16&&h<19)return 'evening'; return 'night'; }
+function applyTint(){ const m=curMode(),c=TINT[m];
+  if(c){ ctx.fillStyle=c; ctx.fillRect(0,0,cv.width,cv.height); }
+  if(m==='night'){ ctx.fillStyle='#fff';
+    for(const s of STARS){ ctx.globalAlpha=0.45+0.5*(0.5+0.5*Math.sin(Date.now()/600+s[0])); ctx.fillRect(s[0],s[1],s[2],s[2]); }
+    ctx.globalAlpha=1; } }
+function updateTimeBtn(){ document.querySelectorAll('#timeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.m===timeMode)); }
+function cycleTime(){ timeMode=TORDER[(TORDER.indexOf(timeMode)+1)%TORDER.length]; updateTimeBtn(); }
+document.querySelectorAll('#timeSeg button').forEach(b=>b.addEventListener('click',()=>{ timeMode=b.dataset.m; updateTimeBtn(); }));
+/* settings menu open/close */
+const menuEl=document.getElementById('menu'), menuScrim=document.getElementById('menuScrim');
+function openMenu(){ menuEl.classList.add('open'); menuScrim.classList.add('open'); }
+function closeMenu(){ menuEl.classList.remove('open'); menuScrim.classList.remove('open'); }
+document.getElementById('menuBtn').addEventListener('click',()=>menuEl.classList.contains('open')?closeMenu():openMenu());
+document.getElementById('menuClose').addEventListener('click',closeMenu);
+menuScrim.addEventListener('click',closeMenu);
+
+function wcolor(c){
+  if(/舞台/.test(c))return '#b79cf0';
+  if(/MV|映像|撮影|映画/.test(c))return '#f08c9c';
+  if(/構造|建築|建設|模型/.test(c))return '#8cb4e8';
+  if(/空間|展示|美術|インスタ/.test(c))return '#8ce0a8';
+  return '#d7cfb6';
+}
+function openWorksPanel(){
+  let h='', n=0;
+  for(const yr of WORKS){
+    h+='<div class="wyear"><h3>'+yr.y+'</h3>';
+    for(const it of yr.items){ n++;
+      const col=wcolor(it.c);
+      const chip=it.c?'<span class="wc" style="background:'+col+'22;color:'+col+'">'+it.c+'</span>':'';
+      h+='<div class="witem"><span class="wm">'+it.m+'</span>'+chip+'<span class="wt">'+it.t+'</span></div>';
+    }
+    h+='</div>';
+  }
+  openPanel('🏛 美術館 — Works ('+n+')',h);
+}
+function openAppsPanel(){
+  let h='<div class="agrid">';
+  for(const cat of APPS){
+    h+='<div class="acat">'+cat.cat+'</div>';
+    for(const a of cat.items)
+      h+='<a class="acard" href="'+a.u+'" target="_blank" rel="noopener"><div class="an">'+a.n+'</div><div class="au">'+a.u.replace(/^https?:\/\//,'')+'</div></a>';
+  }
+  h+='</div>';
+  openPanel('🔧 工房 — Apps',h);
+}
+/* newsletter signup → GAS (重複チェック・登録・通知を一括処理) */
+const GAS_URL='https://script.google.com/macros/s/AKfycbyieDzOkdfRhkqzWx51YnUC6Y-537NnTCfpDkCaXGNOLMYJTDzG36kBhgcllVQu1VV5tQ/exec';
+function openNewsPanel(){
+  openPanel('📜 掲示板 — Newsletter',
+    `<form id="nlForm" class="nlform">
+       <p>不定期メルマガ「karasuletters」。制作の裏側や活動のお知らせをお届けします。<br>下のフォームから購読登録できます。</p>
+       <label>お名前<input id="nlName" type="text" autocomplete="name" required></label>
+       <label>メールアドレス<input id="nlEmail" type="email" autocomplete="email" required></label>
+       <button id="nlBtn" type="submit">購読する</button>
+       <div id="nlError" class="nlerr" hidden></div>
+     </form>
+     <div id="nlThanks" class="nlthanks" hidden>✉ 登録ありがとうございます！<br>karasuletters の配信をお待ちください。</div>`);
+  const f=document.getElementById('nlForm');
+  f.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const name=document.getElementById('nlName').value.trim();
+    const email=document.getElementById('nlEmail').value.trim();
+    const btn=document.getElementById('nlBtn'), err=document.getElementById('nlError');
+    err.hidden=true; btn.disabled=true; btn.textContent='確認中...';
+    try{
+      const res=await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({action:'register',name,email})});
+      const result=await res.json();
+      if(result.duplicate){ err.textContent='このメールアドレスはすでに登録されています。';
+        err.hidden=false; btn.disabled=false; btn.textContent='購読する'; return; }
+      f.style.display='none'; document.getElementById('nlThanks').hidden=false;
+    }catch(ex){ err.textContent='通信エラーが発生しました。時間をおいてお試しください。';
+      err.hidden=false; btn.disabled=false; btn.textContent='購読する'; }
+  });
+}
+
+function interact(){
+  if(panelOpen){closePanel();return;}
+  if(dlgOpen){advance();return;}
+  const cx=P.px+TS/2, cy=P.py+TS/2;
+  const off={up:[0,-TS],down:[0,TS],left:[-TS,0],right:[TS,0]}[P.dir];
+  const fx=cx+off[0], fy=cy+off[1];
+  // NPC?
+  for(const n of NPCS){ if(Math.abs(fx-(n.px+TS/2))<TS&&Math.abs(fy-(n.py+TS/2))<TS){
+    n.dir={up:'down',down:'up',left:'right',right:'left'}[P.dir];
+    openDialog(n.name,'',n.pages); return; } }
+  // animal?
+  for(const a of ANIMALS){ if(Math.abs(fx-(a.px+TS/2))<TS&&Math.abs(fy-(a.py+TS/2))<TS){
+    a.dir={up:'down',down:'up',left:'right',right:'left'}[P.dir];
+    openDialog(ANAME[a.type],'',[a.say]); return; } }
+  // boulder? (話しかけられる古き岩)
+  const btc=(fx/TS)|0, btr=(fy/TS)|0;
+  for(const b of BOULDERS){ if(btc>=b.x&&btc<b.x+b.w&&btr>=b.y&&btr<b.y+b.h){
+    openDialog('古き岩','',
+      ['……。',
+       '（岩が、かすかに目を開けた気がした）',
+       'われは、八ヶ岳が火を噴いた頃から、この地におる岩。',
+       'もののけも旅人も、みなここで一息ついてゆく。',
+       'きみも、ゆっくりしておゆき。']); return; } }
+  // crop harvest? (いちご / ぶどう / レタス)
+  const stc=(fx/TS)|0, str=(fy/TS)|0, here=M[str]&&M[str][stc];
+  const crop=CROP[here];
+  if(crop){ M[str][stc]=crop.picked; PICKED.push({c:stc,r:str,at:Date.now()+20000,ripe:here});
+    P[crop.key]++; P.lastCrop=crop.key; updateCropHud();
+    showToast(crop.icon+' '+crop.name+'を収穫した！  (E / 🍴ボタンで食べられる)'); return; }
+  if(PICKEDTILE.has(here)){ showToast('🌱 まだ実っていない…'); return; }
+  // building?
+  const tc=(fx/TS)|0, tr=(fy/TS)|0;
+  for(const s of SPOTS){ if(tc>=s.x-1&&tc<=s.x+s.w&&tr>=s.y-1&&tr<=s.y+s.h){
+    if(s.key==='works'){openWorksPanel();return;}
+    if(s.key==='apps'){openAppsPanel();return;}
+    if(s.key==='news'){openNewsPanel();return;}
+    const c=CONTENT[s.key]; openDialog(c.who,c.t,c.pages); return; } }
+}
+
+/* ── update ── */
+let cam={x:0,y:0};
+function moveEnt(ent,dx,dy,spd){
+  ent.moving=!!(dx||dy);
+  if(dy<0)ent.dir='up';else if(dy>0)ent.dir='down';else if(dx<0)ent.dir='left';else if(dx>0)ent.dir='right';
+  if(dx){const nx=ent.px+dx*spd; if(canMove(nx,ent.py,ent))ent.px=nx;}
+  if(dy){const ny=ent.py+dy*spd; if(canMove(ent.px,ny,ent))ent.py=ny;}
+  ent.frame = ent.moving ? ent.frame+0.16 : 0;
+}
+function update(){
+  // strawberry regrow
+  const now=Date.now();
+  for(let i=PICKED.length-1;i>=0;i--) if(now>=PICKED[i].at){ M[PICKED[i].r][PICKED[i].c]=PICKED[i].ripe; PICKED.splice(i,1); }
+  // NPC wander (paused when talking)
+  if(!dlgOpen&&!panelOpen) for(const n of NPCS){
+    if(n.still){ n.moving=false; continue; }
+    n.t--;
+    if(n.t<=0){ n.t=60+rnd()*120;
+      const r=rnd(); n.mdir = r<.55?null:['up','down','left','right'][(rnd()*4)|0]; }
+    let dx=0,dy=0;
+    if(n.mdir){const d={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]}[n.mdir];
+      // stay near home
+      if(Math.hypot(n.px-n.hx,n.py-n.hy)<TS*3){dx=d[0];dy=d[1];}else{n.mdir=null;n.t=40;}}
+    moveEnt(n,dx,dy,.55);
+  }
+  // animals wander (a bit wider range)
+  if(!dlgOpen&&!panelOpen) for(const a of ANIMALS){
+    a.t--;
+    if(a.t<=0){ a.t=50+rnd()*140; const r=rnd(); a.mdir=r<.5?null:['up','down','left','right'][(rnd()*4)|0]; }
+    let dx=0,dy=0;
+    if(a.mdir){const d={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]}[a.mdir];
+      if(Math.hypot(a.px-a.hx,a.py-a.hy)<TS*4){dx=d[0];dy=d[1];}else{a.mdir=null;a.t=40;}}
+    moveEnt(a,dx,dy,a.type==='rabbit'?.8:.5);
+  }
+  if(!dlgOpen&&!panelOpen){
+    let dx=0,dy=0;
+    if(keys['arrowup']||keys['w']||keys['_up'])dy=-1;
+    else if(keys['arrowdown']||keys['s']||keys['_down'])dy=1;
+    else if(keys['arrowleft']||keys['a']||keys['_left'])dx=-1;
+    else if(keys['arrowright']||keys['d']||keys['_right'])dx=1;
+    let base=P.speed;
+    if(Date.now()<P.boostUntil) base=P.speed*1.8;
+    else if(Date.now()<P.slowUntil) base=P.speed*0.5;
+    const inWater=M[((P.py+TS/2)/TS)|0] && M[((P.py+TS/2)/TS)|0][((P.px+TS/2)/TS)|0]===2;
+    moveEnt(P,dx,dy,inWater?base*0.55:base);
+    P.swim=M[((P.py+TS/2)/TS)|0] && M[((P.py+TS/2)/TS)|0][((P.px+TS/2)/TS)|0]===2;
+  } else P.moving=false;
+  // camera
+  cam.x=Math.max(0,Math.min(MW*TS-VW*TS, P.px+TS/2-VW*TS/2));
+  cam.y=Math.max(0,Math.min(MH*TS-VH*TS, P.py+TS/2-VH*TS/2));
+  // location label
+  let near=null,nd=1e9;
+  for(const s of SPOTS){const d=Math.hypot((s.x+s.w/2)*TS-P.px,(s.y+s.h)*TS-P.py);if(d<nd){nd=d;near=s;}}
+  for(const n of NPCS){const d=Math.hypot(n.px-P.px,n.py-P.py);if(d<nd-4){nd=d+999;}}
+  let label;
+  if(P.swim){ label='🏊 <b>泳いでいる！</b>'; }
+  else if(nd<40){ label=`📍 <b>${near.label}</b> の前 — 調べてみよう`; }
+  else {
+    const pc=((P.px+TS/2)/TS)|0, pr=((P.py+TS-2)/TS)|0;
+    const around=t=>{for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){const rr=pr+dr,cc=pc+dc;if(rr>=0&&rr<MH&&cc>=0&&cc<MW&&M[rr][cc]===t)return true;}return false;};
+    const here=M[pr]&&M[pr][pc];
+    if(pc>=15&&pc<=22&&pr>=6&&pr<=11) label='🎶 <b>自由の広場</b> — ワイワイ';
+    else if(here===12||here===13||around(12)||around(13)) label='🍓 <b>いちご畑</b> — 調べて収穫';
+    else if(here===14||here===15||around(14)||around(15)) label='🍇 <b>ぶどう畑</b>（ワイン用）— 調べて収穫';
+    else if(here===16||here===17||around(16)||around(17)) label='🥬 <b>レタス畑</b> — 調べて収穫';
+    else if(here===7||around(10)) label='🏜 <b>砂漠</b> を歩いている';
+    else if(around(8))       label='🌋 <b>溶岩地帯</b> — 熱い！';
+    else if(here===2||around(2)) label='💧 <b>池のほとり</b>';
+    else if(pr<7||around(11)) label='⛰ <b>八ヶ岳</b> のふもと';
+    else label='📍 <b>あわいの島</b> を探索中';
+  }
+  document.getElementById('loc').innerHTML=label;
+}
+
+/* ── drawing helpers ── */
+function px(x,y,w,h,col){ctx.fillStyle=col;ctx.fillRect(x,y,w,h);}
+function drawTile(c,r,sx,sy){
+  const t=M[r][c];
+  // grass base under everything
+  const g=((c*7+r*13)%5);
+  px(sx,sy,TS,TS, (c+r)%2? '#5a9356':'#558d52');
+  if(g===0)px(sx+3,sy+10,1,2,'#6fae66'); if(g===2){px(sx+9,sy+5,1,2,'#6fae66');px(sx+11,sy+11,1,2,'#4f8049');}
+  if(g===3)px(sx+5,sy+3,1,2,'#6fae66');
+  if(t===2){ px(sx,sy,TS,TS,'#4f86ab'); px(sx,sy,TS,3,'#5d97bd');
+    px(sx+3+((Date.now()/600+c)%6),sy+6,3,1,'#a9d4e6'); px(sx+9,sy+11,2,1,'#a9d4e6'); }
+  else if(t===1){ px(sx,sy,TS,TS,'#cbb079'); px(sx,sy,TS,1,'#d8bf8c');
+    const k=(c*5+r*3)%4; px(sx+2+k*3,sy+4,2,2,'#bda06a'); px(sx+8,sy+10,2,2,'#bda06a'); }
+  else if(t===5){ px(sx,sy,TS,TS,'#8a6a44'); px(sx,sy,TS,2,'#9a774e'); px(sx+2,sy+7,12,1,'#75582f'); }
+  else if(t===6){ px(sx+2,sy+5,12,9,'#2f6b3a'); px(sx+4,sy+4,8,4,'#3a7d45'); px(sx+5,sy+8,2,2,'#246030'); }
+  else if(t===3){ // tree with shading + trunk
+    px(sx+6,sy+10,4,6,'#6b4a2c'); px(sx+6,sy+10,1,6,'#7d5836');
+    px(sx+2,sy+1,12,11,'#26592f'); px(sx+3,sy,10,9,'#2f6b3a'); px(sx+4,sy+1,6,4,'#3c8147');
+    px(sx+10,sy+6,2,4,'#1f4a27'); }
+  else if(t===4){ const cl=['#e8d24f','#e57ba0','#fff','#d98cf0'][(c+r)%4];
+    px(sx+5,sy+6,3,3,cl); px(sx+5,sy+5,1,1,'#7a5'); px(sx+10,sy+9,2,2,cl); px(sx+3,sy+10,2,2,'#e8d24f'); }
+  else if(t===7){ // sand / desert
+    px(sx,sy,TS,TS,'#dcc486'); px(sx,sy,TS,2,'#e6d199');
+    const k=(c*5+r*7)%4; px(sx+2+k*3,sy+9,2,1,'#cbb277'); px(sx+9,sy+5,1,1,'#c8af72'); px(sx+5,sy+12,2,1,'#cbb277'); }
+  else if(t===9){ // rock / boulder
+    px(sx,sy,TS,TS,(c+r)%2?'#dcc486':'#cbb277');
+    px(sx+3,sy+5,10,9,'#8b8a86'); px(sx+4,sy+4,8,4,'#a3a29d'); px(sx+5,sy+9,3,3,'#6e6d69'); px(sx+10,sy+11,2,2,'#6e6d69'); }
+  else if(t===10){ // cactus
+    px(sx,sy,TS,TS,'#dcc486'); px(sx+7,sy+3,3,11,'#3a7d45'); px(sx+4,sy+6,3,4,'#3a7d45'); px(sx+10,sy+5,3,4,'#3a7d45');
+    px(sx+7,sy+3,1,11,'#4f9a57'); px(sx+8,sy+5,1,1,'#cdebc6'); }
+  else if(t===8){ // lava (animated glow)
+    const f=Math.sin(Date.now()/350+(c*1.7+r))*0.5+0.5;
+    px(sx,sy,TS,TS,'#3a1410');
+    ctx.fillStyle='#e0531e'; ctx.globalAlpha=0.5+0.5*f; ctx.fillRect(sx+1,sy+1,TS-2,TS-2); ctx.globalAlpha=1;
+    px(sx+3,sy+4,TS-6,1,'#2a0d0a'); px(sx+2,sy+9,TS-5,1,'#2a0d0a'); px(sx+6,sy+6,3,2,'#ffd27a'); }
+  else if(t===11){ // 八ヶ岳 mountain
+    px(sx,sy,TS,TS,(c+r)%2?'#6b7486':'#5f6878');
+    px(sx,sy,TS,4,'#7c8597');
+    px(sx+2,sy+6,3,8,'#525a69'); px(sx+10,sy+4,3,10,'#525a69');
+    if(r<2){ px(sx,sy,TS,6,'#e8edf4'); px(sx+3,sy+6,2,2,'#e8edf4'); px(sx+9,sy+7,2,2,'#e8edf4'); } }
+  else if(t===12){ // ripe strawberry plant
+    px(sx,sy,TS,TS,(c+r)%2?'#5a9356':'#558d52');
+    px(sx+3,sy+6,10,7,'#2f6b3a'); px(sx+4,sy+5,8,3,'#3a7d45');
+    px(sx+5,sy+10,3,3,'#e23b4a'); px(sx+9,sy+9,3,3,'#e23b4a');     // berries
+    px(sx+6,sy+11,1,1,'#ffe'); px(sx+10,sy+10,1,1,'#ffe'); }       // seeds
+  else if(t===13){ // picked plant (regrowing)
+    px(sx,sy,TS,TS,(c+r)%2?'#5a9356':'#558d52');
+    px(sx+3,sy+6,10,7,'#2f6b3a'); px(sx+4,sy+5,8,3,'#3a7d45');
+    px(sx+7,sy+9,2,2,'#fff'); px(sx+7,sy+9,2,1,'#ffe'); }          // tiny flower
+  else if(t===14){ // ripe grapevine
+    px(sx,sy,TS,TS,(c+r)%2?'#5a9356':'#558d52');
+    px(sx+1,sy+2,14,3,'#3a7d45'); px(sx+2,sy+1,12,2,'#4a8d52');     // trellis leaves
+    px(sx+5,sy+6,4,5,'#5b2f7a'); px(sx+6,sy+11,2,2,'#5b2f7a');      // grape cluster
+    px(sx+5,sy+6,1,1,'#9a6ab8'); px(sx+7,sy+8,1,1,'#9a6ab8'); }
+  else if(t===15){ // picked grapevine
+    px(sx,sy,TS,TS,(c+r)%2?'#5a9356':'#558d52');
+    px(sx+1,sy+2,14,3,'#3a7d45'); px(sx+7,sy+6,1,6,'#6b4a2c'); }
+  else if(t===16){ // ripe lettuce
+    px(sx,sy,TS,TS,(c+r)%2?'#5a9356':'#558d52');
+    px(sx+3,sy+6,10,7,'#4f9a44'); px(sx+4,sy+5,8,4,'#6cc05a');      // head
+    px(sx+6,sy+8,1,3,'#3f8038'); px(sx+9,sy+9,1,2,'#3f8038'); }     // veins
+  else if(t===17){ // picked lettuce (sprout)
+    px(sx,sy,TS,TS,(c+r)%2?'#5a9356':'#558d52');
+    px(sx+6,sy+10,4,2,'#8a6a44'); px(sx+7,sy+8,2,2,'#6cc05a'); }
+}
+function drawBuilding(s){
+  const x=s.x*TS-cam.x, y=s.y*TS-cam.y, w=s.w*TS, h=s.h*TS;
+  px(x-3,y+h-2,w+6,4,'rgba(0,0,0,.25)');           // ground shadow
+  px(x,y+TS,w,h-TS,s.wall);                          // wall
+  px(x,y+TS,w,3,'#fff3'); px(x,y+h-3,w,3,'#0003');   // wall hi/lo
+  for(let i=1;i<s.w;i++)px(x+i*TS,y+TS,1,h-TS,'#0001'); // plank lines
+  // windows
+  px(x+5,y+TS+6,6,6,'#3a5a7a'); px(x+w-11,y+TS+6,6,6,'#3a5a7a');
+  px(x+5,y+TS+6,6,1,'#aee'); px(x+w-11,y+TS+6,6,1,'#aee');
+  // roof (two-tone, eaves)
+  px(x-3,y,w+6,TS,s.roof); px(x-3,y,w+6,3,'#0004'); px(x-3,y+TS-3,w+6,3,'#0003');
+  px(x-3,y+TS-2,w+6,2,'#00000044');
+  for(let i=0;i<s.w;i++)px(x+i*TS+TS/2,y+2,1,TS-4,'#ffffff14');
+  // door
+  const dx=x+w/2-7; px(dx,y+h-15,14,15,'#5a3d28'); px(dx+2,y+h-13,10,13,'#3a2718');
+  px(dx+9,y+h-8,1,2,'#e7c878');
+  // sign
+  if(s.icon){ ctx.font='13px serif'; ctx.fillText(s.icon,x+w/2,y+TS-3); }
+  if(s.label){ ctx.font='9px monospace'; px(x+w/2-18,y+h+2,36,11,'rgba(20,18,15,.8)');
+    ctx.fillStyle='#fff'; ctx.fillText(s.label,x+w/2,y+h+11); }
+}
+function drawChar(x,y,dir,frame,moving,c1,c2,hair,cat){
+  const bob=moving?(Math.floor(frame)%2):0, sx=Math.round(x), sy=Math.round(y);
+  px(sx+3,sy+TS-2,10,3,'rgba(0,0,0,.28)');           // shadow
+  if(cat){ px(sx+4,sy+8+bob,9,5,c1); px(sx+11,sy+5+bob,3,3,c1);  // body+head
+    px(sx+12,sy+3+bob,1,2,c1);px(sx+14,sy+3+bob,1,2,c1);         // ears
+    px(sx+13,sy+7+bob,1,1,'#3a5'); px(sx+3,sy+9+bob,2,1,c1);     // eye+tail
+    return; }
+  // legs
+  px(sx+5,sy+12+bob,2,3-bob,'#2a2e3a'); px(sx+9,sy+12+bob,2,3-bob,'#2a2e3a');
+  // body / cloak
+  px(sx+3,sy+6+bob,10,7,c1); px(sx+3,sy+6+bob,10,1,'#fff2'); px(sx+3,sy+12+bob,10,1,'#0003');
+  // arms hint
+  px(sx+2,sy+7+bob,1,4,c1); px(sx+13,sy+7+bob,1,4,c1);
+  // head
+  px(sx+5,sy+1+bob,6,6,c2); px(sx+5,sy+bob,6,2,hair); px(sx+4,sy+1+bob,1,3,hair); px(sx+11,sy+1+bob,1,3,hair);
+  // face by dir
+  if(dir==='down'){px(sx+6,sy+4+bob,1,1,'#3a2a1a');px(sx+9,sy+4+bob,1,1,'#3a2a1a');}
+  else if(dir==='up'){px(sx+5,sy+bob,6,3,hair);}
+  else if(dir==='left'){px(sx+6,sy+4+bob,1,1,'#3a2a1a');}
+  else {px(sx+9,sy+4+bob,1,1,'#3a2a1a');}
+}
+function drawBoulder(b){
+  const x=b.x*TS-cam.x, y=b.y*TS-cam.y, w=b.w*TS, h=b.h*TS;
+  px(x-2,y+h-3,w+4,5,'rgba(0,0,0,.28)');        // ground shadow
+  px(x+6,y+2,w-12,h-2,'#83827e');               // upper mass
+  px(x+3,y+6,w-6,h-6,'#8b8a86');                // lower mass
+  px(x+6,y+2,w-12,3,'#b0afaa');                 // top light
+  px(x+3,y+6,w-6,3,'#a3a29d');
+  px(x+5,y+h-6,w-10,4,'#6e6d69');               // bottom shade
+  px(x+(w/2|0),y+7,2,h-9,'#6e6d69');            // crack
+  px(x+9,y+10,3,2,'#6e6d69');
+  px(x+5,y+h-4,5,2,'#5a7d3a'); px(x+w-11,y+6,4,2,'#5a7d3a'); // moss
+}
+function drawObj(o){
+  const sx=Math.round(o.x*TS-cam.x), sy=Math.round(o.y*TS-cam.y), W=o.w*TS, H=o.h*TS;
+  px(sx,sy+H-3,W,4,'rgba(0,0,0,.26)'); // ground shadow
+  if(o.type==='kei'){            // 軽トラック（白）
+    px(sx+14,sy+5,W-15,6,'#dcd8d0'); px(sx+14,sy+4,W-15,2,'#bbb7af');   // 荷台
+    px(sx+1,sy+2,13,9,'#eef0f2'); px(sx+1,sy+2,13,1,'#cfd2d6');         // キャブ
+    px(sx+2,sy+3,7,4,'#9cc4d8');                                        // 窓
+    px(sx+3,sy+11,4,4,'#1f1f1f'); px(sx+W-9,sy+11,4,4,'#1f1f1f');       // タイヤ
+    px(sx+4,sy+12,2,2,'#888'); px(sx+W-8,sy+12,2,2,'#888'); }
+  else if(o.type==='fiat'){      // 青いFiat（丸い小型車）
+    px(sx+2,sy+6,W-4,6,'#2f6fc0'); px(sx+5,sy+3,W-12,4,'#3a7fd0');      // ボディ＋屋根
+    px(sx+6,sy+3,W-15,3,'#c3e2f2');                                     // 窓
+    px(sx+2,sy+6,W-4,1,'#5a9fe0'); px(sx+W-4,sy+7,1,2,'#ffe');          // ライト
+    px(sx+4,sy+11,4,4,'#1f1f1f'); px(sx+W-9,sy+11,4,4,'#1f1f1f');
+    px(sx+5,sy+12,2,2,'#999'); px(sx+W-8,sy+12,2,2,'#999'); }
+  else if(o.type==='flat'){      // 背景パネル（描きかけ）＋イーゼル脚
+    px(sx+4,sy+9,2,H-9,'#7a5a3a'); px(sx+W-6,sy+9,2,H-9,'#7a5a3a');
+    px(sx+3,sy+2,W-6,16,'#e8e2d2'); px(sx+3,sy+2,W-6,2,'#cfc8b6');      // パネル
+    px(sx+5,sy+4,W-10,6,'#9cc6e0'); px(sx+5,sy+10,W-10,5,'#7fae66');    // 空＋丘（描きかけ）
+    px(sx+W-9,sy+5,2,2,'#e8c84a');                                      // 太陽
+    px(sx+6,sy+12,3,1,'#c25a5a'); }                                     // 塗りかけの跡
+  else if(o.type==='platform'){  // 舞台の平台
+    px(sx+1,sy+5,W-2,6,'#b88a52'); px(sx+1,sy+5,W-2,2,'#c89a62');
+    for(let i=1;i*8<W-2;i++)px(sx+i*8,sy+5,1,6,'#9c7042');
+    px(sx+2,sy+11,2,3,'#6e4e2a'); px(sx+W-4,sy+11,2,3,'#6e4e2a'); }
+  else if(o.type==='scaffold'){  // 単管の枠
+    px(sx+2,sy+2,1,12,'#b6b6b6'); px(sx+W-3,sy+2,1,12,'#b6b6b6');
+    px(sx+2,sy+4,W-4,1,'#cfcfcf'); px(sx+2,sy+9,W-4,1,'#cfcfcf');
+    px(sx+2,sy+2,W-4,1,'#e2e2e2'); }
+  else if(o.type==='ladder'){    // 脚立
+    px(sx+4,sy+1,1,13,'#caa46a'); px(sx+9,sy+1,1,13,'#caa46a');
+    for(let i=0;i<4;i++)px(sx+4,sy+3+i*3,6,1,'#b8905a'); }
+  else if(o.type==='lumber'){    // 木材
+    px(sx+1,sy+9,13,2,'#c69a5e'); px(sx+1,sy+11,13,2,'#b8895a'); px(sx+2,sy+7,11,2,'#caa264');
+    px(sx+1,sy+7,1,6,'#8a6a3a'); px(sx+13,sy+7,1,6,'#8a6a3a'); }
+  else if(o.type==='paint'){     // 塗料＋刷毛
+    px(sx+2,sy+8,5,5,'#cc4a4a'); px(sx+2,sy+8,5,1,'#e06a6a');
+    px(sx+9,sy+9,4,4,'#3a6ac0'); px(sx+9,sy+9,4,1,'#5a8ae0');
+    px(sx+6,sy+4,1,4,'#8a6a3a'); px(sx+5,sy+3,3,2,'#e8e2d2'); }
+}
+function drawFire(x,y){
+  const sx=Math.round(x),sy=Math.round(y),t=Date.now()/90;
+  px(sx+3,sy+11,10,3,'rgba(0,0,0,.25)');
+  px(sx+3,sy+10,10,2,'#6b4a2c'); px(sx+4,sy+9,8,2,'#5a3d24');   // logs
+  const f=Math.round(Math.sin(t)*1.2);
+  ctx.fillStyle='#e0531e'; ctx.fillRect(sx+5,sy+4+f,6,6);
+  ctx.fillStyle='#f0a23a'; ctx.fillRect(sx+6,sy+5+f,4,4);
+  ctx.fillStyle='#ffe08a'; ctx.fillRect(sx+7,sy+7+f,2,2);
+  px(sx+8,sy+2+Math.round(Math.sin(t*1.7)),1,1,'#ffd27a');      // spark
+}
+function drawSwimmer(x,y,dir,frame){
+  const sx=Math.round(x),sy=Math.round(y),t=Date.now()/200;
+  // ripple ring
+  ctx.strokeStyle='rgba(220,240,255,.55)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.ellipse(sx+8,sy+11,7+Math.sin(t)*1.6,3.2,0,0,7);ctx.stroke();
+  // submerged body hint
+  px(sx+4,sy+9,8,3,'#3a4a8a');
+  // head above water
+  px(sx+5,sy+3,6,6,'#e8c39a'); px(sx+5,sy+2,6,2,'#3a2a1a');
+  if(dir==='down'){px(sx+6,sy+6,1,1,'#3a2a1a');px(sx+9,sy+6,1,1,'#3a2a1a');}
+  else if(dir==='left'){px(sx+6,sy+6,1,1,'#3a2a1a');}
+  else if(dir==='right'){px(sx+9,sy+6,1,1,'#3a2a1a');}
+  // arms stroking
+  const a=Math.floor(frame)%2;
+  px(sx+3,sy+8+a,2,2,'#e8c39a'); px(sx+11,sy+9-a,2,2,'#e8c39a');
+}
+function drawAnimal(x,y,dir,frame,moving,type){
+  const sx=Math.round(x),sy=Math.round(y),bob=moving?(Math.floor(frame)%2):0;
+  const R=dir!=='left';
+  px(sx+3,sy+13,10,2,'rgba(0,0,0,.22)');
+  const C={sheep:['#efe9df','#3c352d','#3c352d'],goat:['#c7b9a0','#9c8f78','#6e6253'],
+           rabbit:['#e9e3d7','#e9e3d7','#d2cabb'],deer:['#a9794e','#8a6038','#5e4126']}[type];
+  const body=C[0],head=C[1],leg=C[2];
+  px(sx+4,sy+10,1,3-bob,leg);px(sx+6,sy+10,1,3-bob,leg);px(sx+9,sy+10,1,3-bob,leg);px(sx+11,sy+10,1,3-bob,leg);
+  px(sx+3,sy+5+bob,9,6,body);
+  if(type==='sheep'){ px(sx+2,sy+4+bob,4,4,body);px(sx+6,sy+3+bob,4,4,body);px(sx+9,sy+4+bob,4,4,body); }
+  const hx=R?sx+10:sx+2;
+  px(hx,sy+4+bob,4,4,head);
+  px(R?hx+2:hx+1,sy+6+bob,1,1,'#1c160f');                       // eye
+  if(type==='rabbit'){ px(R?hx+1:hx+2,sy+bob,1,4,head); px(R?hx+2:hx+1,sy+1+bob,1,3,'#f0b8c0'); }
+  else if(type==='goat'){ px(R?hx+3:hx,sy+3+bob,1,1,'#efe7d6'); px(R?hx:hx+3,sy+8+bob,1,2,head); }
+  else if(type==='deer'){ px(R?hx+1:hx+2,sy+bob,1,4,'#d8c9b0'); px(R?hx-1:hx+4,sy+1+bob,1,2,'#d8c9b0');
+    px(sx+5,sy+6+bob,1,1,'#e8dcc8'); px(sx+8,sy+7+bob,1,1,'#e8dcc8'); }
+  else if(type==='sheep'){ px(hx,sy+3+bob,4,2,head); }
+}
+function render(){
+  const c0=(cam.x/TS)|0, r0=(cam.y/TS)|0, ox=cam.x%TS, oy=cam.y%TS;
+  for(let r=0;r<=VH;r++)for(let c=0;c<=VW;c++){
+    const mc=c0+c, mr=r0+r; if(mr<0||mr>=MH||mc<0||mc>=MW)continue;
+    drawTile(mc,mr,c*TS-ox,r*TS-oy);
+  }
+  // depth-sorted entities
+  const ents=[];
+  DECO.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
+  BOULDERS.forEach(b=>ents.push({y:(b.y+b.h)*TS,fn:()=>drawBoulder(b)}));
+  OBJS.forEach(o=>ents.push({y:(o.y+o.h)*TS,fn:()=>drawObj(o)}));
+  SPOTS.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
+  NPCS.forEach(n=>ents.push({y:n.py+TS,fn:()=>drawChar(n.px-cam.x,n.py-cam.y,n.dir,n.frame,n.moving,n.c1,n.c2,n.hair,n.cat)}));
+  ANIMALS.forEach(a=>ents.push({y:a.py+TS,fn:()=>drawAnimal(a.px-cam.x,a.py-cam.y,a.dir,a.frame,a.moving,a.type)}));
+  PROPS.forEach(p=>ents.push({y:p.y*TS+TS,fn:()=>drawFire(p.x*TS-cam.x,p.y*TS-cam.y)}));
+  const wob=Date.now()<P.slowUntil?Math.sin(Date.now()/110)*1.6:0;
+  ents.push({y:P.py+TS,fn:()=> P.swim
+    ? drawSwimmer(P.px-cam.x+wob,P.py-cam.y,P.dir,P.frame)
+    : drawChar(P.px-cam.x+wob,P.py-cam.y,P.dir,P.frame,P.moving,'#3a4a8a','#e8c39a','#3a2a1a')});
+  ents.sort((a,b)=>a.y-b.y).forEach(e=>e.fn());
+  // vignette
+  const grd=ctx.createRadialGradient(cv.width/2,cv.height/2,cv.height*0.4,cv.width/2,cv.height/2,cv.height*0.8);
+  grd.addColorStop(0,'rgba(0,0,0,0)');grd.addColorStop(1,'rgba(0,0,0,0.28)');
+  ctx.fillStyle=grd;ctx.fillRect(0,0,cv.width,cv.height);
+  applyTint();   // time-of-day color
+}
+let running=false;
+function loop(){ if(!running)return; update();render();requestAnimationFrame(loop); }
+function startGame(){ document.getElementById('title').classList.add('hide'); startAudio(); if(!running){running=true;loop();} }
+/* ── ambient BGM (procedural drone + slow pads) ── */
+let audioCtx=null, masterGain=null, audioOn=true, audioStarted=false, noteTimer=null;
+const volEl=document.getElementById('vol'), audioBtn=document.getElementById('audioBtn');
+function volFromSlider(){ return (volEl.value/100)*0.4; }
+function applyVol(){ if(masterGain) masterGain.gain.setTargetAtTime(audioOn?volFromSlider():0, audioCtx.currentTime, 0.2); }
+function startAudio(){
+  try{
+    if(audioStarted){ if(audioCtx.state==='suspended')audioCtx.resume(); return; }
+    audioStarted=true;
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    masterGain=audioCtx.createGain(); masterGain.gain.value=audioOn?volFromSlider():0;
+    masterGain.connect(audioCtx.destination);
+    // drone pad
+    const filter=audioCtx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=620; filter.Q.value=1.5;
+    filter.connect(masterGain);
+    const base=110; // A2
+    [1,1.5,2,3].forEach((r,i)=>{
+      const o=audioCtx.createOscillator(); o.type=i%2?'sine':'triangle'; o.frequency.value=base*r; o.detune.value=(i-1.5)*4;
+      const g=audioCtx.createGain(); g.gain.value=0.16/(i+1); o.connect(g); g.connect(filter); o.start();
+      const lfo=audioCtx.createOscillator(); lfo.frequency.value=0.05+0.03*i;
+      const lg=audioCtx.createGain(); lg.gain.value=4; lfo.connect(lg); lg.connect(o.detune); lfo.start();
+    });
+    const flfo=audioCtx.createOscillator(); flfo.frequency.value=0.025;
+    const fg=audioCtx.createGain(); fg.gain.value=280; flfo.connect(fg); fg.connect(filter.frequency); flfo.start();
+    scheduleNote();
+  }catch(e){ console.warn('audio init failed',e); }
+}
+const SCALE=[220,247,330,392,440]; // A pentatonic
+function scheduleNote(){
+  if(!audioStarted||!audioCtx) return;
+  if(audioOn && audioCtx.state==='running'){
+    const f=SCALE[(Math.random()*SCALE.length)|0]*(Math.random()<.5?1:2);
+    const o=audioCtx.createOscillator(); o.type='sine'; o.frequency.value=f;
+    const g=audioCtx.createGain(); g.gain.value=0; o.connect(g);
+    const pan=audioCtx.createStereoPanner?audioCtx.createStereoPanner():null;
+    if(pan){ pan.pan.value=Math.random()*2-1; g.connect(pan); pan.connect(masterGain); } else g.connect(masterGain);
+    const t=audioCtx.currentTime;
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.10,t+2.2); g.gain.linearRampToValueAtTime(0,t+6.5);
+    o.start(t); o.stop(t+6.6);
+  }
+  noteTimer=setTimeout(scheduleNote, 3500+Math.random()*5000);
+}
+audioBtn.addEventListener('click',()=>{ audioOn=!audioOn; audioBtn.textContent=audioOn?'🔊':'🔇';
+  if(audioOn&&audioCtx&&audioCtx.state==='suspended')audioCtx.resume(); applyVol(); });
+volEl.addEventListener('input',applyVol);
+
+if(('ontouchstart' in window) || (window.matchMedia && window.matchMedia('(pointer:coarse)').matches))
+  document.body.classList.add('touch');
+updateTimeBtn(); update();render(); // draw a frame behind title
+</script>
+</body>
+</html>
