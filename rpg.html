@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>渡邊織音 — あわいの島</title>
+<title>渡邊織音 — あわい村</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon.ico" sizes="any">
 <meta name="description" content="渡邊織音のポートフォリオを「歩いて」探索する2D RPG風ランディングページ。">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://shikine.github.io/rpg.html">
-<meta property="og:title" content="あわいの島 — WATANABE Shikine">
+<meta property="og:title" content="あわい村 — WATANABE Shikine">
 <meta property="og:description" content="ドット絵の村を歩いて、舞台美術・建築・アプリを探索する。">
 <!-- Google Tag Manager -->
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -189,7 +189,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div id="game"><canvas id="cv"></canvas></div>
 
 <div id="hud">
-  <div class="tag" id="loc">📍 <b>あわいの島</b></div>
+  <div class="tag" id="loc">📍 <b>あわい村</b></div>
   <div class="tag" id="crops">🍓 <b>×0</b>&ensp;🍇 <b>×0</b>&ensp;🥬 <b>×0</b></div>
   <div class="tag" id="treas">💎 <b>0/8</b></div>
 </div>
@@ -244,9 +244,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <button id="eat">🍴食べる</button>
 
 <div id="title"><div>
-  <div class="t-kick">― <b>烏帽子</b>ともののけの棲む ―</div>
-  <div class="t-jp">あわいの島</div>
-  <div class="t-en">AWAI ISLAND &middot; SHIKINE</div>
+  <div class="t-kick">— 八つの峰のあわいに棲む、<b>作品</b>と<b>気配</b> —</div>
+  <div class="t-jp">あわい村</div>
+  <div class="t-en">AWAI VILLAGE &middot; SHIKINE</div>
   <div class="desc">建築・舞台美術・構造設計の渡邊織音。<br>村を歩き、村人と話し、作品とアプリを探そう。<br>島に隠された<b>8つの宝</b>も探してみてください。</div>
   <button onclick="startGame()">▶ はじめる</button>
   <div class="blink">PRESS START</div>
@@ -427,7 +427,7 @@ const WORKS=[{y:'2026',items:[{m:'4〜',c:'空間構成',t:'たまに葡萄 ワ�
 /* ── NPCs (villagers) ── */
 const NPCS=[
  {x:32,y:20, c1:'#7a5cae',c2:'#e8c39a',hair:'#cfcfcf',name:'村長', gives:6,
-  pages:['ようこそ、あわいの島へ。','この島には8つの宝が隠されておる。','箱の中、木立、池の底、人の手のなか……探しておゆき。']},
+  pages:['ようこそ、あわい村へ。','この島には8つの宝が隠されておる。','箱の中、木立、池の底、人の手のなか……探しておゆき。']},
  {x:27,y:13, c1:'#c8504a',c2:'#e8c39a',hair:'#3a2a1a',name:'子ども',
   pages:['美術館にはね、織音さんの舞台美術があるんだって！','ぼく、お芝居みるの好き。']},
  {x:49,y:14, c1:'#3a7a5c',c2:'#e8c39a',hair:'#5a3a1a',name:'旅の職人',
@@ -584,7 +584,7 @@ function updateTreasHud(){ const e=document.getElementById('treas'); if(e)e.inne
 function getTreasure(t){ if(t.found)return false; t.found=true; updateTreasHud();
   if(document.getElementById('menu').classList.contains('open')) renderTreasLog();
   if(treasCount()===8) setTimeout(()=>openDialog('','🎉 おめでとう！',
-    ['あわいの島の <b>8つの宝</b> を、すべて見つけた！','「構造と物語のあいだ」に、きみだけの物語が生まれた。']),500);
+    ['あわい村の <b>8つの宝</b> を、すべて見つけた！','「構造と物語のあいだ」に、きみだけの物語が生まれた。']),500);
   return true; }
 function renderTreasLog(){
   const lab=document.getElementById('treasLabel'); if(lab)lab.textContent='宝さがし（💎 '+treasCount()+'/8）';
@@ -807,7 +807,7 @@ function update(){
     else if(around(8))       label='🌋 <b>溶岩地帯</b> — 熱い！';
     else if(here===2||around(2)) label='💧 <b>池のほとり</b>';
     else if(pr<7||around(11)) label='⛰ <b>八ヶ岳</b> のふもと';
-    else label='📍 <b>あわいの島</b> を探索中';
+    else label='📍 <b>あわい村</b> を探索中';
   }
   document.getElementById('loc').innerHTML=label;
 }
