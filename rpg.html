@@ -346,6 +346,12 @@ const TREASURES=[
  {id:6,name:'村長の銀貨',  icon:'🪙',found:false,type:'npc',  npc:'村長',hint:'村長に話しかけてみよう'},
  {id:7,name:'ねこの鈴',    icon:'🔔',found:false,type:'npc',  npc:'ねこ',hint:'ねこと仲良くなると…'},
 ];
+/* ── ワープサークル（砂漠の端） → サービスサイト ── */
+const WARP={x:4,y:41,w:2,h:2,url:'index.html'};
+const SIGN={x:6,y:41,lines:[
+  '【 ワープサークル 】',
+  'この先の光の輪に乗ると、',
+  'サービスサイト（渡邊織音の本サイト）へ飛べる。']};
 // carve path tiles & clear footprints
 function clear(c,r){if(r>=0&&r<MH&&c>=0&&c<MW)M[r][c]=0;}
 [...SPOTS,...DECO,...BOULDERS].forEach(s=>{
@@ -358,6 +364,9 @@ OBJS.forEach(o=>{ for(let r=o.y;r<o.y+o.h;r++)for(let c=o.x;c<o.x+o.w;c++)
 TREASURES.forEach(t=>{ if(t.type==='chest') set(t.x,t.y,(t.y>=34&&t.x>=3&&t.x<19)?7:0); });
 // keep the cat's spot beside the truck clear (rescued from the kei truck)
 set(16,30,0); set(16,31,0);
+// clear ground under the warp circle (walkable sand) and the signpost tile
+for(let r=WARP.y;r<WARP.y+WARP.h;r++)for(let c=WARP.x;c<WARP.x+WARP.w;c++)set(c,r,7);
+set(SIGN.x,SIGN.y,7);
 // simple paths: a horizontal main road + spurs to each door
 function road(c1,r1,c2,r2){ // L-shaped
   for(let c=Math.min(c1,c2);c<=Math.max(c1,c2);c++)if(M[r1][c]!==2)M[r1][c]=1;
@@ -498,7 +507,8 @@ const inB=(c,r)=>{for(const s of SPOTS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)r
   for(const s of DECO)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
   for(const s of BOULDERS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
   for(const s of OBJS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
-  for(const t of TREASURES)if(t.type==='chest'&&c===t.x&&r===t.y)return true;return false;};
+  for(const t of TREASURES)if(t.type==='chest'&&c===t.x&&r===t.y)return true;
+  if(c===SIGN.x&&r===SIGN.y)return true;return false;};
 function solidAt(px,py,self){
   const c=(px/TS)|0,r=(py/TS)|0;
   if(r<0||r>=MH||c<0||c>=MW)return true;
@@ -545,9 +555,10 @@ document.getElementById('eat').addEventListener('touchstart',e=>{e.preventDefaul
 document.getElementById('eat').addEventListener('click',eatCrop);
 
 /* ── dialog (paged) ── */
-let dlgOpen=false,curPages=[],curIdx=0;
+let dlgOpen=false,curPages=[],curIdx=0,dlgConfirm=null;
 const dlg=document.getElementById('dlg');
 function openDialog(who,title,pages){
+  dlgConfirm=null;
   curPages=pages;curIdx=0;
   document.getElementById('dlgWho').textContent=who||'';
   document.getElementById('dlgTitle').innerHTML=title||'';
@@ -557,8 +568,10 @@ function renderPage(){
   document.getElementById('dlgBody').innerHTML=curPages[curIdx];
   document.getElementById('dlgNext').style.display=(curIdx<curPages.length-1)?'block':'none';
 }
-function advance(){ if(curIdx<curPages.length-1){curIdx++;renderPage();}else closeDlg(); }
-function closeDlg(){dlg.classList.remove('show');dlgOpen=false;}
+function advance(){ if(curIdx<curPages.length-1){curIdx++;renderPage();}
+  else { const cb=dlgConfirm; dlgConfirm=null; closeDlg(); if(cb)cb(); } }
+function closeDlg(){dlg.classList.remove('show');dlgOpen=false;dlgConfirm=null;}
+function openConfirm(title,pages,onYes){ openDialog('',title,pages); dlgConfirm=onYes; }
 dlg.addEventListener('click',e=>{if(e.target.closest('a,.close'))return;advance();});
 
 /* ── centered panel (works / apps) ── */
@@ -712,6 +725,8 @@ function interact(){
        'われは、八ヶ岳が火を噴いた頃から、この地におる岩。',
        'もののけも旅人も、みなここで一息ついてゆく。',
        'きみも、ゆっくりしておゆき。']); return; } }
+  // signboard (ワープサークルの案内)?
+  if(btc===SIGN.x&&btr===SIGN.y){ openDialog('立て看板','',[SIGN.lines.join('<br>')]); return; }
   // treasure chest? (facing it)
   for(const t of TREASURES){ if(t.type==='chest'&&btc===t.x&&btr===t.y){
     if(getTreasure(t)) showToast(t.icon+' 宝箱だ！ <'+t.name+'> 💎'+treasCount()+'/8');
@@ -783,6 +798,15 @@ function update(){
     const inWater=ctile===2, inBrush=(ctile===3||ctile===6);
     moveEnt(P,dx,dy, base*(inWater?0.55:(inBrush?0.6:1)));
     P.swim=inWater; P.inBrush=inBrush;
+    // warp circle: entering it prompts to jump to the service site
+    const wc=((P.px+TS/2)/TS)|0, wr=((P.py+TS-2)/TS)|0;
+    const onWarp = wc>=WARP.x&&wc<WARP.x+WARP.w&&wr>=WARP.y&&wr<WARP.y+WARP.h;
+    if(onWarp && !P.onWarp && !dlgOpen && !panelOpen)
+      openConfirm('✨ ワープサークル',
+        ['足もとに、淡く光る魔法陣。','サービスサイト（渡邊織音の本サイト）へ飛びます。',
+         '［ スペース／クリックで移動 ・ ✕でやめる ］'],
+        ()=>{ location.href=WARP.url; });
+    P.onWarp=onWarp;
   } else P.moving=false;
   // camera
   cam.x=Math.max(0,Math.min(MW*TS-VW*TS, P.px+TS/2-VW*TS/2));
@@ -792,7 +816,8 @@ function update(){
   for(const s of SPOTS){const d=Math.hypot((s.x+s.w/2)*TS-P.px,(s.y+s.h)*TS-P.py);if(d<nd){nd=d;near=s;}}
   for(const n of NPCS){const d=Math.hypot(n.px-P.px,n.py-P.py);if(d<nd-4){nd=d+999;}}
   let label;
-  if(P.swim){ label='🏊 <b>泳いでいる！</b>'; }
+  if(P.onWarp){ label='✨ <b>ワープサークル</b> — サービスサイトへ'; }
+  else if(P.swim){ label='🏊 <b>泳いでいる！</b>'; }
   else if(P.inBrush){ label='🌳 <b>茂みの中</b> — すこしゆっくり'; }
   else if(nd<40){ label=`📍 <b>${near.label}</b> の前 — 調べてみよう`; }
   else {
@@ -971,6 +996,24 @@ function drawObj(o){
     px(sx+9,sy+9,4,4,'#3a6ac0'); px(sx+9,sy+9,4,1,'#5a8ae0');
     px(sx+6,sy+4,1,4,'#8a6a3a'); px(sx+5,sy+3,3,2,'#e8e2d2'); }
 }
+function drawWarp(){
+  const x=WARP.x*TS-cam.x, y=WARP.y*TS-cam.y, w=WARP.w*TS, h=WARP.h*TS;
+  const cx=x+w/2, cy=y+h/2, t=Date.now()/400;
+  for(let i=0;i<3;i++){ const rr=9+i*5+Math.sin(t+i)*1.5;
+    ctx.strokeStyle='rgba(120,200,255,'+(0.55-i*0.15)+')'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.ellipse(cx,cy,rr,rr*0.55,0,0,7); ctx.stroke(); }
+  for(let i=0;i<6;i++){ const a=t+i*Math.PI/3;
+    px(Math.round(cx+Math.cos(a)*13)-1, Math.round(cy+Math.sin(a)*7)-1, 2,2,'#cde6ff'); }
+  px(Math.round(cx)-1,Math.round(cy)-1,2,2,'#eaf6ff');
+}
+function drawSign(){
+  const x=SIGN.x*TS-cam.x, y=SIGN.y*TS-cam.y;
+  px(x+5,y+13,6,3,'rgba(0,0,0,.28)');
+  px(x+7,y+6,2,8,'#6b4a2c');                 // post
+  px(x+2,y,12,8,'#caa46a'); px(x+2,y,12,1,'#d8b884'); px(x+2,y+7,12,1,'#9c7a4a'); // board
+  px(x+4,y+2,8,1,'#5a3d24'); px(x+4,y+4,6,1,'#5a3d24'); // text marks
+  px(x+11,y+2,1,1,'#7aa0c8');                 // ✨
+}
 function drawChest(t){
   const x=t.x*TS-cam.x, y=t.y*TS-cam.y;
   px(x+1,y+13,14,3,'rgba(0,0,0,.28)');
@@ -1036,8 +1079,10 @@ function render(){
     const mc=c0+c, mr=r0+r; if(mr<0||mr>=MH||mc<0||mc>=MW)continue;
     drawTile(mc,mr,c*TS-ox,r*TS-oy);
   }
+  drawWarp(); // magic circle on the ground (under entities)
   // depth-sorted entities
   const ents=[];
+  ents.push({y:(SIGN.y+1)*TS,fn:drawSign});
   DECO.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
   BOULDERS.forEach(b=>ents.push({y:(b.y+b.h)*TS,fn:()=>drawBoulder(b)}));
   OBJS.forEach(o=>ents.push({y:(o.y+o.h)*TS,fn:()=>drawObj(o)}));
