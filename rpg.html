@@ -803,9 +803,9 @@ function update(){
     const onWarp = wc>=WARP.x&&wc<WARP.x+WARP.w&&wr>=WARP.y&&wr<WARP.y+WARP.h;
     if(onWarp && !P.onWarp && !dlgOpen && !panelOpen)
       openConfirm('✨ ワープサークル',
-        ['足もとに、淡く光る魔法陣。','サービスサイト（渡邊織音の本サイト）へ飛びます。',
-         '［ スペース／クリックで移動 ・ ✕でやめる ］'],
-        ()=>{ location.href=WARP.url; });
+        ['足もとに、淡く光る魔法陣。','サービスサイト（渡邊織音の本サイト）を別タブで開きます。',
+         '［ スペース／クリックで開く ・ ✕でやめる ］'],
+        ()=>{ window.open(WARP.url,'_blank','noopener'); });
     P.onWarp=onWarp;
   } else P.moving=false;
   // camera
