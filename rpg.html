@@ -169,6 +169,9 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   #menu .m-audio button{background:none;border:none;color:var(--gold);font-size:20px;cursor:pointer;line-height:1}
   #menu #vol{flex:1;accent-color:var(--gold)}
   #menu .m-help{font-size:12px;line-height:1.9;color:#d8d2c4}
+  #menu .m-treas{display:flex;flex-direction:column;gap:5px;font-size:12px}
+  #menu .m-treas .t-on{color:var(--gold)}
+  #menu .m-treas .t-off{color:#9a927f}
   #menu .m-link{margin-top:auto;color:var(--gold);font-size:13px;text-decoration:none;
     border:2px solid var(--gold);text-align:center;padding:11px}
   @media (pointer:coarse){
@@ -188,6 +191,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div id="hud">
   <div class="tag" id="loc">📍 <b>あわいの島</b></div>
   <div class="tag" id="crops">🍓 <b>×0</b>&ensp;🍇 <b>×0</b>&ensp;🥬 <b>×0</b></div>
+  <div class="tag" id="treas">💎 <b>0/8</b></div>
 </div>
 <div id="toast"></div>
 
@@ -205,6 +209,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="m-label">BGM（アンビエント）</div>
     <div class="m-audio"><button id="audioBtn" title="BGM オン/オフ">🔊</button>
       <input id="vol" type="range" min="0" max="100" value="45" aria-label="BGM音量"></div>
+  </div>
+  <div class="m-row">
+    <div class="m-label" id="treasLabel">宝さがし</div>
+    <div class="m-treas" id="treasLog"></div>
   </div>
   <div class="m-row">
     <div class="m-label">操作</div>
@@ -239,7 +247,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="t-kick">― <b>烏帽子</b>ともののけの棲む ―</div>
   <div class="t-jp">あわいの島</div>
   <div class="t-en">AWAI ISLAND &middot; SHIKINE</div>
-  <div class="desc">建築・舞台美術・構造設計の渡邊織音。<br>村を歩き、村人と話し、作品とアプリを見つけてください。</div>
+  <div class="desc">建築・舞台美術・構造設計の渡邊織音。<br>村を歩き、村人と話し、作品とアプリを探そう。<br>島に隠された<b>8つの宝</b>も探してみてください。</div>
   <button onclick="startGame()">▶ はじめる</button>
   <div class="blink">PRESS START</div>
 </div></div>
@@ -327,6 +335,17 @@ const OBJS=[
  {x:12,y:39,w:1,h:1,type:'lumber'},   // 木材
  {x:8, y:40,w:1,h:1,type:'paint'},    // 塗料
 ];
+/* ── 宝さがし：8つの宝（箱／隠し場所／村人がくれる） ── */
+const TREASURES=[
+ {id:0,name:'星の砂時計',  icon:'⏳',found:false,type:'chest',x:15,y:38,hint:'アトリエ前の制作ヤード、砂の上の宝箱'},
+ {id:1,name:'虹色の貝がら',icon:'🐚',found:false,type:'chest',x:21,y:8, hint:'自由の広場、焚き火のそばの宝箱'},
+ {id:2,name:'溶岩の雫',    icon:'🔥',found:false,type:'spot', x:49,y:34,hint:'溶岩地帯のふちを調べてみよう'},
+ {id:3,name:'沈んだ古鍵',  icon:'🗝️',found:false,type:'spot', x:55,y:23,hint:'東の池の底に、何か光っている（泳ごう）'},
+ {id:4,name:'森のどんぐり',icon:'🌰',found:false,type:'spot', x:30,y:6, hint:'烏帽子岳のふもと、北の木立のあたり'},
+ {id:5,name:'真紅の宝石',  icon:'💠',found:false,type:'spot', x:22,y:30,hint:'いちご畑の畝のあいだ'},
+ {id:6,name:'村長の銀貨',  icon:'🪙',found:false,type:'npc',  npc:'村長',hint:'村長に話しかけてみよう'},
+ {id:7,name:'ねこの鈴',    icon:'🔔',found:false,type:'npc',  npc:'ねこ',hint:'ねこと仲良くなると…'},
+];
 // carve path tiles & clear footprints
 function clear(c,r){if(r>=0&&r<MH&&c>=0&&c<MW)M[r][c]=0;}
 [...SPOTS,...DECO,...BOULDERS].forEach(s=>{
@@ -335,6 +354,10 @@ function clear(c,r){if(r>=0&&r<MH&&c>=0&&c<MW)M[r][c]=0;}
 // prep ground under placed objects: sand in the desert, grass elsewhere
 OBJS.forEach(o=>{ for(let r=o.y;r<o.y+o.h;r++)for(let c=o.x;c<o.x+o.w;c++)
   set(c,r,(r>=34&&c>=3&&c<19)?7:0); });
+// prep ground under treasure chests
+TREASURES.forEach(t=>{ if(t.type==='chest') set(t.x,t.y,(t.y>=34&&t.x>=3&&t.x<19)?7:0); });
+// keep the cat's spot beside the truck clear (rescued from the kei truck)
+set(16,30,0); set(16,31,0);
 // simple paths: a horizontal main road + spurs to each door
 function road(c1,r1,c2,r2){ // L-shaped
   for(let c=Math.min(c1,c2);c<=Math.max(c1,c2);c++)if(M[r1][c]!==2)M[r1][c]=1;
@@ -403,16 +426,16 @@ const WORKS=[{y:'2026',items:[{m:'4〜',c:'空間構成',t:'たまに葡萄 ワ�
 
 /* ── NPCs (villagers) ── */
 const NPCS=[
- {x:32,y:20, c1:'#7a5cae',c2:'#e8c39a',hair:'#cfcfcf',name:'村長',
-  pages:['ようこそ、あわいの島へ。','ここでは作品や道具が、建物の中で待っておる。','気になる建物の前で「調べる」を押すとよい。']},
+ {x:32,y:20, c1:'#7a5cae',c2:'#e8c39a',hair:'#cfcfcf',name:'村長', gives:6,
+  pages:['ようこそ、あわいの島へ。','この島には8つの宝が隠されておる。','箱の中、木立、池の底、人の手のなか……探しておゆき。']},
  {x:27,y:13, c1:'#c8504a',c2:'#e8c39a',hair:'#3a2a1a',name:'子ども',
   pages:['美術館にはね、織音さんの舞台美術があるんだって！','ぼく、お芝居みるの好き。']},
  {x:49,y:14, c1:'#3a7a5c',c2:'#e8c39a',hair:'#5a3a1a',name:'旅の職人',
   pages:['工房では小さなアプリ道具を作っているそうだ。','音や地図、自然を観るための道具さ。']},
  {x:53,y:35, c1:'#a8742c',c2:'#d8b486',hair:'#3a2a1a',name:'畑の人',
   pages:['富士見町は八ヶ岳のふもと。','空気がうまいぞ。だから移り住む人も多い。']},
- {x:14,y:30, c1:'#444',c2:'#444',hair:'#444',name:'ねこ',cat:true,
-  pages:['（にゃあ）','（すりすり）']},
+ {x:16,y:31, c1:'#444',c2:'#444',hair:'#444',name:'ねこ',cat:true, gives:7, still:true,
+  pages:['（にゃあ）','（軽トラから出してくれて、ありがとう）','（すりすり…）']},
  // ── 富士見町の語り部たち（家の前に立つ・移動しない） ──
  {x:17,y:16, still:true, c1:'#8a6a3a',c2:'#e8c39a',hair:'#9a9a9a',name:'富士見の古老',
   pages:['ここ長野県・富士見町は、その名のとおり——晴れた日には富士山が見える町じゃ。',
@@ -474,7 +497,8 @@ const PICKEDTILE=new Set([13,15,17]);
 const inB=(c,r)=>{for(const s of SPOTS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
   for(const s of DECO)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
   for(const s of BOULDERS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
-  for(const s of OBJS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;return false;};
+  for(const s of OBJS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
+  for(const t of TREASURES)if(t.type==='chest'&&c===t.x&&r===t.y)return true;return false;};
 function solidAt(px,py,self){
   const c=(px/TS)|0,r=(py/TS)|0;
   if(r<0||r>=MH||c<0||c>=MW)return true;
@@ -554,6 +578,21 @@ function showToast(msg){ const t=document.getElementById('toast'); t.textContent
   t.classList.add('show'); clearTimeout(_toastT); _toastT=setTimeout(()=>t.classList.remove('show'),1700); }
 function updateCropHud(){ document.getElementById('crops').innerHTML=
   '🍓 <b>×'+P.berries+'</b>&ensp;🍇 <b>×'+P.grapes+'</b>&ensp;🥬 <b>×'+P.lettuce+'</b>'; }
+/* ── treasure hunt ── */
+function treasCount(){ return TREASURES.filter(t=>t.found).length; }
+function updateTreasHud(){ const e=document.getElementById('treas'); if(e)e.innerHTML='💎 <b>'+treasCount()+'/8</b>'; }
+function getTreasure(t){ if(t.found)return false; t.found=true; updateTreasHud();
+  if(document.getElementById('menu').classList.contains('open')) renderTreasLog();
+  if(treasCount()===8) setTimeout(()=>openDialog('','🎉 おめでとう！',
+    ['あわいの島の <b>8つの宝</b> を、すべて見つけた！','「構造と物語のあいだ」に、きみだけの物語が生まれた。']),500);
+  return true; }
+function renderTreasLog(){
+  const lab=document.getElementById('treasLabel'); if(lab)lab.textContent='宝さがし（💎 '+treasCount()+'/8）';
+  const box=document.getElementById('treasLog'); if(!box)return;
+  box.innerHTML=TREASURES.map(t=>t.found
+    ? '<div class="t-on">'+t.icon+' '+t.name+' ✓</div>'
+    : '<div class="t-off">❔ '+t.hint+'</div>').join('');
+}
 function eatCrop(){
   let key=P.lastCrop;
   if(!key||P[key]<=0) key=['berries','grapes','lettuce'].find(k=>P[k]>0);
@@ -580,7 +619,7 @@ function cycleTime(){ timeMode=TORDER[(TORDER.indexOf(timeMode)+1)%TORDER.length
 document.querySelectorAll('#timeSeg button').forEach(b=>b.addEventListener('click',()=>{ timeMode=b.dataset.m; updateTimeBtn(); }));
 /* settings menu open/close */
 const menuEl=document.getElementById('menu'), menuScrim=document.getElementById('menuScrim');
-function openMenu(){ menuEl.classList.add('open'); menuScrim.classList.add('open'); }
+function openMenu(){ menuEl.classList.add('open'); menuScrim.classList.add('open'); renderTreasLog(); }
 function closeMenu(){ menuEl.classList.remove('open'); menuScrim.classList.remove('open'); }
 document.getElementById('menuBtn').addEventListener('click',()=>menuEl.classList.contains('open')?closeMenu():openMenu());
 document.getElementById('menuClose').addEventListener('click',closeMenu);
@@ -653,10 +692,13 @@ function interact(){
   const cx=P.px+TS/2, cy=P.py+TS/2;
   const off={up:[0,-TS],down:[0,TS],left:[-TS,0],right:[TS,0]}[P.dir];
   const fx=cx+off[0], fy=cy+off[1];
-  // NPC?
+  // NPC? (some give a treasure)
   for(const n of NPCS){ if(Math.abs(fx-(n.px+TS/2))<TS&&Math.abs(fy-(n.py+TS/2))<TS){
     n.dir={up:'down',down:'up',left:'right',right:'left'}[P.dir];
-    openDialog(n.name,'',n.pages); return; } }
+    let pages=n.pages;
+    if(n.gives!=null && !TREASURES[n.gives].found){ const t=TREASURES[n.gives]; getTreasure(t);
+      pages=n.pages.concat(['（'+t.icon+' <b>'+t.name+'</b> を授かった！ 💎'+treasCount()+'/8）']); }
+    openDialog(n.name,'',pages); return; } }
   // animal?
   for(const a of ANIMALS){ if(Math.abs(fx-(a.px+TS/2))<TS&&Math.abs(fy-(a.py+TS/2))<TS){
     a.dir={up:'down',down:'up',left:'right',right:'left'}[P.dir];
@@ -670,6 +712,14 @@ function interact(){
        'われは、八ヶ岳が火を噴いた頃から、この地におる岩。',
        'もののけも旅人も、みなここで一息ついてゆく。',
        'きみも、ゆっくりしておゆき。']); return; } }
+  // treasure chest? (facing it)
+  for(const t of TREASURES){ if(t.type==='chest'&&btc===t.x&&btr===t.y){
+    if(getTreasure(t)) showToast(t.icon+' 宝箱だ！ <'+t.name+'> 💎'+treasCount()+'/8');
+    else showToast('（からっぽの宝箱）'); return; } }
+  // hidden treasure spot? (proximity — water/tree/lava/crop areas; before harvest)
+  for(const t of TREASURES){ if(t.type==='spot'&&!t.found){
+    const d=Math.hypot((t.x+0.5)*TS-(P.px+TS/2),(t.y+0.5)*TS-(P.py+TS/2));
+    if(d<TS*1.6){ getTreasure(t); showToast(t.icon+' 宝を発見！ <'+t.name+'> 💎'+treasCount()+'/8'); return; } } }
   // crop harvest? (いちご / ぶどう / レタス)
   const stc=(fx/TS)|0, str=(fy/TS)|0, here=M[str]&&M[str][stc];
   const crop=CROP[here];
@@ -921,6 +971,20 @@ function drawObj(o){
     px(sx+9,sy+9,4,4,'#3a6ac0'); px(sx+9,sy+9,4,1,'#5a8ae0');
     px(sx+6,sy+4,1,4,'#8a6a3a'); px(sx+5,sy+3,3,2,'#e8e2d2'); }
 }
+function drawChest(t){
+  const x=t.x*TS-cam.x, y=t.y*TS-cam.y;
+  px(x+1,y+13,14,3,'rgba(0,0,0,.28)');
+  if(t.found){
+    px(x+2,y+9,12,5,'#6b4527'); px(x+2,y+9,12,1,'#8a6038');     // body
+    px(x+2,y+3,12,4,'#5a3a22'); px(x+2,y+3,12,1,'#7a5230');     // open lid (back)
+    px(x+4,y+10,8,2,'#e7c878'); px(x+6,y+10,2,2,'#fff4c2');     // gold remnants
+  } else {
+    px(x+2,y+7,12,7,'#7a5230'); px(x+2,y+7,12,2,'#8a6038');     // body
+    px(x+2,y+5,12,3,'#6b4527'); px(x+2,y+5,12,1,'#9a6e3e');     // lid
+    px(x+2,y+9,12,1,'#e7c878');                                  // gold band
+    px(x+7,y+8,2,4,'#e7c878'); px(x+7,y+9,2,2,'#c8a850');        // lock
+  }
+}
 function drawFire(x,y){
   const sx=Math.round(x),sy=Math.round(y),t=Date.now()/90;
   px(sx+3,sy+11,10,3,'rgba(0,0,0,.25)');
@@ -977,6 +1041,7 @@ function render(){
   DECO.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
   BOULDERS.forEach(b=>ents.push({y:(b.y+b.h)*TS,fn:()=>drawBoulder(b)}));
   OBJS.forEach(o=>ents.push({y:(o.y+o.h)*TS,fn:()=>drawObj(o)}));
+  TREASURES.forEach(t=>{ if(t.type==='chest') ents.push({y:(t.y+1)*TS,fn:()=>drawChest(t)}); });
   SPOTS.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
   NPCS.forEach(n=>ents.push({y:n.py+TS,fn:()=>drawChar(n.px-cam.x,n.py-cam.y,n.dir,n.frame,n.moving,n.c1,n.c2,n.hair,n.cat)}));
   ANIMALS.forEach(a=>ents.push({y:a.py+TS,fn:()=>drawAnimal(a.px-cam.x,a.py-cam.y,a.dir,a.frame,a.moving,a.type)}));
@@ -1059,7 +1124,7 @@ function setupViewport(){
 addEventListener('resize', setupViewport);
 addEventListener('orientationchange', setupViewport);
 setupViewport();
-updateTimeBtn(); update();render(); // draw a frame behind title
+updateTimeBtn(); updateTreasHud(); update();render(); // draw a frame behind title
 </script>
 </body>
 </html>
