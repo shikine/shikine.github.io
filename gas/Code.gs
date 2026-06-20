@@ -48,7 +48,7 @@ function handleGetNextIssue() {
 }
 
 function doGet(e) {
-  return respond({ status: 'ok' });
+  return respond({ status: 'ok', version: 'gmailapp-2026-06-21' });
 }
 
 // ===== 即時送信 =====
