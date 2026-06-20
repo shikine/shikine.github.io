@@ -1344,6 +1344,9 @@ function scheduleNote(){
 audioBtn.addEventListener('click',()=>{ audioOn=!audioOn; audioBtn.textContent=audioOn?'🔊':'🔇';
   if(audioOn&&audioCtx&&audioCtx.state==='suspended')audioCtx.resume(); applyVol(); });
 volEl.addEventListener('input',applyVol);
+/* どの入口（通常 / ?to=larry 自動開始）でも、最初のユーザー操作でBGMを開始・再開する */
+function unlockAudio(){ if(!audioStarted) startAudio(); else if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume(); }
+['pointerdown','keydown','touchstart'].forEach(ev=>window.addEventListener(ev,unlockAudio));
 
 if(('ontouchstart' in window) || (window.matchMedia && window.matchMedia('(pointer:coarse)').matches))
   document.body.classList.add('touch');
