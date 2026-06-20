@@ -322,7 +322,7 @@ const SPOTS=[
  {x:9, y:30,w:4,h:3, roof:'#6b8cb0', wall:'#d8b486', icon:'🏠', label:'アトリエ',key:'profile'},
  {x:50,y:9, w:4,h:3, roof:'#7a9c52', wall:'#cdaa70', icon:'🔧', label:'工房',    key:'apps'},
  {x:30,y:24,w:4,h:3, roof:'#c08a4c', wall:'#d8b486', icon:'📮', label:'郵便屋',  key:'contact'},
- {x:46,y:26,w:4,h:3, roof:'#9c6cb0', wall:'#d8b486', icon:'📜', label:'掲示板',  key:'news'},
+ {x:46,y:26,w:4,h:3, roof:'#9c6cb0', wall:'#d8b486', icon:'📜', label:'メルマガ',  key:'news'},
  {x:54,y:6, w:4,h:3, roof:'#5a8a6a', wall:'#d8b486', icon:'🖼', label:'3D館',   key:'gallery'},
 ];
 /* decorative houses (non-interactive, village atmosphere) */
@@ -415,7 +415,7 @@ const CONTENT={
      <li><a href="https://www.instagram.com/watanabeshikine/" target="_blank">Instagram</a> /
          <a href="https://twitter.com/watanabeshikine" target="_blank">X</a></li>
    </ul>`]},
- news:{who:'掲示板',t:'📜 Newsletter',pages:[`不定期のメルマガ「karasuletters」。制作の裏側や活動のお知らせを綴っています。
+ news:{who:'メルマガ',t:'📜 Newsletter',pages:[`不定期のメルマガ「karasuletters」。制作の裏側や活動のお知らせを綴っています。
    <a class="more" href="mailto:watanabeshikine@gmail.com?subject=karasuletters%20%E8%B3%BC%E8%AA%AD%E5%B8%8C%E6%9C%9B">メールで購読希望を送る →</a>`]},
 };
 
@@ -785,7 +785,7 @@ function galleryShow(i){
 /* newsletter signup → GAS (重複チェック・登録・通知を一括処理) */
 const GAS_URL='https://script.google.com/macros/s/AKfycbyieDzOkdfRhkqzWx51YnUC6Y-537NnTCfpDkCaXGNOLMYJTDzG36kBhgcllVQu1VV5tQ/exec';
 function openNewsPanel(){
-  openPanel('📜 掲示板 — Newsletter',
+  openPanel('📜 メルマガ — Newsletter',
     `<form id="nlForm" class="nlform">
        <p>不定期メルマガ「karasuletters」。制作の裏側や活動のお知らせをお届けします。<br>下のフォームから購読登録できます。</p>
        <label>お名前<input id="nlName" type="text" autocomplete="name" required></label>
