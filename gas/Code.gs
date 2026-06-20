@@ -188,29 +188,28 @@ function handleRegister(name, email) {
   }
 
   // 管理者への通知メール（失敗しても登録は止めない）
+  // MailApp ではなく GmailApp を使用（newsletter 配信と同じ権限で済み、再認証不要）
   try {
-    MailApp.sendEmail({
-      to:      NOTIFY_EMAIL,
-      subject: '【karasuletters】新しい購読者が登録しました',
-      body:    '新しい登録者がありました。\n\nお名前：' + name + '\nメール：' + email + '\n\n登録日時：' + new Date().toLocaleString('ja-JP')
-    });
+    GmailApp.sendEmail(
+      NOTIFY_EMAIL,
+      '【karasuletters】新しい購読者が登録しました',
+      '新しい登録者がありました。\n\nお名前：' + name + '\nメール：' + email + '\n\n登録日時：' + new Date().toLocaleString('ja-JP')
+    );
   } catch (e) {
     Logger.log('handleRegister notify mail error: ' + e.message);
   }
 
   // 購読者へのサンクスメール（失敗しても登録は止めない）
   try {
-    MailApp.sendEmail({
-      to:      email,
-      subject: '【karasuletters】購読登録ありがとうございます',
-      body:    name + ' さま\n\nkarasuletters へようこそ。\n\n購読登録ありがとうございます。\n月に一度、舞台・美術・建築、日々のことをお届けします。\n\n次号をどうぞお楽しみに。\n\nwith love,\nShikine Watanabe\n—\n配信停止をご希望の方は ' + UNSUB_EMAIL + ' に空メールをお送りください。'
-    });
+    GmailApp.sendEmail(
+      email,
+      '【karasuletters】購読登録ありがとうございます',
+      name + ' さま\n\nkarasuletters へようこそ。\n\n購読登録ありがとうございます。\n月に一度、舞台・美術・建築、日々のことをお届けします。\n\n次号をどうぞお楽しみに。\n\nwith love,\nShikine Watanabe\n—\n配信停止をご希望の方は ' + UNSUB_EMAIL + ' に空メールをお送りください。',
+      { name: 'karasuletters' }
+    );
   } catch (e) {
     Logger.log('handleRegister thanks mail error: ' + e.message);
   }
-
-  // 送信残量をログに残す（上限切れの早期発見用）
-  Logger.log('MailApp remaining quota: ' + MailApp.getRemainingDailyQuota());
 
   return respond({ ok: true });
 }
@@ -239,17 +238,17 @@ function processUnsubscribeEmails() {
     var removed = removeSubscriber(senderEmail);
 
     if (removed) {
-      MailApp.sendEmail({
-        to:      senderEmail,
-        subject: '【karasuletters】配信停止が完了しました',
-        body:    'karasuletters の配信停止が完了しました。\n\nご登録のメールアドレス：' + senderEmail + '\n\nまたいつでも https://shikine.github.io/ からご登録いただけます。\n\nShikine Watanabe'
-      });
+      GmailApp.sendEmail(
+        senderEmail,
+        '【karasuletters】配信停止が完了しました',
+        'karasuletters の配信停止が完了しました。\n\nご登録のメールアドレス：' + senderEmail + '\n\nまたいつでも https://shikine.github.io/ からご登録いただけます。\n\nShikine Watanabe'
+      );
 
-      MailApp.sendEmail({
-        to:      NOTIFY_EMAIL,
-        subject: '【karasuletters】配信停止がありました',
-        body:    '配信停止のリクエストを処理しました。\n\nメール：' + senderEmail + '\n\n日時：' + new Date().toLocaleString('ja-JP')
-      });
+      GmailApp.sendEmail(
+        NOTIFY_EMAIL,
+        '【karasuletters】配信停止がありました',
+        '配信停止のリクエストを処理しました。\n\nメール：' + senderEmail + '\n\n日時：' + new Date().toLocaleString('ja-JP')
+      );
     }
 
     thread.addLabel(label);
