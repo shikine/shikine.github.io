@@ -304,6 +304,8 @@ for(let r=8;r<13;r++)for(let c=34;c<45;c++)set(c,r,(r-8)%2===0?14:5);
 for(let r=20;r<24;r++)for(let c=34;c<45;c++)set(c,r,(r-20)%2===0?16:5);
 // hippie meadow (自由の広場) — top-left, east of the pond: grass + flowers
 for(let r=6;r<12;r++)for(let c=15;c<23;c++)set(c,r, rnd()>.62?4:0);
+// small rice paddy (ちいさな田んぼ) — south-central
+for(let r=21;r<23;r++)for(let c=22;c<26;c++)set(c,r,18);
 
 /* ── buildings: tile col,row, size, roof color, icon, label, key ── */
 const SPOTS=[
@@ -490,6 +492,17 @@ ANIMALS.forEach(a=>{a.px=a.x*TS;a.py=a.y*TS;a.hx=a.px;a.hy=a.py;a.dir=rnd()<.5?'
 
 /* ── props (decorative, e.g. campfire) ── */
 const PROPS=[{x:18,y:9,type:'fire'}];
+
+/* ── シロサギ（田んぼに佇み、話すと哲学を語って飛び去る） ── */
+const HERON={ x:24, y:21, dir:'left', flying:false, gone:false, flyT:0, frame:0,
+  pages:[
+    '（一羽の白鷺が、田んぼに静かに立っている）',
+    'シロサギ「人は私を見て、優雅だと言う。」',
+    '「けれど "サギ" とは、欺くものの名でもある。」',
+    '「美しさと、あざむき。そのあわいに、私は立っている。」',
+    '「君もまた、見る角度で姿を変えるだろう。」',
+    '「……では、ゆこう。」'] };
+HERON.px=HERON.x*TS; HERON.py=HERON.y*TS;
 
 /* ── player ── */
 const P={px:HUB[0]*TS, py:HUB[1]*TS+TS, dir:'down', speed:1.5, frame:0, moving:false,
@@ -716,6 +729,10 @@ function interact(){
   for(const a of ANIMALS){ if(Math.abs(fx-(a.px+TS/2))<TS&&Math.abs(fy-(a.py+TS/2))<TS){
     a.dir={up:'down',down:'up',left:'right',right:'left'}[P.dir];
     openDialog(ANAME[a.type],'',[a.say]); return; } }
+  // シロサギ? (話し終えると飛び去る)
+  if(!HERON.gone && !HERON.flying && Math.abs(fx-(HERON.px+TS/2))<TS+4 && Math.abs(fy-(HERON.py+TS/2))<TS+4){
+    openDialog('シロサギ','',HERON.pages);
+    dlgConfirm=()=>{ HERON.flying=true; HERON.flyT=0; }; return; }
   // boulder? (話しかけられる古き岩)
   const btc=(fx/TS)|0, btr=(fy/TS)|0;
   for(const b of BOULDERS){ if(btc>=b.x&&btc<b.x+b.w&&btr>=b.y&&btr<b.y+b.h){
@@ -764,6 +781,8 @@ function update(){
   // strawberry regrow
   const now=Date.now();
   for(let i=PICKED.length-1;i>=0;i--) if(now>=PICKED[i].at){ M[PICKED[i].r][PICKED[i].c]=PICKED[i].ripe; PICKED.splice(i,1); }
+  // heron flying away (runs even during dialog so it leaves after the talk)
+  if(HERON.flying && !HERON.gone){ HERON.flyT++; HERON.px+=0.9; HERON.py-=1.1; if(HERON.flyT>92) HERON.gone=true; }
   // NPC wander (paused when talking)
   if(!dlgOpen&&!panelOpen) for(const n of NPCS){
     if(n.still){ n.moving=false; continue; }
@@ -795,9 +814,9 @@ function update(){
     if(Date.now()<P.boostUntil) base=P.speed*1.8;
     else if(Date.now()<P.slowUntil) base=P.speed*0.5;
     const ctile=(M[((P.py+TS/2)/TS)|0]||[])[((P.px+TS/2)/TS)|0];
-    const inWater=ctile===2, inBrush=(ctile===3||ctile===6);
-    moveEnt(P,dx,dy, base*(inWater?0.55:(inBrush?0.6:1)));
-    P.swim=inWater; P.inBrush=inBrush;
+    const inWater=ctile===2, inBrush=(ctile===3||ctile===6), inPaddy=ctile===18;
+    moveEnt(P,dx,dy, base*(inWater?0.55:((inBrush||inPaddy)?0.6:1)));
+    P.swim=inWater; P.inBrush=inBrush; P.inPaddy=inPaddy;
     // warp circle: entering it prompts to jump to the service site
     const wc=((P.px+TS/2)/TS)|0, wr=((P.py+TS-2)/TS)|0;
     const onWarp = wc>=WARP.x&&wc<WARP.x+WARP.w&&wr>=WARP.y&&wr<WARP.y+WARP.h;
@@ -819,6 +838,7 @@ function update(){
   if(P.onWarp){ label='✨ <b>ワープサークル</b> — サービスサイトへ'; }
   else if(P.swim){ label='🏊 <b>泳いでいる！</b>'; }
   else if(P.inBrush){ label='🌳 <b>茂みの中</b> — すこしゆっくり'; }
+  else if(P.inPaddy){ label='🌾 <b>ちいさな田んぼ</b>'; }
   else if(nd<40){ label=`📍 <b>${near.label}</b> の前 — 調べてみよう`; }
   else {
     const pc=((P.px+TS/2)/TS)|0, pr=((P.py+TS-2)/TS)|0;
@@ -901,6 +921,11 @@ function drawTile(c,r,sx,sy){
   else if(t===17){ // picked lettuce (sprout)
     px(sx,sy,TS,TS,(c+r)%2?'#5a9356':'#558d52');
     px(sx+6,sy+10,4,2,'#8a6a44'); px(sx+7,sy+8,2,2,'#6cc05a'); }
+  else if(t===18){ // 田んぼ (flooded rice paddy)
+    px(sx,sy,TS,TS,'#6f93a0'); px(sx,sy,TS,1,'#86a8b4');           // muddy water + sky reflection
+    px(sx+3,sy+5,1,7,'#5a9a4c'); px(sx+7,sy+4,1,8,'#5a9a4c'); px(sx+11,sy+6,1,6,'#5a9a4c'); // rice rows
+    px(sx+5,sy+9,1,4,'#6cb05a'); px(sx+9,sy+8,1,5,'#6cb05a');
+    px(sx+2,sy+12,3,1,'#9cc2cc'); px(sx+10,sy+13,3,1,'#9cc2cc'); } // ripples
 }
 function drawBuilding(s){
   const x=s.x*TS-cam.x, y=s.y*TS-cam.y, w=s.w*TS, h=s.h*TS;
@@ -996,6 +1021,27 @@ function drawObj(o){
     px(sx+9,sy+9,4,4,'#3a6ac0'); px(sx+9,sy+9,4,1,'#5a8ae0');
     px(sx+6,sy+4,1,4,'#8a6a3a'); px(sx+5,sy+3,3,2,'#e8e2d2'); }
 }
+function drawHeron(){
+  const sx=Math.round(HERON.px-cam.x), sy=Math.round(HERON.py-cam.y);
+  if(!HERON.flying){
+    px(sx+5,sy+15,6,1,'rgba(0,0,0,.18)');                  // reflection/shadow
+    px(sx+6,sy+11,1,4,'#d8b24a'); px(sx+9,sy+11,1,4,'#d8b24a'); // legs
+    px(sx+4,sy+7,8,5,'#f5f5f1'); px(sx+4,sy+7,8,1,'#ffffff');   // body
+    px(sx+9,sy+3,1,5,'#f5f5f1'); px(sx+10,sy+2,1,2,'#f5f5f1'); // S-neck
+    px(sx+10,sy+1,2,2,'#ffffff');                              // head
+    px(sx+12,sy+2,3,1,'#e3b22e');                              // beak
+    px(sx+11,sy+1,1,1,'#333');                                 // eye
+  } else if(!HERON.gone){
+    const up=(Math.floor(HERON.flyT/5)%2);
+    ctx.globalAlpha=Math.max(0,1-HERON.flyT/90);
+    px(sx+5,sy+6,6,3,'#f5f5f1');                               // body
+    px(sx+10,sy+4,2,2,'#ffffff'); px(sx+11,sy+5,3,1,'#e3b22e'); // head + beak forward
+    if(up){ px(sx+1,sy+3,4,2,'#ffffff'); px(sx+10,sy+3,4,2,'#ffffff'); }
+    else  { px(sx+1,sy+8,4,2,'#eeeeea'); px(sx+10,sy+8,4,2,'#eeeeea'); }
+    px(sx+4,sy+9,4,1,'#d8b24a');                               // trailing legs
+    ctx.globalAlpha=1;
+  }
+}
 function drawWarp(){
   const x=WARP.x*TS-cam.x, y=WARP.y*TS-cam.y, w=WARP.w*TS, h=WARP.h*TS;
   const cx=x+w/2, cy=y+h/2, t=Date.now()/400;
@@ -1090,6 +1136,7 @@ function render(){
   SPOTS.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
   NPCS.forEach(n=>ents.push({y:n.py+TS,fn:()=>drawChar(n.px-cam.x,n.py-cam.y,n.dir,n.frame,n.moving,n.c1,n.c2,n.hair,n.cat)}));
   ANIMALS.forEach(a=>ents.push({y:a.py+TS,fn:()=>drawAnimal(a.px-cam.x,a.py-cam.y,a.dir,a.frame,a.moving,a.type)}));
+  if(!HERON.gone) ents.push({y:HERON.py+TS,fn:drawHeron});
   PROPS.forEach(p=>ents.push({y:p.y*TS+TS,fn:()=>drawFire(p.x*TS-cam.x,p.y*TS-cam.y)}));
   const wob=Date.now()<P.slowUntil?Math.sin(Date.now()/110)*1.6:0;
   ents.push({y:P.py+TS,fn:()=>{
