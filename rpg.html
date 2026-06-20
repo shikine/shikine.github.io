@@ -502,6 +502,7 @@ const NPCS=[
          '［ スペース／クリックで告知ページを別タブで開く ↗ ］']},
 ];
 NPCS.forEach(n=>{n.px=n.x*TS;n.py=n.y*TS;n.hx=n.px;n.hy=n.py;n.dir='down';n.frame=0;n.t=rnd()*120;n.mdir=null;n.moving=false;});
+const LARRY=NPCS.find(n=>n.name==='劇団員ラリー'); // 夜にスポットライトを当てる対象
 
 /* ── animals (放牧されている生きもの) ── */
 const ANIMALS=[
@@ -707,7 +708,18 @@ function applyTint(){ const m=curMode(),c=TINT[m];
   if(c){ ctx.fillStyle=c; ctx.fillRect(0,0,cv.width,cv.height); }
   if(m==='night'){ ctx.fillStyle='#fff';
     for(const s of STARS){ ctx.globalAlpha=0.45+0.5*(0.5+0.5*Math.sin(Date.now()/600+s[0])); ctx.fillRect(s[0],s[1],s[2],s[2]); }
-    ctx.globalAlpha=1; } }
+    ctx.globalAlpha=1;
+    // spotlight on 劇団員ラリー
+    const lx=Math.round(LARRY.px+TS/2-cam.x), ly=Math.round(LARRY.py+TS-cam.y);
+    if(lx>-60&&lx<cv.width+60&&ly>-60&&ly<cv.height+60){
+      const bg=ctx.createLinearGradient(lx,ly-58,lx,ly+4);
+      bg.addColorStop(0,'rgba(255,246,205,0)'); bg.addColorStop(1,'rgba(255,246,205,0.16)');
+      ctx.fillStyle=bg; ctx.beginPath();
+      ctx.moveTo(lx-4,ly-58); ctx.lineTo(lx+4,ly-58); ctx.lineTo(lx+20,ly+5); ctx.lineTo(lx-20,ly+5); ctx.closePath(); ctx.fill();
+      const g=ctx.createRadialGradient(lx,ly-3,3, lx,ly,44);
+      g.addColorStop(0,'rgba(255,245,200,0.5)'); g.addColorStop(0.5,'rgba(255,240,190,0.18)'); g.addColorStop(1,'rgba(255,240,190,0)');
+      ctx.fillStyle=g; ctx.fillRect(0,0,cv.width,cv.height);
+    } } }
 function updateTimeBtn(){ document.querySelectorAll('#timeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.m===timeMode)); }
 function cycleTime(){ timeMode=TORDER[(TORDER.indexOf(timeMode)+1)%TORDER.length]; updateTimeBtn(); }
 document.querySelectorAll('#timeSeg button').forEach(b=>b.addEventListener('click',()=>{ timeMode=b.dataset.m; updateTimeBtn(); }));
@@ -1354,10 +1366,10 @@ if(('ontouchstart' in window) || (window.matchMedia && window.matchMedia('(point
   document.body.classList.add('touch');
 /* deep-link spawn: ?to=larry など で最初からその場所に出現してゲーム開始 */
 let _autostart=false;
-(function(){ const q=new URLSearchParams(location.search); const SPN={larry:[48,34], momo:[11,34]};
+(function(){ const q=new URLSearchParams(location.search); const SPN={larry:[48,34,'up'], momo:[11,34,'up']};
   const s=q.get('to')||q.get('spawn'); if(!s)return;
   const pos = SPN[s] || (/^\d+,\d+$/.test(s)?s.split(',').map(Number):null);
-  if(pos){ P.px=pos[0]*TS; P.py=pos[1]*TS; _autostart=true; } })();
+  if(pos){ P.px=pos[0]*TS; P.py=pos[1]*TS; if(pos[2])P.dir=pos[2]; _autostart=true; } })();
 /* portrait-mobile viewport: fewer tiles -> bigger character, fills the screen */
 function setupViewport(){
   const pm = document.body.classList.contains('touch') && window.innerHeight>window.innerWidth;
