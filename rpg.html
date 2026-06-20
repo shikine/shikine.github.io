@@ -488,7 +488,34 @@ const ANIMALS=[
  {x:40,y:9, type:'deer',  say:'（静かに草を食んでいる）'},
 ];
 const ANAME={goat:'ヤギ',sheep:'ひつじ',rabbit:'うさぎ',deer:'しか'};
-ANIMALS.forEach(a=>{a.px=a.x*TS;a.py=a.y*TS;a.hx=a.px;a.hy=a.py;a.dir=rnd()<.5?'left':'right';a.frame=0;a.t=rnd()*120;a.mdir=null;a.moving=false;});
+/* それぞれ もののけ・畏怖をまとう哲学的な生命として、生きる意味を語る */
+const ATALK={
+ goat:[
+  '（ヤギが、崖のような目でこちらを見た）',
+  'ヤギ「私は、立てぬ場所にこそ立つ。」',
+  '「断崖も、痩せた草も、すべて糧だ。」',
+  '「生きるとは、拒まぬこと。来たものを、ただ食む。」',
+  '「君は——何を拒んで、生きている？」'],
+ sheep:[
+  '（ひつじが、群れを離れてこちらを向いた）',
+  'ひつじ「数えられるために、生まれたのではない。」',
+  '「群れは温かい。けれど私は、私の夢を見る。」',
+  '「眠りと目覚めのあわいで、魂は草を食む。」',
+  '「君の温もりは——どこにある？」'],
+ rabbit:[
+  '（うさぎが、月を映した目で震えている）',
+  'うさぎ「私は、おそれと共に生きる。」',
+  '「臆病は弱さではない。生きたいという、祈りだ。」',
+  '「だから跳ねる。短い生を、高く、高く。」',
+  '「君は何をおそれ——何を願う？」'],
+ deer:[
+  '（しかが、森そのもののようにこちらを見ていた）',
+  'しか「角は枝。私は、歩く森だ。」',
+  '「見るとは、見られること。畏れとは、敬うこと。」',
+  '「静けさの中にこそ、生命の声は満ちている。」',
+  '「君は——何に、耳を澄ましている？」'],
+};
+ANIMALS.forEach(a=>{a.px=a.x*TS;a.py=a.y*TS;a.hx=a.px;a.hy=a.py;a.dir=rnd()<.5?'left':'right';a.frame=0;a.t=rnd()*120;a.mdir=null;a.moving=false;a.fleeing=false;a.gone=false;a.fleeT=0;a.fvx=0;a.fvy=0;});
 
 /* ── props (decorative, e.g. campfire) ── */
 const PROPS=[{x:18,y:9,type:'fire'}];
@@ -725,10 +752,13 @@ function interact(){
     if(n.gives!=null && !TREASURES[n.gives].found){ const t=TREASURES[n.gives]; getTreasure(t);
       pages=n.pages.concat(['（'+t.icon+' <b>'+t.name+'</b> を授かった！ 💎'+treasCount()+'/8）']); }
     openDialog(n.name,'',pages); return; } }
-  // animal?
-  for(const a of ANIMALS){ if(Math.abs(fx-(a.px+TS/2))<TS&&Math.abs(fy-(a.py+TS/2))<TS){
+  // animal? (もののけ的に語り、話し終えると走り去って消える)
+  for(const a of ANIMALS){ if(!a.gone&&!a.fleeing&&Math.abs(fx-(a.px+TS/2))<TS&&Math.abs(fy-(a.py+TS/2))<TS){
     a.dir={up:'down',down:'up',left:'right',right:'left'}[P.dir];
-    openDialog(ANAME[a.type],'',[a.say]); return; } }
+    openDialog(ANAME[a.type],'',ATALK[a.type]);
+    dlgConfirm=()=>{ a.fleeing=true; a.fleeT=0;
+      const ang=Math.atan2(a.py-P.py, a.px-P.px); a.fvx=Math.cos(ang)*1.7; a.fvy=Math.sin(ang)*1.7; };
+    return; } }
   // シロサギ? (話し終えると飛び去る)
   if(!HERON.gone && !HERON.flying && Math.abs(fx-(HERON.px+TS/2))<TS+4 && Math.abs(fy-(HERON.py+TS/2))<TS+4){
     openDialog('シロサギ','',HERON.pages);
@@ -783,6 +813,11 @@ function update(){
   for(let i=PICKED.length-1;i>=0;i--) if(now>=PICKED[i].at){ M[PICKED[i].r][PICKED[i].c]=PICKED[i].ripe; PICKED.splice(i,1); }
   // heron flying away (runs even during dialog so it leaves after the talk)
   if(HERON.flying && !HERON.gone){ HERON.flyT++; HERON.px+=0.9; HERON.py-=1.1; if(HERON.flyT>92) HERON.gone=true; }
+  // animals fleeing away & vanishing (runs even during dialog)
+  for(const a of ANIMALS){ if(a.fleeing&&!a.gone){
+    a.px+=a.fvx; a.py+=a.fvy; a.frame+=0.4; a.moving=true; a.fleeT++;
+    a.dir = Math.abs(a.fvx)>Math.abs(a.fvy) ? (a.fvx<0?'left':'right') : (a.fvy<0?'up':'down');
+    if(a.fleeT>90) a.gone=true; } }
   // NPC wander (paused when talking)
   if(!dlgOpen&&!panelOpen) for(const n of NPCS){
     if(n.still){ n.moving=false; continue; }
@@ -797,6 +832,7 @@ function update(){
   }
   // animals wander (a bit wider range)
   if(!dlgOpen&&!panelOpen) for(const a of ANIMALS){
+    if(a.fleeing||a.gone) continue;
     a.t--;
     if(a.t<=0){ a.t=50+rnd()*140; const r=rnd(); a.mdir=r<.5?null:['up','down','left','right'][(rnd()*4)|0]; }
     let dx=0,dy=0;
@@ -1135,7 +1171,9 @@ function render(){
   TREASURES.forEach(t=>{ if(t.type==='chest') ents.push({y:(t.y+1)*TS,fn:()=>drawChest(t)}); });
   SPOTS.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
   NPCS.forEach(n=>ents.push({y:n.py+TS,fn:()=>drawChar(n.px-cam.x,n.py-cam.y,n.dir,n.frame,n.moving,n.c1,n.c2,n.hair,n.cat)}));
-  ANIMALS.forEach(a=>ents.push({y:a.py+TS,fn:()=>drawAnimal(a.px-cam.x,a.py-cam.y,a.dir,a.frame,a.moving,a.type)}));
+  ANIMALS.forEach(a=>{ if(a.gone)return; ents.push({y:a.py+TS,fn:()=>{
+    const al=a.fleeing?Math.max(0,1-a.fleeT/90):1; if(al<1)ctx.globalAlpha=al;
+    drawAnimal(a.px-cam.x,a.py-cam.y,a.dir,a.frame,a.moving,a.type); ctx.globalAlpha=1; }}); });
   if(!HERON.gone) ents.push({y:HERON.py+TS,fn:drawHeron});
   PROPS.forEach(p=>ents.push({y:p.y*TS+TS,fn:()=>drawFire(p.x*TS-cam.x,p.y*TS-cam.y)}));
   const wob=Date.now()<P.slowUntil?Math.sin(Date.now()/110)*1.6:0;
