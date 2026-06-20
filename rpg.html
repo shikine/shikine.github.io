@@ -90,6 +90,13 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .acard:hover{border-color:var(--gold);transform:translateY(-2px)}
   .acard .an{color:var(--gold);font-size:14px}
   .acard .au{font-size:10px;color:#8a8378;margin-top:5px;word-break:break-all}
+  .gcard{cursor:pointer;text-align:left;font-family:inherit}
+  .gback{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px}
+  .gbackbtn{background:rgba(231,200,120,.1);border:2px solid #4a4030;color:var(--paper);
+    font-family:inherit;font-size:13px;padding:8px 14px;cursor:pointer}
+  .gext{color:var(--gold);font-size:12px;text-decoration:none;white-space:nowrap}
+  .gframe{width:100%;aspect-ratio:16/9;background:#000;border:2px solid #4a4030}
+  .gframe iframe{width:100%;height:100%;display:block;border:0}
   /* newsletter form */
   .nlform{display:flex;flex-direction:column;gap:13px;font-size:14px}
   .nlform p{line-height:1.85}
@@ -316,6 +323,7 @@ const SPOTS=[
  {x:50,y:9, w:4,h:3, roof:'#7a9c52', wall:'#cdaa70', icon:'🔧', label:'工房',    key:'apps'},
  {x:30,y:24,w:4,h:3, roof:'#c08a4c', wall:'#d8b486', icon:'📮', label:'郵便屋',  key:'contact'},
  {x:46,y:26,w:4,h:3, roof:'#9c6cb0', wall:'#d8b486', icon:'📜', label:'掲示板',  key:'news'},
+ {x:54,y:6, w:4,h:3, roof:'#5a8a6a', wall:'#d8b486', icon:'🖼', label:'3D館',   key:'gallery'},
 ];
 /* decorative houses (non-interactive, village atmosphere) */
 const DECO=[
@@ -729,6 +737,39 @@ function openAppsPanel(){
   h+='</div>';
   openPanel('🔧 工房 — Apps',h);
 }
+/* 3D gallery (Sketchfab embeds) */
+const SKETCHFAB=[
+ {uid:'5e6c68e622824cc2a72b6a2bf0e2c5d4',name:'Dino_scan'},
+ {uid:'0abadb32dedf43e599feee375ea2e0d8',name:'Glass Vase 001'},
+ {uid:'0c350ddb8c154869bf7e6557456e8644',name:'Tokyo cone 003'},
+ {uid:'2012e87dab0e46568ff72fef1197364d',name:'Tokyo cone 002'},
+ {uid:'01c5a1e84c24468faed9db680aadf0a4',name:'Pipe Organ by PVC pipe'},
+ {uid:'c6c45e8bc68347cbad9775d0f5d25fbc',name:'Tokyo Cone Tower'},
+ {uid:'fc60f23338514f88bd0162740d73ebd2',name:'BathBomb volcano'},
+ {uid:'7f53a04175e54093abc2051290a82c2c',name:'01 bathbomb'},
+ {uid:'748d824c36a5467ba6b680d3e5773e37',name:'02 bathbomb'},
+ {uid:'6dc9ea8816c5474a83e51db180325768',name:'04 bathbomb'},
+ {uid:'fc62dae3b6d747a3857982a7c5d6c16d',name:'05 bathbomb'},
+ {uid:'d7b3eea5130c4e98bfd918173863309f',name:'06 bathbomb'},
+ {uid:'2b7fb6563c2f4a94a9cd8b24ff76d1f8',name:'Stone from Tokyo'},
+ {uid:'14065f8620ca4fae8ed521149213db49',name:'Stone'},
+ {uid:'0856867c943b446e8316511ce6c729ff',name:'A_room'},
+ {uid:'8a393d9003a3498893abec932257d94f',name:'hotel_JAPAN'},
+ {uid:'d27521a42edd4bb7983c824da112a397',name:'エースギャラリー（屋根なし）'},
+];
+function openGalleryPanel(){
+  let h='<p style="font-size:13px;line-height:1.8;margin-bottom:10px">渡邊織音の3D作品（Sketchfab）。カードを選ぶと、その場で回して鑑賞できます。</p><div class="agrid">';
+  SKETCHFAB.forEach((m,i)=> h+='<button class="acard gcard" onclick="galleryShow('+i+')"><div class="an">'+m.name+'</div><div class="au">3Dで見る ▶</div></button>');
+  h+='</div><a class="more" href="https://sketchfab.com/watanabeshikine" target="_blank" rel="noopener">Sketchfabのページを開く ↗</a>';
+  openPanel('🖼 3Dギャラリー — Sketchfab ('+SKETCHFAB.length+')',h);
+}
+function galleryShow(i){
+  const m=SKETCHFAB[i];
+  openPanel('🖼 '+m.name,
+   '<div class="gback"><button class="gbackbtn" onclick="openGalleryPanel()">← 一覧へ</button>'
+   +'<a class="gext" href="https://sketchfab.com/3d-models/'+m.uid+'" target="_blank" rel="noopener">Sketchfabで開く ↗</a></div>'
+   +'<div class="gframe"><iframe title="'+m.name+'" src="https://sketchfab.com/models/'+m.uid+'/embed?ui_theme=dark&autospin=0.2&ui_infos=0" allow="autoplay; fullscreen; xr-spatial-tracking" allowfullscreen mozallowfullscreen webkitallowfullscreen frameborder="0"></iframe></div>');
+}
 /* newsletter signup → GAS (重複チェック・登録・通知を一括処理) */
 const GAS_URL='https://script.google.com/macros/s/AKfycbyieDzOkdfRhkqzWx51YnUC6Y-537NnTCfpDkCaXGNOLMYJTDzG36kBhgcllVQu1VV5tQ/exec';
 function openNewsPanel(){
@@ -819,6 +860,7 @@ function interact(){
   for(const s of SPOTS){ if(tc>=s.x-1&&tc<=s.x+s.w&&tr>=s.y-1&&tr<=s.y+s.h){
     if(s.key==='works'){openWorksPanel();return;}
     if(s.key==='apps'){openAppsPanel();return;}
+    if(s.key==='gallery'){openGalleryPanel();return;}
     if(s.key==='news'){openNewsPanel();return;}
     const c=CONTENT[s.key]; openDialog(c.who,c.t,c.pages); return; } }
 }
