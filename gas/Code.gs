@@ -9,6 +9,9 @@ var DRAFT_FOLDER = 'karasuletters_drafts';
 
 // ===== ウェブアプリ エントリーポイント =====
 function doPost(e) {
+  if (!e || !e.postData) {
+    return respond({ error: 'no postData (エディタからの直接実行では動きません)' });
+  }
   var data = JSON.parse(e.postData.contents);
   var action = data.action;
 
@@ -166,27 +169,48 @@ function handleDeleteDraft(issue) {
 
 // ===== 登録処理 =====
 function handleRegister(name, email) {
+  // email が空ならクラッシュさせず明示エラーを返す
+  if (!email) {
+    return respond({ error: 'email が空です' });
+  }
   if (isDuplicate(email)) {
     return respond({ duplicate: true });
   }
 
-  var ss    = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEET_NAME);
-  sheet.appendRow([new Date(), name, email]);
+  // シートへ登録（失敗したらここで中断）
+  try {
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(SHEET_NAME);
+    sheet.appendRow([new Date(), name, email]);
+  } catch (e) {
+    Logger.log('handleRegister appendRow error: ' + e.message);
+    return respond({ error: 'sheet: ' + e.message });
+  }
 
-  // 管理者への通知メール
-  MailApp.sendEmail({
-    to:      NOTIFY_EMAIL,
-    subject: '【karasuletters】新しい購読者が登録しました',
-    body:    '新しい登録者がありました。\n\nお名前：' + name + '\nメール：' + email + '\n\n登録日時：' + new Date().toLocaleString('ja-JP')
-  });
+  // 管理者への通知メール（失敗しても登録は止めない）
+  try {
+    MailApp.sendEmail({
+      to:      NOTIFY_EMAIL,
+      subject: '【karasuletters】新しい購読者が登録しました',
+      body:    '新しい登録者がありました。\n\nお名前：' + name + '\nメール：' + email + '\n\n登録日時：' + new Date().toLocaleString('ja-JP')
+    });
+  } catch (e) {
+    Logger.log('handleRegister notify mail error: ' + e.message);
+  }
 
-  // 購読者へのサンクスメール
-  MailApp.sendEmail({
-    to:      email,
-    subject: '【karasuletters】購読登録ありがとうございます',
-    body:    name + ' さま\n\nkarasuletters へようこそ。\n\n購読登録ありがとうございます。\n月に一度、舞台・美術・建築、日々のことをお届けします。\n\n次号をどうぞお楽しみに。\n\nwith love,\nShikine Watanabe\n—\n配信停止をご希望の方は ' + UNSUB_EMAIL + ' に空メールをお送りください。'
-  });
+  // 購読者へのサンクスメール（失敗しても登録は止めない）
+  try {
+    MailApp.sendEmail({
+      to:      email,
+      subject: '【karasuletters】購読登録ありがとうございます',
+      body:    name + ' さま\n\nkarasuletters へようこそ。\n\n購読登録ありがとうございます。\n月に一度、舞台・美術・建築、日々のことをお届けします。\n\n次号をどうぞお楽しみに。\n\nwith love,\nShikine Watanabe\n—\n配信停止をご希望の方は ' + UNSUB_EMAIL + ' に空メールをお送りください。'
+    });
+  } catch (e) {
+    Logger.log('handleRegister thanks mail error: ' + e.message);
+  }
+
+  // 送信残量をログに残す（上限切れの早期発見用）
+  Logger.log('MailApp remaining quota: ' + MailApp.getRemainingDailyQuota());
 
   return respond({ ok: true });
 }

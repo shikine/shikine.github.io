@@ -1196,6 +1196,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             return;
           }
 
+          // バックエンドが ok を返さなかった場合はエラー扱い（誤って「登録完了」を出さない）
+          if (!result.ok) {
+            errEl.textContent = '登録に失敗しました。お手数ですが時間をおいて再度お試しください。';
+            errEl.hidden = false;
+            requestAnimationFrame(function () { errEl.classList.add('visible'); });
+            btn.disabled = false;
+            btn.textContent = '購読する';
+            return;
+          }
+
           nlForm.style.display = 'none';
           var thanks = document.getElementById('nl-thanks');
           thanks.hidden = false;
