@@ -802,7 +802,7 @@ function galleryShow(i){
    +'<div class="gframe"><iframe title="'+m.name+'" src="https://sketchfab.com/models/'+m.uid+'/embed?ui_theme=dark&autospin=0.2&ui_infos=0" allow="autoplay; fullscreen; xr-spatial-tracking" allowfullscreen mozallowfullscreen webkitallowfullscreen frameborder="0"></iframe></div>');
 }
 /* newsletter signup → GAS (重複チェック・登録・通知を一括処理) */
-const GAS_URL='https://script.google.com/macros/s/AKfycbyieDzOkdfRhkqzWx51YnUC6Y-537NnTCfpDkCaXGNOLMYJTDzG36kBhgcllVQu1VV5tQ/exec';
+const GAS_URL='https://script.google.com/macros/s/AKfycbxc09CWmHQr9pjykGosCwf3hiCGWc5jT2vDZdiLdJ2Z0yUj9ThR1G5p495gNmOYZvAgzg/exec';
 function openNewsPanel(){
   openPanel('📜 メルマガ — Newsletter',
     `<form id="nlForm" class="nlform">
@@ -825,6 +825,8 @@ function openNewsPanel(){
         body:JSON.stringify({action:'register',name,email})});
       const result=await res.json();
       if(result.duplicate){ err.textContent='このメールアドレスはすでに登録されています。';
+        err.hidden=false; btn.disabled=false; btn.textContent='購読する'; return; }
+      if(!result.ok){ err.textContent='登録に失敗しました。時間をおいてお試しください。';
         err.hidden=false; btn.disabled=false; btn.textContent='購読する'; return; }
       f.style.display='none'; document.getElementById('nlThanks').hidden=false;
     }catch(ex){ err.textContent='通信エラーが発生しました。時間をおいてお試しください。';
