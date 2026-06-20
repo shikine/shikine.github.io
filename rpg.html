@@ -67,10 +67,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 
   /* ── centered panel popup (works / apps) ── */
   #panel{position:fixed;inset:0;z-index:25;display:none;place-items:center;
-    background:rgba(8,11,7,.74);padding:18px}
+    background:rgba(8,11,7,.74);padding:12px}
   #panel.show{display:grid}
   #panel .pbox{background:var(--box);border:3px solid var(--gold);box-shadow:0 0 0 3px #000;
-    width:min(720px,96vw);max-height:86vh;display:flex;flex-direction:column}
+    width:min(720px, calc(100vw - 30px));max-width:100%;max-height:86vh;display:flex;flex-direction:column}
   #panel .phead{display:flex;justify-content:space-between;align-items:center;
     padding:13px 18px;border-bottom:2px solid #4a4030;flex:0 0 auto}
   #panel .phead h2{color:var(--gold);font-size:17px;letter-spacing:.04em}
@@ -376,6 +376,8 @@ OBJS.forEach(o=>{ for(let r=o.y;r<o.y+o.h;r++)for(let c=o.x;c<o.x+o.w;c++)
 TREASURES.forEach(t=>{ if(t.type==='chest') set(t.x,t.y,(t.y>=34&&t.x>=3&&t.x<19)?7:0); });
 // keep the cat's spot beside the truck clear (rescued from the kei truck)
 set(16,30,0); set(16,31,0);
+// keep Larry's spot near the lava clear
+set(48,33,0); set(48,34,0);
 // clear ground under the warp circle (walkable sand) and the signpost tile
 for(let r=WARP.y;r<WARP.y+WARP.h;r++)for(let c=WARP.x;c<WARP.x+WARP.w;c++)set(c,r,7);
 set(SIGN.x,SIGN.y,7);
@@ -488,6 +490,14 @@ const NPCS=[
   pages:['次の公演、どんな世界にしようか。','「構造と物語のあいだ」——織音さんの美術なら、きっと立ち上がる。','きみにも案があれば、ぜひ聞かせてほしい。']},
  {x:12,y:33, still:true, c1:'#3a78b0',c2:'#e8c39a',hair:'#3a2a1a',name:'劇団員カズキ',
   pages:['稽古は来月から。小屋はどこにしようか。','舞台美術の打ち合わせ、織音さんとそろそろだね。','チラシの絵柄も、そろそろ決めなきゃ。']},
+ // ── 溶岩の近く：ネズミの被り物の劇団員ラリー（告知リンクへ誘導） ──
+ {x:48,y:33, still:true, mouse:true, c1:'#8a8a8a',c2:'#e8c39a',hair:'#6a6a6a',name:'劇団員ラリー',
+  link:'https://www.instagram.com/p/DZrHr1Xkb7q/?igsh=MWY4MTF2anBudXllNQ==',
+  pages:['（ネズミの被り物をかぶった男が、ノリよく手を振っている）',
+         '劇団員ラリー「よっ！ 次の公演、アツくなるぞ〜！」',
+         '「テーマはまだ秘密。でも、とびきり変なやつになる。」',
+         '「告知、もう出てるんだ。チラ見してってよ！」',
+         '［ スペース／クリックで告知ページを別タブで開く ↗ ］']},
 ];
 NPCS.forEach(n=>{n.px=n.x*TS;n.py=n.y*TS;n.hx=n.px;n.hy=n.py;n.dir='down';n.frame=0;n.t=rnd()*120;n.mdir=null;n.moving=false;});
 
@@ -813,7 +823,9 @@ function interact(){
     let pages=n.pages;
     if(n.gives!=null && !TREASURES[n.gives].found){ const t=TREASURES[n.gives]; getTreasure(t);
       pages=n.pages.concat(['（'+t.icon+' <b>'+t.name+'</b> を授かった！ 💎'+treasCount()+'/8）']); }
-    openDialog(n.name,'',pages); return; } }
+    openDialog(n.name,'',pages);
+    if(n.link) dlgConfirm=()=>window.open(n.link,'_blank','noopener'); // 会話後に告知ページへ
+    return; } }
   // animal? (もののけ的に語り、話し終えると走り去って消える)
   for(const a of ANIMALS){ if(!a.gone&&!a.fleeing&&Math.abs(fx-(a.px+TS/2))<TS&&Math.abs(fy-(a.py+TS/2))<TS){
     a.dir={up:'down',down:'up',left:'right',right:'left'}[P.dir];
@@ -1257,7 +1269,12 @@ function render(){
   OBJS.forEach(o=>ents.push({y:(o.y+o.h)*TS,fn:()=>drawObj(o)}));
   TREASURES.forEach(t=>{ if(t.type==='chest') ents.push({y:(t.y+1)*TS,fn:()=>drawChest(t)}); });
   SPOTS.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
-  NPCS.forEach(n=>ents.push({y:n.py+TS,fn:()=>drawChar(n.px-cam.x,n.py-cam.y,n.dir,n.frame,n.moving,n.c1,n.c2,n.hair,n.cat)}));
+  NPCS.forEach(n=>ents.push({y:n.py+TS,fn:()=>{
+    drawChar(n.px-cam.x,n.py-cam.y,n.dir,n.frame,n.moving,n.c1,n.c2,n.hair,n.cat);
+    if(n.mouse){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y); // ネズミの被り物（丸い耳）
+      px(sx+2,sy-2,4,4,'#9a9a9a'); px(sx+10,sy-2,4,4,'#9a9a9a');
+      px(sx+3,sy-1,2,2,'#c8a0a8'); px(sx+11,sy-1,2,2,'#c8a0a8'); }
+  }}));
   ANIMALS.forEach(a=>{ if(a.gone)return; ents.push({y:a.py+TS,fn:()=>{
     const al=a.fleeing?Math.max(0,1-a.fleeT/90):1; if(al<1)ctx.globalAlpha=al;
     drawAnimal(a.px-cam.x,a.py-cam.y,a.dir,a.frame,a.moving,a.type); ctx.globalAlpha=1; }}); });
@@ -1330,6 +1347,12 @@ volEl.addEventListener('input',applyVol);
 
 if(('ontouchstart' in window) || (window.matchMedia && window.matchMedia('(pointer:coarse)').matches))
   document.body.classList.add('touch');
+/* deep-link spawn: ?to=larry など で最初からその場所に出現してゲーム開始 */
+let _autostart=false;
+(function(){ const q=new URLSearchParams(location.search); const SPN={larry:[48,34]};
+  const s=q.get('to')||q.get('spawn'); if(!s)return;
+  const pos = SPN[s] || (/^\d+,\d+$/.test(s)?s.split(',').map(Number):null);
+  if(pos){ P.px=pos[0]*TS; P.py=pos[1]*TS; _autostart=true; } })();
 /* portrait-mobile viewport: fewer tiles -> bigger character, fills the screen */
 function setupViewport(){
   const pm = document.body.classList.contains('touch') && window.innerHeight>window.innerWidth;
@@ -1343,6 +1366,7 @@ addEventListener('resize', setupViewport);
 addEventListener('orientationchange', setupViewport);
 setupViewport();
 updateTimeBtn(); updateTreasHud(); update();render(); // draw a frame behind title
+if(_autostart) startGame();
 </script>
 </body>
 </html>
