@@ -306,6 +306,8 @@ for(let r=20;r<24;r++)for(let c=34;c<45;c++)set(c,r,(r-20)%2===0?16:5);
 for(let r=6;r<12;r++)for(let c=15;c<23;c++)set(c,r, rnd()>.62?4:0);
 // small rice paddy (ちいさな田んぼ) — south-central
 for(let r=21;r<23;r++)for(let c=22;c<26;c++)set(c,r,18);
+// river (川) — meanders south out of the west pond; the bear lingers near it
+for(let r=13;r<34;r++){ const cc=6+Math.round(Math.sin((r-13)*0.55)); for(let c=cc-1;c<=cc+1;c++) if(c>=3&&c<=7) set(c,r,2); }
 
 /* ── buildings: tile col,row, size, roof color, icon, label, key ── */
 const SPOTS=[
@@ -530,6 +532,20 @@ const HERON={ x:24, y:21, dir:'left', flying:false, gone:false, flyT:0, frame:0,
     '「君もまた、見る角度で姿を変えるだろう。」',
     '「……では、ゆこう。」'] };
 HERON.px=HERON.x*TS; HERON.py=HERON.y*TS;
+
+/* ── 熊（森の主・人の2倍・川辺をおびえてうろつく。話しても消えない） ── */
+const BEAR={ x:9, y:20, dir:'down', frame:0, moving:false, t:90, mdir:null, talked:false,
+  pages:[
+    '（人の倍ほどもある熊が、おびえた目でこちらを見ている）',
+    '熊「……来るな。いや……もう、よい。」',
+    '「私は、この森の主だった。山が、まだ山だった頃の。」',
+    '「木は伐られ、沢は涸れ、私の通り道は寸断された。」',
+    '「腹が減る。人の捨てた残飯の匂いに……どうしても、ひかれてしまう。」',
+    '「里へ下りれば、撃たれる。それでも、子らに食わせねばならぬ。」',
+    '「殺されること。死ぬこと。……怖い。お前たちと、同じだ。」',
+    '「それでも私は、子のために生きる。生きるとは、そういうことだ。」',
+    '「……人よ。願わくば、山に木を返してくれ。」'] };
+BEAR.px=BEAR.x*TS; BEAR.py=BEAR.y*TS; BEAR.hx=BEAR.px; BEAR.hy=BEAR.py;
 
 /* ── player ── */
 const P={px:HUB[0]*TS, py:HUB[1]*TS+TS, dir:'down', speed:1.5, frame:0, moving:false,
@@ -759,6 +775,10 @@ function interact(){
     dlgConfirm=()=>{ a.fleeing=true; a.fleeT=0;
       const ang=Math.atan2(a.py-P.py, a.px-P.px); a.fvx=Math.cos(ang)*1.7; a.fvy=Math.sin(ang)*1.7; };
     return; } }
+  // 熊? (人の2倍・話しても消えない)
+  if(fx>BEAR.px-6 && fx<BEAR.px+2*TS+6 && fy>BEAR.py-6 && fy<BEAR.py+2*TS+6){
+    BEAR.dir={up:'down',down:'up',left:'right',right:'left'}[P.dir]; BEAR.talked=true;
+    openDialog('熊','',BEAR.pages); return; }
   // シロサギ? (話し終えると飛び去る)
   if(!HERON.gone && !HERON.flying && Math.abs(fx-(HERON.px+TS/2))<TS+4 && Math.abs(fy-(HERON.py+TS/2))<TS+4){
     openDialog('シロサギ','',HERON.pages);
@@ -839,6 +859,14 @@ function update(){
     if(a.mdir){const d={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]}[a.mdir];
       if(Math.hypot(a.px-a.hx,a.py-a.hy)<TS*4){dx=d[0];dy=d[1];}else{a.mdir=null;a.t=40;}}
     moveEnt(a,dx,dy,a.type==='rabbit'?.8:.5);
+  }
+  // bear wander (timid: slow, frequent pauses, stays near the river)
+  if(!dlgOpen&&!panelOpen){ BEAR.t--;
+    if(BEAR.t<=0){ BEAR.t=120+rnd()*180; BEAR.mdir = rnd()<.6?null:['up','down','left','right'][(rnd()*4)|0]; }
+    let dx=0,dy=0;
+    if(BEAR.mdir){ const d={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]}[BEAR.mdir];
+      if(Math.hypot(BEAR.px-BEAR.hx,BEAR.py-BEAR.hy)<TS*3){dx=d[0];dy=d[1];}else{BEAR.mdir=null;BEAR.t=60;} }
+    moveEnt(BEAR,dx,dy,0.35);
   }
   if(!dlgOpen&&!panelOpen){
     let dx=0,dy=0;
@@ -1057,6 +1085,18 @@ function drawObj(o){
     px(sx+9,sy+9,4,4,'#3a6ac0'); px(sx+9,sy+9,4,1,'#5a8ae0');
     px(sx+6,sy+4,1,4,'#8a6a3a'); px(sx+5,sy+3,3,2,'#e8e2d2'); }
 }
+function drawBear(){
+  const sx=Math.round(BEAR.px-cam.x), sy=Math.round(BEAR.py-cam.y), bob=BEAR.moving?(Math.floor(BEAR.frame)%2):0;
+  px(sx+5,sy+28,22,3,'rgba(0,0,0,.26)');                         // wide shadow
+  px(sx+7,sy+24+bob,5,6,'#5a3d28'); px(sx+20,sy+24+bob,5,6,'#5a3d28'); // legs
+  px(sx+5,sy+12+bob,22,14,'#6b4a32'); px(sx+5,sy+12+bob,22,2,'#7a5638'); px(sx+5,sy+24+bob,22,2,'#4f3522'); // body
+  px(sx+8,sy+2+bob,5,5,'#5a3d28'); px(sx+19,sy+2+bob,5,5,'#5a3d28'); // ears
+  px(sx+9,sy+3+bob,2,2,'#7a5638'); px(sx+20,sy+3+bob,2,2,'#7a5638');
+  px(sx+9,sy+4+bob,14,12,'#6b4a32'); px(sx+9,sy+4+bob,14,2,'#7a5638'); // head
+  px(sx+13,sy+11+bob,6,5,'#c8a884'); px(sx+15,sy+13+bob,2,2,'#2a1d12'); // snout + nose
+  px(sx+12,sy+8+bob,2,2,'#2a1d12'); px(sx+18,sy+8+bob,2,2,'#2a1d12'); // eyes
+  px(sx+12,sy+8+bob,1,1,'#fff'); px(sx+18,sy+8+bob,1,1,'#fff');        // timid catchlight
+}
 function drawHeron(){
   const sx=Math.round(HERON.px-cam.x), sy=Math.round(HERON.py-cam.y);
   if(!HERON.flying){
@@ -1175,6 +1215,7 @@ function render(){
     const al=a.fleeing?Math.max(0,1-a.fleeT/90):1; if(al<1)ctx.globalAlpha=al;
     drawAnimal(a.px-cam.x,a.py-cam.y,a.dir,a.frame,a.moving,a.type); ctx.globalAlpha=1; }}); });
   if(!HERON.gone) ents.push({y:HERON.py+TS,fn:drawHeron});
+  ents.push({y:BEAR.py+2*TS,fn:drawBear});
   PROPS.forEach(p=>ents.push({y:p.y*TS+TS,fn:()=>drawFire(p.x*TS-cam.x,p.y*TS-cam.y)}));
   const wob=Date.now()<P.slowUntil?Math.sin(Date.now()/110)*1.6:0;
   ents.push({y:P.py+TS,fn:()=>{
