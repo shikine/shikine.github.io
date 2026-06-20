@@ -493,7 +493,7 @@ const NPCS=[
  {x:12,y:33, still:true, c1:'#3a78b0',c2:'#e8c39a',hair:'#3a2a1a',name:'劇団員カズキ',
   pages:['稽古は来月から。小屋はどこにしようか。','舞台美術の打ち合わせ、織音さんとそろそろだね。','チラシの絵柄も、そろそろ決めなきゃ。']},
  // ── 溶岩の近く：ネズミの被り物の劇団員ラリー（告知リンクへ誘導） ──
- {x:48,y:33, still:true, mouse:true, c1:'#8a8a8a',c2:'#e8c39a',hair:'#6a6a6a',name:'劇団員ラリー',
+ {x:48,y:33, still:true, mouse:true, female:true, c1:'#8a8a8a',c2:'#e8c39a',hair:'#3a2a1a',name:'劇団員ラリー',
   link:'https://www.instagram.com/p/DZrHr1Xkb7q/?igsh=MWY4MTF2anBudXllNQ==',
   pages:['（ネズミの被り物をかぶった男が、ノリよく手を振っている）',
          '劇団員ラリー「よっ！ 次の公演、アツくなるぞ〜！」',
@@ -1281,6 +1281,8 @@ function render(){
   SPOTS.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
   NPCS.forEach(n=>ents.push({y:n.py+TS,fn:()=>{
     drawChar(n.px-cam.x,n.py-cam.y,n.dir,n.frame,n.moving,n.c1,n.c2,n.hair,n.cat);
+    if(n.female){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y); // 長めの髪
+      px(sx+3,sy+2,2,7,n.hair); px(sx+11,sy+2,2,7,n.hair); }
     if(n.mouse){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y); // ネズミの被り物（丸い耳）
       px(sx+2,sy-2,4,4,'#9a9a9a'); px(sx+10,sy-2,4,4,'#9a9a9a');
       px(sx+3,sy-1,2,2,'#c8a0a8'); px(sx+11,sy-1,2,2,'#c8a0a8'); }
