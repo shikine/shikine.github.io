@@ -709,15 +709,11 @@ function applyTint(){ const m=curMode(),c=TINT[m];
   if(m==='night'){ ctx.fillStyle='#fff';
     for(const s of STARS){ ctx.globalAlpha=0.45+0.5*(0.5+0.5*Math.sin(Date.now()/600+s[0])); ctx.fillRect(s[0],s[1],s[2],s[2]); }
     ctx.globalAlpha=1;
-    // spotlight on 劇団員ラリー
+    // spotlight on 劇団員ラリー — 足元に広がる円形の光のみ
     const lx=Math.round(LARRY.px+TS/2-cam.x), ly=Math.round(LARRY.py+TS-cam.y);
     if(lx>-60&&lx<cv.width+60&&ly>-60&&ly<cv.height+60){
-      const bg=ctx.createLinearGradient(lx,ly-58,lx,ly+4);
-      bg.addColorStop(0,'rgba(255,246,205,0)'); bg.addColorStop(1,'rgba(255,246,205,0.16)');
-      ctx.fillStyle=bg; ctx.beginPath();
-      ctx.moveTo(lx-4,ly-58); ctx.lineTo(lx+4,ly-58); ctx.lineTo(lx+20,ly+5); ctx.lineTo(lx-20,ly+5); ctx.closePath(); ctx.fill();
-      const g=ctx.createRadialGradient(lx,ly-3,3, lx,ly,44);
-      g.addColorStop(0,'rgba(255,245,200,0.5)'); g.addColorStop(0.5,'rgba(255,240,190,0.18)'); g.addColorStop(1,'rgba(255,240,190,0)');
+      const g=ctx.createRadialGradient(lx,ly,3, lx,ly,40);
+      g.addColorStop(0,'rgba(255,245,200,0.3)'); g.addColorStop(0.55,'rgba(255,240,190,0.12)'); g.addColorStop(1,'rgba(255,240,190,0)');
       ctx.fillStyle=g; ctx.fillRect(0,0,cv.width,cv.height);
     } } }
 function updateTimeBtn(){ document.querySelectorAll('#timeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.m===timeMode)); }
