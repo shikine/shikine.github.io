@@ -676,10 +676,19 @@ function updateCropHud(){ document.getElementById('crops').innerHTML=
 /* ── treasure hunt ── */
 function treasCount(){ return TREASURES.filter(t=>t.found).length; }
 function updateTreasHud(){ const e=document.getElementById('treas'); if(e)e.innerHTML='💎 <b>'+treasCount()+'/8</b>'; }
+let FW=[], fwUntil=0, fwTimer=0;  // 花火（fireworks）
+function launchFirework(){
+  const x=40+Math.random()*(cv.width-80), y=24+Math.random()*(cv.height*0.45);
+  const col=['#ff5a5a','#ffd24a','#5ad2ff','#a87aff','#7aff9a','#ff8ad2','#fff'][(Math.random()*7)|0];
+  const n=22+(Math.random()*12|0);
+  for(let i=0;i<n;i++){ const a=(i/n)*Math.PI*2, sp=0.7+Math.random()*1.5;
+    FW.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,col}); }
+}
 function getTreasure(t){ if(t.found)return false; t.found=true; updateTreasHud();
   if(document.getElementById('menu').classList.contains('open')) renderTreasLog();
-  if(treasCount()===8) setTimeout(()=>openDialog('','🎉 おめでとう！',
-    ['あわい村の <b>8つの宝</b> を、すべて見つけた！','「構造と物語のあいだ」に、きみだけの物語が生まれた。']),500);
+  if(treasCount()===8){ fwUntil=Date.now()+9000; fwTimer=0;   // 花火を打ち上げる
+    setTimeout(()=>openDialog('','🎉 おめでとう！',
+      ['あわい村の <b>8つの宝</b> を、すべて見つけた！','夜空に、花火が上がっている。','「構造と物語のあいだ」に、きみだけの物語が生まれた。']),500); }
   return true; }
 function renderTreasLog(){
   const lab=document.getElementById('treasLabel'); if(lab)lab.textContent='宝さがし（💎 '+treasCount()+'/8）';
@@ -902,6 +911,9 @@ function update(){
   for(let i=PICKED.length-1;i>=0;i--) if(now>=PICKED[i].at){ M[PICKED[i].r][PICKED[i].c]=PICKED[i].ripe; PICKED.splice(i,1); }
   // heron flying away (runs even during dialog so it leaves after the talk)
   if(HERON.flying && !HERON.gone){ HERON.flyT++; HERON.px+=0.9; HERON.py-=1.1; if(HERON.flyT>92) HERON.gone=true; }
+  // fireworks (8つの宝コンプリート時。ダイアログ中も上がり続ける)
+  if(now<fwUntil){ fwTimer--; if(fwTimer<=0){ fwTimer=16+(Math.random()*20|0); launchFirework(); } }
+  for(let i=FW.length-1;i>=0;i--){ const p=FW[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.03; p.vx*=0.99; p.life-=0.016; if(p.life<=0)FW.splice(i,1); }
   // animals fleeing away & vanishing (runs even during dialog)
   for(const a of ANIMALS){ if(a.fleeing&&!a.gone){
     a.px+=a.fvx; a.py+=a.fvy; a.frame+=0.4; a.moving=true; a.fleeT++;
@@ -1307,6 +1319,10 @@ function render(){
   grd.addColorStop(0,'rgba(0,0,0,0)');grd.addColorStop(1,'rgba(0,0,0,0.28)');
   ctx.fillStyle=grd;ctx.fillRect(0,0,cv.width,cv.height);
   applyTint();   // time-of-day color
+  // fireworks on top
+  for(const p of FW){ ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.col;
+    ctx.fillRect(p.x|0,p.y|0,2,2); }
+  ctx.globalAlpha=1;
 }
 let running=false;
 function loop(){ if(!running)return; update();render();requestAnimationFrame(loop); }
