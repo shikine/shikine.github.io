@@ -380,6 +380,8 @@ set(16,30,0); set(16,31,0);
 set(48,33,0); set(48,34,0);
 // keep the momo spawn tile walkable (sand, in front of the troupe)
 set(11,34,7);
+// keep the bear-side spawn tile walkable (land, just below the bear)
+set(4,18,0);
 // clear ground under the warp circle (walkable sand) and the signpost tile
 for(let r=WARP.y;r<WARP.y+WARP.h;r++)for(let c=WARP.x;c<WARP.x+WARP.w;c++)set(c,r,7);
 set(SIGN.x,SIGN.y,7);
@@ -1380,7 +1382,8 @@ if(('ontouchstart' in window) || (window.matchMedia && window.matchMedia('(point
   document.body.classList.add('touch');
 /* deep-link spawn: ?to=larry など で最初からその場所に出現してゲーム開始 */
 let _autostart=false;
-(function(){ const q=new URLSearchParams(location.search); const SPN={larry:[48,34,'up'], momo:[11,34,'up']};
+(function(){ const q=new URLSearchParams(location.search);
+  const SPN={larry:[48,34,'up'], momo:[11,34,'up'], gallery:[56,9,'up'], bear:[4,18,'up']};
   const s=q.get('to')||q.get('spawn'); if(!s)return;
   const pos = SPN[s] || (/^\d+,\d+$/.test(s)?s.split(',').map(Number):null);
   if(pos){ P.px=pos[0]*TS; P.py=pos[1]*TS; if(pos[2])P.dir=pos[2]; _autostart=true; } })();
