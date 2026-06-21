@@ -332,6 +332,8 @@ const DECO=[
  {x:8, y:25,w:3,h:3, roof:'#7a8a4c', wall:'#d2ab74'},
  {x:40,y:31,w:3,h:3, roof:'#a06a4c', wall:'#cdaa70'},
 ];
+/* すべての家（夜に窓の灯りをともす対象） */
+const HOUSES=[...SPOTS,...DECO];
 /* large boulders (solid, decorative) — between 美術館 and 郵便屋 */
 const BOULDERS=[{x:28,y:15,w:3,h:2}];
 /* placed objects (solid, decorative) — vehicles + stage set under construction */
@@ -464,7 +466,7 @@ const NPCS=[
  {x:16,y:31, c1:'#444',c2:'#444',hair:'#444',name:'ねこ',cat:true, gives:7, still:true,
   pages:['（にゃあ）','（軽トラから出してくれて、ありがとう）','（すりすり…）']},
  // ── 富士見町の語り部たち（家の前に立つ・移動しない） ──
- {x:17,y:16, still:true, c1:'#8a6a3a',c2:'#e8c39a',hair:'#9a9a9a',name:'富士見の古老',
+ {x:17,y:16, still:true, keepNight:true, c1:'#8a6a3a',c2:'#e8c39a',hair:'#9a9a9a',name:'富士見の古老',
   pages:['ここ長野県・富士見町は、その名のとおり——晴れた日には富士山が見える町じゃ。',
          '八ヶ岳と入笠山にいだかれた、標高千メートルの高原の町でな。',
          '空気が澄んで、夜には星がこぼれるほど見える。よい土地じゃよ。']},
@@ -490,15 +492,15 @@ const NPCS=[
  {x:20,y:10,c1:'#6a6ad0',c2:'#e8c39a',hair:'#5a3a1a',name:'自由人',
   pages:['畑を耕して、歌って、また旅に出る。','富士見には、そういう仲間が集まってくるのさ。']},
  // ── アトリエ近くの劇団員（次の公演を相談中） ──
- {x:10,y:33, still:true, c1:'#c0504a',c2:'#e8c39a',hair:'#2a2a2a',name:'劇団員モモ',
+ {x:10,y:33, still:true, keepNight:true, c1:'#c0504a',c2:'#e8c39a',hair:'#2a2a2a',name:'劇団員モモ',
   link:'https://www.hachisu-kikaku.com/',
   pages:['次の公演、どんな世界にしようか。','「構造と物語のあいだ」——織音さんの美術なら、きっと立ち上がる。','きみにも案があれば、ぜひ聞かせてほしい。',
          '「ハチス企画」で、わたしたちの世界をのぞいてみて。',
          '［ スペース／クリックでハチス企画のサイトを別タブで開く ↗ ］']},
- {x:12,y:33, still:true, c1:'#3a78b0',c2:'#e8c39a',hair:'#3a2a1a',name:'劇団員カズキ',
+ {x:12,y:33, still:true, keepNight:true, c1:'#3a78b0',c2:'#e8c39a',hair:'#3a2a1a',name:'劇団員カズキ',
   pages:['稽古は来月から。小屋はどこにしようか。','舞台美術の打ち合わせ、織音さんとそろそろだね。','チラシの絵柄も、そろそろ決めなきゃ。']},
  // ── 溶岩の近く：ネズミの被り物の劇団員ラリー（告知リンクへ誘導） ──
- {x:48,y:33, still:true, mouse:true, female:true, c1:'#8a8a8a',c2:'#e8c39a',hair:'#3a2a1a',name:'劇団員ラリー',
+ {x:48,y:33, still:true, keepNight:true, mouse:true, female:true, c1:'#8a8a8a',c2:'#e8c39a',hair:'#3a2a1a',name:'劇団員ラリー',
   link:'https://www.instagram.com/p/DZrHr1Xkb7q/?igsh=MWY4MTF2anBudXllNQ==',
   pages:['（ネズミの被り物をかぶった女性が、ノリよく手を振っている）',
          '劇団員ラリー「よっ！ 次の公演、アツくなるぞ〜！」',
@@ -519,8 +521,17 @@ const ANIMALS=[
  {x:14,y:21,type:'rabbit',say:'（鼻をひくひく動かしている）'},
  {x:45,y:19,type:'deer',  say:'（じっとこちらを見ている）'},
  {x:40,y:9, type:'deer',  say:'（静かに草を食んでいる）'},
+ // ── 夜だけ里へ下りてくる獣たち（人が寝静まると数を増す） ──
+ {x:42,y:9, type:'deer',  night:true, say:'（夜霧の中、角がぼんやり浮かぶ）'},
+ {x:46,y:20,type:'deer',  night:true, say:'（家々の灯りを避け、草を食む）'},
+ {x:38,y:11,type:'deer',  night:true, say:'（こちらをうかがい、立ちつくす）'},
+ {x:22,y:18,type:'deer',  night:true, say:'（畑のへりで、そっと頭を上げた）'},
+ {x:41,y:11,type:'monkey',night:true, say:'（キャッと鳴いて、夜空を見上げた）'},
+ {x:44,y:18,type:'monkey',night:true, say:'（群れではぐれた一匹が毛づくろい）'},
+ {x:21,y:17,type:'monkey',night:true, say:'（畑のほうを、じっと見ている）'},
+ {x:36,y:10,type:'monkey',night:true, say:'（月明かりの下、身を寄せ合う）'},
 ];
-const ANAME={goat:'ヤギ',sheep:'ひつじ',rabbit:'うさぎ',deer:'しか'};
+const ANAME={goat:'ヤギ',sheep:'ひつじ',rabbit:'うさぎ',deer:'しか',monkey:'さる'};
 /* それぞれ もののけ・畏怖をまとう哲学的な生命として、生きる意味を語る */
 const ATALK={
  goat:[
@@ -547,6 +558,12 @@ const ATALK={
   '「見るとは、見られること。畏れとは、敬うこと。」',
   '「静けさの中にこそ、生命の声は満ちている。」',
   '「君は——何に、耳を澄ましている？」'],
+ monkey:[
+  '（さるが、月明かりの下でこちらを見据えた）',
+  'さる「夜は、人の里がいちばん静かになる。」',
+  '「だから降りてくる。境を越えるのは、私たちの自由だ。」',
+  '「賢さとは、群れと孤独のあいだを行き来すること。」',
+  '「君は——どちらの世界に、属している？」'],
 };
 ANIMALS.forEach(a=>{a.px=a.x*TS;a.py=a.y*TS;a.hx=a.px;a.hy=a.py;a.dir=rnd()<.5?'left':'right';a.frame=0;a.t=rnd()*120;a.mdir=null;a.moving=false;a.fleeing=false;a.gone=false;a.fleeT=0;a.fvx=0;a.fvy=0;});
 
@@ -609,7 +626,7 @@ function solidAt(px,py,self){
   }
   if(inB(c,r))return true;
   // NPC collision
-  for(const n of NPCS){ if(n===self)continue;
+  for(const n of NPCS){ if(n===self||npcHidden(n))continue;
     if(Math.abs(px-(n.px+TS/2))<11&&Math.abs(py-(n.py+TS-3))<10)return true;}
   if(self&&self!==P&&Math.abs(px-(P.px+TS/2))<11&&Math.abs(py-(P.py+TS-3))<10)return true; // player blocks npc
   return false;
@@ -718,11 +735,27 @@ const TORDER=['auto','morning','day','evening','night'];
 const STARS=[]; for(let i=0;i<46;i++) STARS.push([(Math.random()*cv.width)|0,(Math.random()*cv.height*0.62)|0,Math.random()<.3?2:1]);
 function curMode(){ if(timeMode!=='auto')return timeMode; const h=new Date().getHours();
   if(h>=5&&h<10)return 'morning'; if(h>=10&&h<16)return 'day'; if(h>=16&&h<19)return 'evening'; return 'night'; }
+function isNight(){ return curMode()==='night'; }
+// 夜は里の人が寝静まる：keepNight 指定・ねこ・宝を授ける者だけ残し、ほかの村人は隠す
+function npcHidden(n){ return isNight() && !n.keepNight && !n.cat && n.gives==null; }
+// night:true の獣は夜だけ里へ下りてくる（昼は不在）
+function animalHidden(a){ return a.night && !isNight(); }
 function applyTint(){ const m=curMode(),c=TINT[m];
   if(c){ ctx.fillStyle=c; ctx.fillRect(0,0,cv.width,cv.height); }
   if(m==='night'){ ctx.fillStyle='#fff';
     for(const s of STARS){ ctx.globalAlpha=0.45+0.5*(0.5+0.5*Math.sin(Date.now()/600+s[0])); ctx.fillRect(s[0],s[1],s[2],s[2]); }
     ctx.globalAlpha=1;
+    // 各家の窓からこぼれる灯り（夜の闇の上に暖色をにじませる）
+    for(const s of HOUSES){
+      const bx=s.x*TS-cam.x, by=s.y*TS-cam.y, bw=s.w*TS;
+      for(const cx of [bx+8, bx+bw-8]){ const cy=by+TS+9;
+        if(cx<-30||cx>cv.width+30||cy<-30||cy>cv.height+30) continue;
+        const wg=ctx.createRadialGradient(cx,cy,1, cx,cy,18);
+        wg.addColorStop(0,'rgba(255,214,106,0.55)'); wg.addColorStop(0.5,'rgba(255,206,120,0.20)'); wg.addColorStop(1,'rgba(255,206,120,0)');
+        ctx.fillStyle=wg; ctx.fillRect(cx-18,cy-18,36,36);
+        px(cx-3,cy-3,6,6,'#ffe49a');   // 窓の灯りを点け直す
+      }
+    }
     // spotlight on 劇団員ラリー — 足元に広がる円形の光のみ
     const lx=Math.round(LARRY.px+TS/2-cam.x), ly=Math.round(LARRY.py+TS-cam.y);
     if(lx>-60&&lx<cv.width+60&&ly>-60&&ly<cv.height+60){
@@ -844,7 +877,7 @@ function interact(){
   const off={up:[0,-TS],down:[0,TS],left:[-TS,0],right:[TS,0]}[P.dir];
   const fx=cx+off[0], fy=cy+off[1];
   // NPC? (some give a treasure)
-  for(const n of NPCS){ if(Math.abs(fx-(n.px+TS/2))<TS&&Math.abs(fy-(n.py+TS/2))<TS){
+  for(const n of NPCS){ if(npcHidden(n))continue; if(Math.abs(fx-(n.px+TS/2))<TS&&Math.abs(fy-(n.py+TS/2))<TS){
     n.dir={up:'down',down:'up',left:'right',right:'left'}[P.dir];
     let pages=n.pages;
     if(n.gives!=null && !TREASURES[n.gives].found){ const t=TREASURES[n.gives]; getTreasure(t);
@@ -853,7 +886,7 @@ function interact(){
     if(n.link) dlgConfirm=()=>window.open(n.link,'_blank','noopener'); // 会話後に告知ページへ
     return; } }
   // animal? (もののけ的に語り、話し終えると走り去って消える)
-  for(const a of ANIMALS){ if(!a.gone&&!a.fleeing&&Math.abs(fx-(a.px+TS/2))<TS&&Math.abs(fy-(a.py+TS/2))<TS){
+  for(const a of ANIMALS){ if(animalHidden(a))continue; if(!a.gone&&!a.fleeing&&Math.abs(fx-(a.px+TS/2))<TS&&Math.abs(fy-(a.py+TS/2))<TS){
     a.dir={up:'down',down:'up',left:'right',right:'left'}[P.dir];
     openDialog(ANAME[a.type],'',ATALK[a.type]);
     dlgConfirm=()=>{ a.fleeing=true; a.fleeT=0;
@@ -922,7 +955,7 @@ function update(){
   if(now<fwUntil){ fwTimer--; if(fwTimer<=0){ fwTimer=16+(Math.random()*20|0); launchFirework(); } }
   for(let i=FW.length-1;i>=0;i--){ const p=FW[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.03; p.vx*=0.99; p.life-=0.016; if(p.life<=0)FW.splice(i,1); }
   // animals fleeing away & vanishing (runs even during dialog)
-  for(const a of ANIMALS){ if(a.fleeing&&!a.gone){
+  for(const a of ANIMALS){ if(animalHidden(a))continue; if(a.fleeing&&!a.gone){
     a.px+=a.fvx; a.py+=a.fvy; a.frame+=0.4; a.moving=true; a.fleeT++;
     a.dir = Math.abs(a.fvx)>Math.abs(a.fvy) ? (a.fvx<0?'left':'right') : (a.fvy<0?'up':'down');
     if(a.fleeT>90) a.gone=true; } }
@@ -940,7 +973,7 @@ function update(){
   }
   // animals wander (a bit wider range)
   if(!dlgOpen&&!panelOpen) for(const a of ANIMALS){
-    if(a.fleeing||a.gone) continue;
+    if(a.fleeing||a.gone||animalHidden(a)) continue;
     a.t--;
     if(a.t<=0){ a.t=50+rnd()*140; const r=rnd(); a.mdir=r<.5?null:['up','down','left','right'][(rnd()*4)|0]; }
     let dx=0,dy=0;
@@ -985,7 +1018,7 @@ function update(){
   // location label
   let near=null,nd=1e9;
   for(const s of SPOTS){const d=Math.hypot((s.x+s.w/2)*TS-P.px,(s.y+s.h)*TS-P.py);if(d<nd){nd=d;near=s;}}
-  for(const n of NPCS){const d=Math.hypot(n.px-P.px,n.py-P.py);if(d<nd-4){nd=d+999;}}
+  for(const n of NPCS){if(npcHidden(n))continue;const d=Math.hypot(n.px-P.px,n.py-P.py);if(d<nd-4){nd=d+999;}}
   let label;
   if(P.onWarp){ label='✨ <b>ワープサークル</b> — サービスサイトへ'; }
   else if(P.swim){ label='🏊 <b>泳いでいる！</b>'; }
@@ -1085,9 +1118,15 @@ function drawBuilding(s){
   px(x,y+TS,w,h-TS,s.wall);                          // wall
   px(x,y+TS,w,3,'#fff3'); px(x,y+h-3,w,3,'#0003');   // wall hi/lo
   for(let i=1;i<s.w;i++)px(x+i*TS,y+TS,1,h-TS,'#0001'); // plank lines
-  // windows
-  px(x+5,y+TS+6,6,6,'#3a5a7a'); px(x+w-11,y+TS+6,6,6,'#3a5a7a');
-  px(x+5,y+TS+6,6,1,'#aee'); px(x+w-11,y+TS+6,6,1,'#aee');
+  // windows — 夜は室内に灯りがともる
+  if(isNight()){
+    px(x+5,y+TS+6,6,6,'#ffd86a'); px(x+w-11,y+TS+6,6,6,'#ffd86a');     // 暖色の灯り
+    px(x+5,y+TS+8,6,1,'#caa23a'); px(x+w-11,y+TS+8,6,1,'#caa23a');     // 窓の桟
+    px(x+8,y+TS+6,1,6,'#caa23a'); px(x+w-8,y+TS+6,1,6,'#caa23a');
+  } else {
+    px(x+5,y+TS+6,6,6,'#3a5a7a'); px(x+w-11,y+TS+6,6,6,'#3a5a7a');
+    px(x+5,y+TS+6,6,1,'#aee'); px(x+w-11,y+TS+6,6,1,'#aee');
+  }
   // roof (two-tone, eaves)
   px(x-3,y,w+6,TS,s.roof); px(x-3,y,w+6,3,'#0004'); px(x-3,y+TS-3,w+6,3,'#0003');
   px(x-3,y+TS-2,w+6,2,'#00000044');
@@ -1269,7 +1308,8 @@ function drawAnimal(x,y,dir,frame,moving,type){
   const R=dir!=='left';
   px(sx+3,sy+13,10,2,'rgba(0,0,0,.22)');
   const C={sheep:['#efe9df','#3c352d','#3c352d'],goat:['#c7b9a0','#9c8f78','#6e6253'],
-           rabbit:['#e9e3d7','#e9e3d7','#d2cabb'],deer:['#a9794e','#8a6038','#5e4126']}[type];
+           rabbit:['#e9e3d7','#e9e3d7','#d2cabb'],deer:['#a9794e','#8a6038','#5e4126'],
+           monkey:['#7a5a3a','#caa07a','#5e4126']}[type];
   const body=C[0],head=C[1],leg=C[2];
   px(sx+4,sy+10,1,3-bob,leg);px(sx+6,sy+10,1,3-bob,leg);px(sx+9,sy+10,1,3-bob,leg);px(sx+11,sy+10,1,3-bob,leg);
   px(sx+3,sy+5+bob,9,6,body);
@@ -1281,6 +1321,9 @@ function drawAnimal(x,y,dir,frame,moving,type){
   else if(type==='goat'){ px(R?hx+3:hx,sy+3+bob,1,1,'#efe7d6'); px(R?hx:hx+3,sy+8+bob,1,2,head); }
   else if(type==='deer'){ px(R?hx+1:hx+2,sy+bob,1,4,'#d8c9b0'); px(R?hx-1:hx+4,sy+1+bob,1,2,'#d8c9b0');
     px(sx+5,sy+6+bob,1,1,'#e8dcc8'); px(sx+8,sy+7+bob,1,1,'#e8dcc8'); }
+  else if(type==='monkey'){ px(R?hx+1:hx+1,sy+6+bob,2,2,'#e9b9a6');          // 赤らんだ顔
+    px(R?hx+2:hx+1,sy+6+bob,1,1,'#1c160f');                                  // 目
+    px(R?sx+1:sx+12,sy+5+bob,1,4,head); px(R?sx:sx+11,sy+8+bob,2,1,head); }  // 巻きしっぽ
   else if(type==='sheep'){ px(hx,sy+3+bob,4,2,head); }
 }
 function render(){
@@ -1298,15 +1341,15 @@ function render(){
   OBJS.forEach(o=>ents.push({y:(o.y+o.h)*TS,fn:()=>drawObj(o)}));
   TREASURES.forEach(t=>{ if(t.type==='chest') ents.push({y:(t.y+1)*TS,fn:()=>drawChest(t)}); });
   SPOTS.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
-  NPCS.forEach(n=>ents.push({y:n.py+TS,fn:()=>{
+  NPCS.forEach(n=>{ if(npcHidden(n))return; ents.push({y:n.py+TS,fn:()=>{
     drawChar(n.px-cam.x,n.py-cam.y,n.dir,n.frame,n.moving,n.c1,n.c2,n.hair,n.cat);
     if(n.female){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y); // 長めの髪
       px(sx+3,sy+2,2,7,n.hair); px(sx+11,sy+2,2,7,n.hair); }
     if(n.mouse){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y); // ネズミの被り物（丸い耳）
       px(sx+2,sy-2,4,4,'#9a9a9a'); px(sx+10,sy-2,4,4,'#9a9a9a');
       px(sx+3,sy-1,2,2,'#c8a0a8'); px(sx+11,sy-1,2,2,'#c8a0a8'); }
-  }}));
-  ANIMALS.forEach(a=>{ if(a.gone)return; ents.push({y:a.py+TS,fn:()=>{
+  }}); });
+  ANIMALS.forEach(a=>{ if(a.gone||animalHidden(a))return; ents.push({y:a.py+TS,fn:()=>{
     const al=a.fleeing?Math.max(0,1-a.fleeT/90):1; if(al<1)ctx.globalAlpha=al;
     drawAnimal(a.px-cam.x,a.py-cam.y,a.dir,a.frame,a.moving,a.type); ctx.globalAlpha=1; }}); });
   if(!HERON.gone) ents.push({y:HERON.py+TS,fn:drawHeron});
