@@ -172,6 +172,9 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   #menu .m-seg button{flex:1;min-width:46px;background:rgba(231,200,120,.10);
     border:2px solid #4a4030;color:var(--paper);font-family:inherit;font-size:14px;padding:13px 4px;cursor:pointer}
   #menu .m-seg button.on{background:var(--gold);color:#221d16;border-color:var(--gold);font-weight:bold}
+  #menu .m-mapbtn{background:rgba(231,200,120,.10);border:2px solid #4a4030;color:var(--paper);
+    font-family:inherit;font-size:14px;padding:13px 4px;cursor:pointer;width:100%}
+  #menu .m-mapbtn:hover{background:rgba(231,200,120,.20)}
   #menu .m-audio{display:flex;align-items:center;gap:10px}
   #menu .m-audio button{background:none;border:none;color:var(--gold);font-size:20px;cursor:pointer;line-height:1}
   #menu #vol{flex:1;accent-color:var(--gold)}
@@ -217,6 +220,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="m-seg" id="seasonSeg">
       <button data-s="auto">自動</button><button data-s="spring">春</button><button data-s="summer">夏</button><button data-s="autumn">秋</button><button data-s="winter">冬</button>
     </div>
+  </div>
+  <div class="m-row">
+    <div class="m-label">マップ</div>
+    <button id="mapBtn" class="m-mapbtn">🗺 全体マップを見る</button>
   </div>
   <div class="m-row">
     <div class="m-label">BGM（アンビエント）</div>
@@ -852,6 +859,53 @@ function openPanel(title,html){
 }
 function closePanel(){panel.classList.remove('show');panelOpen=false;}
 panel.addEventListener('click',e=>{if(e.target===panel)closePanel();});
+
+/* ── 全体マップ（メニューから表示） ── */
+function mapColor(t){ switch(t){
+  case 2: return '#4f86ab';            // 水
+  case 3: return '#2f6b3a';            // 木
+  case 6: return '#3a7d45';            // 茂み
+  case 4: return '#7aa860';            // 花（草地）
+  case 1: return '#cbb079';            // 道
+  case 5: return '#8a6a44';            // 畑の畝（土）
+  case 7: return '#dcc486';            // 砂
+  case 8: return '#e0531e';            // 溶岩
+  case 9: return '#8b8a86';            // 岩
+  case 10: return '#3a7d45';           // サボテン
+  case 11: return '#6b7486';           // 八ヶ岳
+  case 18: return '#6f93a0';           // 田んぼ
+  case 12: case 13: return '#c64a52';  // いちご畑
+  case 14: case 15: return '#6b4a8a';  // ぶどう畑
+  case 16: case 17: return '#6cb05a';  // レタス畑
+  default: return '#5a9356';           // 草地
+}}
+function openMapPanel(){
+  closeMenu();
+  const sc=6, w=MW*sc, h=MH*sc;
+  openPanel('🗺 あわい村 — 全体マップ',
+    '<canvas id="mapcv" width="'+w+'" height="'+h+'" style="width:100%;image-rendering:pixelated;'
+    +'border:2px solid #4a4030;background:#1a1712;display:block"></canvas>'
+    +'<div style="margin-top:8px;font-size:12px;line-height:1.8;color:#b7ad97">'
+    +'🔴 いまの現在地 ／ アイコンは各施設。歩きまわって村を探そう。</div>');
+  const mc=document.getElementById('mapcv'); if(!mc)return;
+  const mx=mc.getContext('2d'); mx.imageSmoothingEnabled=false;
+  for(let r=0;r<MH;r++)for(let c=0;c<MW;c++){ mx.fillStyle=mapColor(M[r][c]); mx.fillRect(c*sc,r*sc,sc,sc); }
+  // 装飾の家
+  mx.fillStyle='rgba(120,90,60,.85)';
+  DECO.forEach(s=>mx.fillRect(s.x*sc,s.y*sc,s.w*sc,s.h*sc));
+  // 施設（アイコン入り）
+  mx.textAlign='center'; mx.textBaseline='middle'; mx.font=(sc*2.4|0)+'px serif';
+  for(const s of SPOTS){
+    mx.fillStyle='rgba(40,30,20,.55)'; mx.fillRect(s.x*sc,s.y*sc,s.w*sc,s.h*sc);
+    mx.fillText(s.icon,(s.x+s.w/2)*sc,(s.y+s.h/2)*sc); }
+  // ワープサークル
+  mx.fillStyle='#c9a6e8'; mx.fillText('✨',(WARP.x+WARP.w/2)*sc,(WARP.y+WARP.h/2)*sc);
+  // 現在地
+  const pcx=(P.px/TS+0.5)*sc, pcy=(P.py/TS+0.5)*sc;
+  mx.beginPath(); mx.arc(pcx,pcy,sc*0.7,0,7); mx.fillStyle='#ff3b3b'; mx.fill();
+  mx.lineWidth=2; mx.strokeStyle='#fff'; mx.stroke();
+}
+document.getElementById('mapBtn').addEventListener('click',openMapPanel);
 
 /* ── strawberry: toast / counter / eat ── */
 let _toastT;
