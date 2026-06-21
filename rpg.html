@@ -365,6 +365,8 @@ const OBJS=[
  {x:15,y:6, w:2,h:2,type:'tent', c:'#c4604a'},  // 赤テント
  {x:21,y:6, w:2,h:2,type:'tent', c:'#4a7ab0'},  // 青テント
  {x:15,y:10,w:2,h:2,type:'tent', c:'#5aa05a'},  // 緑テント
+ // 川の上手・熊の上：竪穴式住居（縄文の名残）
+ {x:3, y:11,w:2,h:2,type:'pit'},
 ];
 /* ── 宝さがし：8つの宝（箱／隠し場所／村人がくれる） ── */
 const TREASURES=[
@@ -1521,6 +1523,17 @@ function drawObj(o){
     px((sx+mid-2)|0, sy+H-9, 1, 6, col); px((sx+mid+1)|0, sy+H-9, 1, 6, col);
     // ridge highlight + top knot
     px((sx+mid-1)|0, sy+3, 2, 2, '#fff5'); px((sx+mid)|0, sy+2, 1, 2, '#caa46a'); }
+  else if(o.type==='pit'){       // 竪穴式住居（縄文）
+    const mid=W/2, base=H-7;
+    px(sx+1,sy+H-7,W-2,6,'#7a5a3a'); px(sx+1,sy+H-7,W-2,1,'#8a6a44');     // 盛り土の土台
+    for(let yy=0; yy<base; yy++){ const half=Math.round((yy/base)*(mid-1));  // 茅葺きの円錐
+      px((sx+mid-half)|0, sy+3+yy, (half*2)||1, 1, '#a98a52'); }
+    for(let yy=0; yy<base; yy++){ const half=Math.round((yy/base)*(mid-1));  // 右側の陰
+      px((sx+mid)|0, sy+3+yy, Math.max(1,(half*0.7)|0), 1, 'rgba(0,0,0,.12)'); }
+    for(let yy=4; yy<base; yy+=3) px(sx+3,sy+3+yy,W-6,1,'#8a6a3a');        // 茅の段
+    px(sx+mid-3,sy+1,3,4,'#5a4028'); px(sx+mid,sy+1,3,4,'#5a4028');        // 棟木（交差）
+    px(sx+mid-3,sy+H-12,6,9,'#241a12'); px(sx+mid-2,sy+H-11,4,8,'#15100a'); // 入口の暗がり
+    px(sx+mid-4,sy+H-12,1,9,'#4a3422'); px(sx+mid+3,sy+H-12,1,9,'#4a3422'); } // 入口の柱
 }
 function drawBear(){
   const sx=Math.round(BEAR.px-cam.x), sy=Math.round(BEAR.py-cam.y), bob=BEAR.moving?(Math.floor(BEAR.frame)%2):0;
