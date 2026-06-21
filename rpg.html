@@ -683,6 +683,29 @@ ANIMALS.forEach(a=>{a.px=a.x*TS;a.py=a.y*TS;a.hx=a.px;a.hy=a.py;a.dir=rnd()<.5?'
 /* ── props (decorative, e.g. campfire) ── */
 const PROPS=[{x:18,y:9,type:'fire'}];
 
+/* ── ホタル（川の近く・6月いっぱいの期間限定） ── */
+const FIREFLIES=[];
+for(let i=0;i<16;i++){ const r=14+Math.random()*18; const cc=6+Math.sin((r-13)*0.55);
+  FIREFLIES.push({ ax:(cc+(Math.random()*4-2))*TS, ay:r*TS, ph:Math.random()*6.28, dr:Math.random()*6.28 }); }
+// 実際の日付が6月のあいだだけ出現する
+function fireflySeason(){ return new Date().getMonth()===5; }
+function drawFireflies(){
+  if(!fireflySeason()) return;
+  const m=curMode(), boost = m==='night'?1 : m==='evening'?0.8 : 0.4;
+  const t=Date.now();
+  for(const f of FIREFLIES){
+    const wx=f.ax + Math.sin(t/1700+f.dr)*10 + Math.cos(t/2300+f.ph)*6;
+    const wy=f.ay + Math.cos(t/1900+f.dr)*8  + Math.sin(t/2600+f.ph)*5;
+    const sx=wx-cam.x, sy=wy-cam.y;
+    if(sx<-8||sx>cv.width+8||sy<-8||sy>cv.height+8) continue;
+    const a=(0.2+0.8*(0.5+0.5*Math.sin(t/330+f.ph*3)))*boost;
+    const g=ctx.createRadialGradient(sx,sy,0, sx,sy,6);
+    g.addColorStop(0,'rgba(214,255,150,'+(0.55*a)+')'); g.addColorStop(1,'rgba(190,255,120,0)');
+    ctx.fillStyle=g; ctx.fillRect(sx-6,sy-6,12,12);
+    ctx.globalAlpha=Math.min(1,a); ctx.fillStyle='#eaffb0'; ctx.fillRect(sx|0,sy|0,1,1); ctx.globalAlpha=1;
+  }
+}
+
 /* ── シロサギ（田んぼに佇み、話すと哲学を語って飛び去る） ── */
 const HERON={ x:24, y:21, dir:'left', flying:false, gone:false, flyT:0, frame:0,
   pages:[
@@ -1692,6 +1715,7 @@ function render(){
   grd.addColorStop(0,'rgba(0,0,0,0)');grd.addColorStop(1,'rgba(0,0,0,0.28)');
   ctx.fillStyle=grd;ctx.fillRect(0,0,cv.width,cv.height);
   applyTint();   // time-of-day color
+  drawFireflies(); // 川辺のホタル（6月限定）
   // fireworks on top
   for(const p of FW){ ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.col;
     ctx.fillRect(p.x|0,p.y|0,2,2); }
