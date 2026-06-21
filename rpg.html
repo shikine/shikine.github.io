@@ -830,38 +830,20 @@ const SORDER=['auto','spring','summer','autumn','winter'];
 // 月で自動判定：3-5春 / 6-8夏 / 9-11秋 / 12-2冬
 function curSeason(){ if(seasonMode!=='auto')return seasonMode; const mo=new Date().getMonth();
   if(mo>=2&&mo<=4)return 'spring'; if(mo>=5&&mo<=7)return 'summer'; if(mo>=8&&mo<=10)return 'autumn'; return 'winter'; }
-// 季節ごとの空気の色（時間帯ティントの上にうっすら重ねる）
-const STINT={spring:'rgba(255,200,222,0.07)',summer:'rgba(255,238,170,0.06)',
-             autumn:'rgba(222,142,64,0.13)',winter:'rgba(204,222,245,0.16)'};
-// 季節の舞い散るもの（桜・木漏れ日・落ち葉・雪）
-let SFX=[], sfxSeason=null;
-const SPCAP={spring:46,summer:30,autumn:52,winter:88};
-function makeFlake(s){
-  const W=cv.width, x=Math.random()*W, top=-6-Math.random()*40;
-  if(s==='spring') return {s,x,y:top,vy:0.5+Math.random()*0.5,sw:0.9+Math.random()*0.8,ph:Math.random()*6.28,sz:Math.random()<.4?3:2,
-    col:['#ffd6e6','#ffc0d6','#ffe6f0','#f7b8d0'][(Math.random()*4)|0]};
-  if(s==='summer') return {s,x,y:cv.height*Math.random(),vy:-(0.15+Math.random()*0.35),sw:0.6+Math.random()*0.6,ph:Math.random()*6.28,sz:Math.random()<.5?1:2,
-    col:['rgba(255,255,210,0.7)','rgba(220,255,200,0.6)','rgba(255,246,190,0.65)'][(Math.random()*3)|0]};
-  if(s==='autumn') return {s,x,y:top,vy:0.6+Math.random()*0.7,sw:1.3+Math.random()*1.1,ph:Math.random()*6.28,sz:Math.random()<.5?3:2,
-    col:['#e08a3a','#d65a3a','#e8b24a','#c46a2a','#b8932a'][(Math.random()*5)|0]};
-  return {s,x,y:top,vy:0.5+Math.random()*0.8,sw:0.7+Math.random()*0.7,ph:Math.random()*6.28,sz:Math.random()<.3?3:2,col:'#ffffff'}; // winter snow
-}
-function updateSeason(){
-  const s=curSeason();
-  if(s!==sfxSeason){ SFX.length=0; sfxSeason=s; }   // 季節が変わったら降りもの一掃
-  const cap=SPCAP[s];
-  while(SFX.length<cap && Math.random()<0.55) SFX.push(makeFlake(s));
-  for(let i=SFX.length-1;i>=0;i--){ const p=SFX[i];
-    p.ph+=0.04; p.y+=p.vy; p.x+=Math.sin(p.ph)*p.sw*0.5;
-    if(p.y>cv.height+8 || p.y<-50 || p.x<-20 || p.x>cv.width+20) SFX.splice(i,1);
-  }
-}
-function applySeason(){
-  const c=STINT[curSeason()];
-  if(c){ ctx.fillStyle=c; ctx.fillRect(0,0,cv.width,cv.height); }
-  for(const p of SFX){ ctx.fillStyle=p.col; ctx.fillRect(p.x|0,p.y|0,p.sz,p.sz);
-    if(p.s==='autumn'||p.s==='spring') ctx.fillRect((p.x|0)+(Math.sin(p.ph)<0?-1:1),(p.y|0)+1,1,1); }
-}
+// 季節ごとの植物パレット（草・木・茂み・花の色がこれで変わる。降りものや空の色は変えない）
+//  g1/g2: 草地の市松, tuft: 草の穂, tree:[暗・中・明]の葉, dark:葉の陰, bush:[本体・明・陰], flowers: 花の色（null=花が咲かない）, snow: 冬の積雪
+const VEGPAL={
+  spring:{g1:'#6fa85f',g2:'#69a259',tuft:'#8ad27a',tree:['#3f8a47','#4f9f57','#62b56a'],dark:'#2f6b3a',
+          bush:['#3a8d45','#4f9f57','#327a3a'],flowers:['#f4a6c0','#ffd24f','#ffffff','#e88ad0'],snow:false},
+  summer:{g1:'#4f8f48',g2:'#4a8943',tuft:'#63a85a',tree:['#26592f','#2f6b3a','#3c8147'],dark:'#1f4a27',
+          bush:['#2f6b3a','#3a7d45','#246030'],flowers:['#e8d24f','#e57ba0','#ffffff','#d98cf0'],snow:false},
+  autumn:{g1:'#9c8c4e',g2:'#96863f',tuft:'#b6a55a',tree:['#b8531f','#d6792a','#e8a83a'],dark:'#8a3a1a',
+          bush:['#9a6a2a','#b8862a','#7a4a1a'],flowers:['#d98a8a','#e8b24a','#caa0d0','#d6792a'],snow:false},
+  winter:{g1:'#8a9080',g2:'#848a78',tuft:'#9aa08c',tree:['#3a5a44','#46684f','#557a5c'],dark:'#2e4a38',
+          bush:['#4a5a48','#56684f','#3a4a3a'],flowers:null,snow:true},
+};
+let VEG=VEGPAL.summer;                       // 描画のたびに render() 冒頭で現在の季節へ更新
+function refreshSeasonPal(){ VEG=VEGPAL[curSeason()]; }
 const SNAME={spring:'🌸 春',summer:'☀️ 夏',autumn:'🍁 秋',winter:'❄️ 冬'};
 function updateSeasonBtn(){ document.querySelectorAll('#seasonSeg button').forEach(b=>b.classList.toggle('on',b.dataset.s===seasonMode)); }
 function cycleSeason(){ seasonMode=SORDER[(SORDER.indexOf(seasonMode)+1)%SORDER.length]; updateSeasonBtn();
@@ -1048,7 +1030,6 @@ function moveEnt(ent,dx,dy,spd){
   ent.frame = ent.moving ? ent.frame+0.16 : 0;
 }
 function update(){
-  updateSeason();   // 季節の降りものを進める
   // strawberry regrow
   const now=Date.now();
   for(let i=PICKED.length-1;i>=0;i--) if(now>=PICKED[i].at){ M[PICKED[i].r][PICKED[i].c]=PICKED[i].ripe; PICKED.splice(i,1); }
@@ -1148,24 +1129,35 @@ function update(){
 /* ── drawing helpers ── */
 function px(x,y,w,h,col){ctx.fillStyle=col;ctx.fillRect(x,y,w,h);}
 function drawTile(c,r,sx,sy){
-  const t=M[r][c];
-  // grass base under everything
+  const t=M[r][c], V=VEG;
+  // grass base under everything（季節で草の色が変わる。冬は雪がちらほら積もる）
   const g=((c*7+r*13)%5);
-  px(sx,sy,TS,TS, (c+r)%2? '#5a9356':'#558d52');
-  if(g===0)px(sx+3,sy+10,1,2,'#6fae66'); if(g===2){px(sx+9,sy+5,1,2,'#6fae66');px(sx+11,sy+11,1,2,'#4f8049');}
-  if(g===3)px(sx+5,sy+3,1,2,'#6fae66');
+  function grassBase(){
+    px(sx,sy,TS,TS,(c+r)%2?V.g1:V.g2);
+    if(g===0)px(sx+3,sy+10,1,2,V.tuft); if(g===2){px(sx+9,sy+5,1,2,V.tuft);px(sx+11,sy+11,1,2,V.tuft);}
+    if(g===3)px(sx+5,sy+3,1,2,V.tuft);
+    if(V.snow){ const sg=(c*5+r*11)%7;                 // ちらほら積もった雪
+      if(sg===0)px(sx+2,sy+11,5,2,'#eef2f8');
+      if(sg===3)px(sx+9,sy+12,4,2,'#e6ecf4');
+      if(sg===5)px(sx+5,sy+8,3,1,'#f2f6fb'); }
+  }
+  grassBase();
   if(t===2){ px(sx,sy,TS,TS,'#4f86ab'); px(sx,sy,TS,3,'#5d97bd');
     px(sx+3+((Date.now()/600+c)%6),sy+6,3,1,'#a9d4e6'); px(sx+9,sy+11,2,1,'#a9d4e6'); }
   else if(t===1){ px(sx,sy,TS,TS,'#cbb079'); px(sx,sy,TS,1,'#d8bf8c');
     const k=(c*5+r*3)%4; px(sx+2+k*3,sy+4,2,2,'#bda06a'); px(sx+8,sy+10,2,2,'#bda06a'); }
   else if(t===5){ px(sx,sy,TS,TS,'#8a6a44'); px(sx,sy,TS,2,'#9a774e'); px(sx+2,sy+7,12,1,'#75582f'); }
-  else if(t===6){ px(sx+2,sy+5,12,9,'#2f6b3a'); px(sx+4,sy+4,8,4,'#3a7d45'); px(sx+5,sy+8,2,2,'#246030'); }
-  else if(t===3){ // tree with shading + trunk
+  else if(t===6){ px(sx+2,sy+5,12,9,V.bush[0]); px(sx+4,sy+4,8,4,V.bush[1]); px(sx+5,sy+8,2,2,V.bush[2]);
+    if(V.snow) px(sx+3,sy+4,7,1,'#eef2f8'); }                          // 茂みの上の雪
+  else if(t===3){ // tree with shading + trunk（葉が季節で色づく）
     px(sx+6,sy+10,4,6,'#6b4a2c'); px(sx+6,sy+10,1,6,'#7d5836');
-    px(sx+2,sy+1,12,11,'#26592f'); px(sx+3,sy,10,9,'#2f6b3a'); px(sx+4,sy+1,6,4,'#3c8147');
-    px(sx+10,sy+6,2,4,'#1f4a27'); }
-  else if(t===4){ const cl=['#e8d24f','#e57ba0','#fff','#d98cf0'][(c+r)%4];
-    px(sx+5,sy+6,3,3,cl); px(sx+5,sy+5,1,1,'#7a5'); px(sx+10,sy+9,2,2,cl); px(sx+3,sy+10,2,2,'#e8d24f'); }
+    px(sx+2,sy+1,12,11,V.tree[0]); px(sx+3,sy,10,9,V.tree[1]); px(sx+4,sy+1,6,4,V.tree[2]);
+    px(sx+10,sy+6,2,4,V.dark);
+    if(V.snow){ px(sx+3,sy,8,2,'#eef2f8'); px(sx+6,sy+1,3,1,'#ffffff'); } }   // 枝に積もった雪
+  else if(t===4){ // 草花（季節の花。冬は咲かず枯れ草に）
+    if(V.flowers){ const cl=V.flowers[(c+r)%4];
+      px(sx+5,sy+6,3,3,cl); px(sx+5,sy+5,1,1,'#7a5'); px(sx+10,sy+9,2,2,cl); px(sx+3,sy+10,2,2,V.flowers[0]); }
+    else { px(sx+5,sy+8,2,3,'#8f8a6e'); px(sx+10,sy+9,2,2,'#9a9580'); px(sx+5,sy+8,2,1,'#eef2f8'); } }
   else if(t===7){ // sand / desert
     px(sx,sy,TS,TS,'#dcc486'); px(sx,sy,TS,2,'#e6d199');
     const k=(c*5+r*7)%4; px(sx+2+k*3,sy+9,2,1,'#cbb277'); px(sx+9,sy+5,1,1,'#c8af72'); px(sx+5,sy+12,2,1,'#cbb277'); }
@@ -1192,28 +1184,28 @@ function drawTile(c,r,sx,sy){
     else if(se==='autumn'){ if(r<1) px(sx,sy,TS,3,'#eef2f8'); }      // 頂にうっすら初雪
     else { if(r<1) px(sx,sy,TS,2,'#e8edf4'); } }                     // 夏：わずかな残雪
   else if(t===12){ // ripe strawberry plant
-    px(sx,sy,TS,TS,(c+r)%2?'#5a9356':'#558d52');
+    grassBase();
     px(sx+3,sy+6,10,7,'#2f6b3a'); px(sx+4,sy+5,8,3,'#3a7d45');
     px(sx+5,sy+10,3,3,'#e23b4a'); px(sx+9,sy+9,3,3,'#e23b4a');     // berries
     px(sx+6,sy+11,1,1,'#ffe'); px(sx+10,sy+10,1,1,'#ffe'); }       // seeds
   else if(t===13){ // picked plant (regrowing)
-    px(sx,sy,TS,TS,(c+r)%2?'#5a9356':'#558d52');
+    grassBase();
     px(sx+3,sy+6,10,7,'#2f6b3a'); px(sx+4,sy+5,8,3,'#3a7d45');
     px(sx+7,sy+9,2,2,'#fff'); px(sx+7,sy+9,2,1,'#ffe'); }          // tiny flower
   else if(t===14){ // ripe grapevine
-    px(sx,sy,TS,TS,(c+r)%2?'#5a9356':'#558d52');
+    grassBase();
     px(sx+1,sy+2,14,3,'#3a7d45'); px(sx+2,sy+1,12,2,'#4a8d52');     // trellis leaves
     px(sx+5,sy+6,4,5,'#5b2f7a'); px(sx+6,sy+11,2,2,'#5b2f7a');      // grape cluster
     px(sx+5,sy+6,1,1,'#9a6ab8'); px(sx+7,sy+8,1,1,'#9a6ab8'); }
   else if(t===15){ // picked grapevine
-    px(sx,sy,TS,TS,(c+r)%2?'#5a9356':'#558d52');
+    grassBase();
     px(sx+1,sy+2,14,3,'#3a7d45'); px(sx+7,sy+6,1,6,'#6b4a2c'); }
   else if(t===16){ // ripe lettuce
-    px(sx,sy,TS,TS,(c+r)%2?'#5a9356':'#558d52');
+    grassBase();
     px(sx+3,sy+6,10,7,'#4f9a44'); px(sx+4,sy+5,8,4,'#6cc05a');      // head
     px(sx+6,sy+8,1,3,'#3f8038'); px(sx+9,sy+9,1,2,'#3f8038'); }     // veins
   else if(t===17){ // picked lettuce (sprout)
-    px(sx,sy,TS,TS,(c+r)%2?'#5a9356':'#558d52');
+    grassBase();
     px(sx+6,sy+10,4,2,'#8a6a44'); px(sx+7,sy+8,2,2,'#6cc05a'); }
   else if(t===18){ // 田んぼ (flooded rice paddy)
     px(sx,sy,TS,TS,'#6f93a0'); px(sx,sy,TS,1,'#86a8b4');           // muddy water + sky reflection
@@ -1454,6 +1446,7 @@ function drawAnimal(x,y,dir,frame,moving,type){
   else if(type==='sheep'){ px(hx,sy+3+bob,4,2,head); }
 }
 function render(){
+  refreshSeasonPal();   // 現在の季節の植物パレットを反映
   const c0=(cam.x/TS)|0, r0=(cam.y/TS)|0, ox=cam.x%TS, oy=cam.y%TS;
   for(let r=0;r<=VH;r++)for(let c=0;c<=VW;c++){
     const mc=c0+c, mr=r0+r; if(mr<0||mr>=MH||mc<0||mc>=MW)continue;
@@ -1496,7 +1489,6 @@ function render(){
   grd.addColorStop(0,'rgba(0,0,0,0)');grd.addColorStop(1,'rgba(0,0,0,0.28)');
   ctx.fillStyle=grd;ctx.fillRect(0,0,cv.width,cv.height);
   applyTint();   // time-of-day color
-  applySeason(); // 季節の空気と舞い散るもの
   // fireworks on top
   for(const p of FW){ ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.col;
     ctx.fillRect(p.x|0,p.y|0,2,2); }
