@@ -707,10 +707,20 @@ const PHEASANTS=(()=>{
   const lead={px:hc*TS,py:hr*TS,hx:hc*TS,hy:hr*TS,dir:'left',frame:0,moving:false,t:40,mdir:null};
   const order=['chick','chick','chick','chick','chick','chick','hen']; // 子6羽＋しんがりの母
   const followers=order.map(k=>({kind:k,px:lead.px,py:lead.py,dir:'left',frame:0,moving:false}));
-  return {lead,followers,hist:[]};
+  return {lead,followers,hist:[],fleeing:false,gone:false,fleeT:0,fvx:0,fvy:0};
 })();
 function updatePheasants(){
   const ph=PHEASANTS, L=ph.lead;
+  if(ph.gone) return;
+  if(ph.fleeing){                                    // 家族そろって走り去り、やがて消える
+    L.px+=ph.fvx; L.py+=ph.fvy; L.moving=true; L.frame+=0.4; ph.fleeT++;
+    L.dir = Math.abs(ph.fvx)>Math.abs(ph.fvy) ? (ph.fvx<0?'left':'right') : (ph.fvy<0?'up':'down');
+    ph.hist.unshift({px:L.px,py:L.py,dir:L.dir,moving:true});
+    const gap=7, need=gap*ph.followers.length+2; if(ph.hist.length>need) ph.hist.length=need;
+    ph.followers.forEach((f,i)=>{ const h=ph.hist[(i+1)*gap]; if(h){ f.px=h.px;f.py=h.py;f.dir=h.dir;f.moving=true;f.frame+=0.4; } });
+    if(ph.fleeT>90) ph.gone=true;
+    return;
+  }
   L.t--;
   if(L.t<=0){ L.t=70+rnd()*130; L.mdir = rnd()<.4?null:['up','down','left','right'][(rnd()*4)|0]; }
   let dx=0,dy=0;
@@ -1073,10 +1083,15 @@ function interact(){
     dlgConfirm=()=>{ a.fleeing=true; a.fleeT=0;
       const ang=Math.atan2(a.py-P.py, a.px-P.px); a.fvx=Math.cos(ang)*1.7; a.fvy=Math.sin(ang)*1.7; };
     return; } }
-  // 雉の親子? (生きることを語る。家族なので去らず歩きつづける)
+  // 雉の親子? (生きることを語り、話し終えると家族そろって走り去って消える)
+  if(!PHEASANTS.gone && !PHEASANTS.fleeing)
   for(const bk of [{b:PHEASANTS.lead,kind:'male'}, ...PHEASANTS.followers.map(f=>({b:f,kind:f.kind}))]){
     if(Math.abs(fx-(bk.b.px+TS/2))<TS && Math.abs(fy-(bk.b.py+TS/2))<TS){
-      openDialog(PHEASANT_NAME[bk.kind],'',PHEASANT_TALK[bk.kind]); return; } }
+      openDialog(PHEASANT_NAME[bk.kind],'',PHEASANT_TALK[bk.kind]);
+      dlgConfirm=()=>{ PHEASANTS.fleeing=true; PHEASANTS.fleeT=0;
+        const ang=Math.atan2(PHEASANTS.lead.py-P.py, PHEASANTS.lead.px-P.px);
+        PHEASANTS.fvx=Math.cos(ang)*1.7; PHEASANTS.fvy=Math.sin(ang)*1.7; };
+      return; } }
   // 熊? (人の2倍・話しても消えない)
   if(fx>BEAR.px-6 && fx<BEAR.px+2*TS+6 && fy>BEAR.py-6 && fy<BEAR.py+2*TS+6){
     BEAR.dir={up:'down',down:'up',left:'right',right:'left'}[P.dir]; BEAR.talked=true;
@@ -1608,9 +1623,9 @@ function render(){
     drawAnimal(a.px-cam.x,a.py-cam.y,a.dir,a.frame,a.moving,a.type); ctx.globalAlpha=1; }}); });
   if(!HERON.gone) ents.push({y:HERON.py+TS,fn:drawHeron});
   ents.push({y:BEAR.py+2*TS,fn:drawBear});
-  { const L=PHEASANTS.lead;
-    ents.push({y:L.py+TS,fn:()=>drawPheasant(L.px-cam.x,L.py-cam.y,L.dir,L.frame,L.moving,'male')});
-    PHEASANTS.followers.forEach(f=>ents.push({y:f.py+TS,fn:()=>drawPheasant(f.px-cam.x,f.py-cam.y,f.dir,f.frame,f.moving,f.kind)})); }
+  if(!PHEASANTS.gone){ const L=PHEASANTS.lead, al=PHEASANTS.fleeing?Math.max(0,1-PHEASANTS.fleeT/90):1;
+    ents.push({y:L.py+TS,fn:()=>{ if(al<1)ctx.globalAlpha=al; drawPheasant(L.px-cam.x,L.py-cam.y,L.dir,L.frame,L.moving,'male'); ctx.globalAlpha=1; }});
+    PHEASANTS.followers.forEach(f=>ents.push({y:f.py+TS,fn:()=>{ if(al<1)ctx.globalAlpha=al; drawPheasant(f.px-cam.x,f.py-cam.y,f.dir,f.frame,f.moving,f.kind); ctx.globalAlpha=1; }})); }
   PROPS.forEach(p=>ents.push({y:p.y*TS+TS,fn:()=>drawFire(p.x*TS-cam.x,p.y*TS-cam.y)}));
   const wob=Date.now()<P.slowUntil?Math.sin(Date.now()/110)*1.6:0;
   ents.push({y:P.py+TS,fn:()=>{
