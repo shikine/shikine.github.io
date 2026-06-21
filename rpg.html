@@ -359,6 +359,12 @@ const OBJS=[
  {x:21,y:6, w:2,h:2,type:'tent', c:'#4a7ab0'},  // 青テント
  {x:15,y:10,w:2,h:2,type:'tent', c:'#5aa05a'},  // 緑テント
 ];
+/* ── コーチングの寺「問いの寺」──
+   村でただ一つ "中に入れる" 館。扉を調べると屋根がぱかっと開いて間取りが見え、
+   中の導師にコーチングを受けられる。 ── */
+const TEMPLE={ x:28, y:31, w:6, h:6, door:{c:30,r:36}, open:false, openT:0 };
+// 内部の歩ける床（外周は壁、扉のマスだけ開く）
+function templeInterior(c,r){ return c>TEMPLE.x&&c<TEMPLE.x+TEMPLE.w-1&&r>TEMPLE.y&&r<TEMPLE.y+TEMPLE.h-1; }
 /* ── 宝さがし：8つの宝（箱／隠し場所／村人がくれる） ── */
 const TREASURES=[
  {id:0,name:'星の砂時計',  icon:'⏳',found:false,type:'chest',x:15,y:38,hint:'アトリエ前の制作ヤード、砂の上の宝箱'},
@@ -378,9 +384,11 @@ const SIGN={x:6,y:41,lines:[
   'サービスサイト（渡邊織音の本サイト）へ飛べる。']};
 // carve path tiles & clear footprints
 function clear(c,r){if(r>=0&&r<MH&&c>=0&&c<MW)M[r][c]=0;}
-[...SPOTS,...DECO,...BOULDERS].forEach(s=>{
+[...SPOTS,...DECO,...BOULDERS,TEMPLE].forEach(s=>{
   for(let r=s.y-1;r<s.y+s.h+1;r++)for(let c=s.x-1;c<s.x+s.w+1;c++)clear(c,r);
 });
+// 問いの寺の参道（扉の南へ石畳）
+for(let r=TEMPLE.y+TEMPLE.h;r<TEMPLE.y+TEMPLE.h+3;r++) set(TEMPLE.door.c,r,1);
 // prep ground under placed objects: sand in the desert, grass elsewhere
 OBJS.forEach(o=>{ for(let r=o.y;r<o.y+o.h;r++)for(let c=o.x;c<o.x+o.w;c++)
   set(c,r,(r>=34&&c>=3&&c<19)?7:0); });
@@ -533,6 +541,16 @@ const NPCS=[
          '「テーマはまだ秘密。でも、とびきり変なやつになる。」',
          '「告知、もう出てるんだ。チラ見してってよ！」',
          '［ スペース／クリックで告知ページを別タブで開く ↗ ］']},
+ // ── 問いの寺の導師（屋根が開いている＝中に入れるときだけ会える） ──
+ {x:30,y:33, still:true, temple:true, dir:'down', c1:'#6a5a8a',c2:'#e8c39a',hair:'#d8d8d8',name:'導師',
+  pages:['（やわらかな灯りの中、導師が静かに座っている）',
+         '導師「ようこそ、問いの寺へ。ここは答えを授ける場所ではない。」',
+         '「きみ自身の答えを、きみの中から取り出すのを手伝う場所だ。」',
+         '「では、ひとつ問おう。——いま、いちばん心にかかっていることは何だい？」',
+         '「……うん。それを、一年後のきみは、どう振り返っていたい？」',
+         '「立派でなくていい。今日のうちにできる小さな一歩を、ひとつだけ決めよう。」',
+         '「よい。種は、土の中でもう静かに育ちはじめている。」',
+         '「迷ったら、いつでもこの扉を開けにおいで。何度でも、聴くよ。」']},
 ];
 NPCS.forEach(n=>{n.px=n.x*TS;n.py=n.y*TS;n.hx=n.px;n.hy=n.py;n.dir=n.dir||'down';n.frame=0;n.t=rnd()*120;n.mdir=null;n.moving=false;});
 const LARRY=NPCS.find(n=>n.name==='劇団員ラリー'); // 夜にスポットライトを当てる対象
@@ -701,6 +719,29 @@ const BEAR={ x:4, y:16, dir:'down', frame:0, moving:false, t:90, mdir:null, talk
     '「……人よ。願わくば、山に木を返してくれ。」'] };
 BEAR.px=BEAR.x*TS; BEAR.py=BEAR.y*TS; BEAR.hx=BEAR.px; BEAR.hy=BEAR.py;
 
+/* ── 雉の親子（雄雉が先導し、子6羽と母雉が一列でついて歩く） ── */
+const PHEASANTS=(()=>{
+  const hc=44, hr=14;
+  const lead={px:hc*TS,py:hr*TS,hx:hc*TS,hy:hr*TS,dir:'left',frame:0,moving:false,t:40,mdir:null};
+  const order=['chick','chick','chick','chick','chick','chick','hen']; // 子6羽＋しんがりの母
+  const followers=order.map(k=>({kind:k,px:lead.px,py:lead.py,dir:'left',frame:0,moving:false}));
+  return {lead,followers,hist:[]};
+})();
+function updatePheasants(){
+  const ph=PHEASANTS, L=ph.lead;
+  L.t--;
+  if(L.t<=0){ L.t=70+rnd()*130; L.mdir = rnd()<.4?null:['up','down','left','right'][(rnd()*4)|0]; }
+  let dx=0,dy=0;
+  if(L.mdir){ const d={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]}[L.mdir];
+    if(Math.hypot(L.px-L.hx,L.py-L.hy)<TS*5){dx=d[0];dy=d[1];}else{L.mdir=null;L.t=30;} }
+  moveEnt(L,dx,dy,0.45);
+  ph.hist.unshift({px:L.px,py:L.py,dir:L.dir,moving:L.moving});
+  const gap=7, need=gap*ph.followers.length+2;
+  if(ph.hist.length>need) ph.hist.length=need;
+  ph.followers.forEach((f,i)=>{ const h=ph.hist[(i+1)*gap]; if(h){
+    f.px=h.px; f.py=h.py; f.dir=h.dir; f.moving=h.moving; f.frame+=f.moving?0.16:0; } });
+}
+
 /* ── player ── */
 const P={px:HUB[0]*TS, py:HUB[1]*TS+TS, dir:'down', speed:1.5, frame:0, moving:false,
          swim:false, berries:0, grapes:0, lettuce:0, lastCrop:'', boostUntil:0, slowUntil:0};
@@ -731,6 +772,12 @@ function solidAt(px,py,self){
     } else return true;
   }
   if(inB(c,r))return true;
+  // 問いの寺：閉まっているあいだは全体が壁。開くと内部の床と扉だけ通れる
+  if(c>=TEMPLE.x&&c<TEMPLE.x+TEMPLE.w&&r>=TEMPLE.y&&r<TEMPLE.y+TEMPLE.h){
+    if(!TEMPLE.open) return true;
+    const isDoor=(c===TEMPLE.door.c&&r===TEMPLE.door.r);
+    if(!isDoor && !templeInterior(c,r)) return true;   // 外周の壁
+  }
   // NPC collision
   for(const n of NPCS){ if(n===self||npcHidden(n))continue;
     if(Math.abs(px-(n.px+TS/2))<11&&Math.abs(py-(n.py+TS-3))<10)return true;}
@@ -844,7 +891,9 @@ function curMode(){ if(timeMode!=='auto')return timeMode; const h=new Date().get
   if(h>=5&&h<10)return 'morning'; if(h>=10&&h<16)return 'day'; if(h>=16&&h<19)return 'evening'; return 'night'; }
 function isNight(){ return curMode()==='night'; }
 // 夜は里の人が寝静まる：keepNight 指定・ねこ・宝を授ける者だけ残し、ほかの村人は隠す
-function npcHidden(n){ return isNight() && !n.keepNight && !n.cat && n.gives==null; }
+//  導師（temple）は屋根が開いているときだけ姿を見せる
+function npcHidden(n){ if(n.temple) return !TEMPLE.open;
+  return isNight() && !n.keepNight && !n.cat && n.gives==null; }
 // night:true の獣は夜だけ里へ下りてくる（昼は不在）
 function animalHidden(a){ return a.night && !isNight(); }
 function applyTint(){ const m=curMode(),c=TINT[m];
@@ -1036,6 +1085,9 @@ function interact(){
     dlgConfirm=()=>{ HERON.flying=true; HERON.flyT=0; }; return; }
   // boulder? (話しかけられる古き岩)
   const btc=(fx/TS)|0, btr=(fy/TS)|0;
+  // 問いの寺の扉を調べると、屋根がぱかっと開く
+  if(!TEMPLE.open && btc===TEMPLE.door.c && btr===TEMPLE.door.r){
+    TEMPLE.open=true; showToast('🚪 扉を開けると、屋根がぱかりと開いた'); return; }
   for(const b of BOULDERS){ if(btc>=b.x&&btc<b.x+b.w&&btr>=b.y&&btr<b.y+b.h){
     openDialog('古き岩','',
       ['……。',
@@ -1080,6 +1132,11 @@ function moveEnt(ent,dx,dy,spd){
   ent.frame = ent.moving ? ent.frame+0.16 : 0;
 }
 function update(){
+  // 問いの寺：屋根の開閉アニメ＋プレイヤーが離れたら静かに閉じる
+  if(TEMPLE.open){ TEMPLE.openT=Math.min(1,TEMPLE.openT+0.07);
+    const dcx=(TEMPLE.x+TEMPLE.w/2)*TS-(P.px+TS/2), dcy=(TEMPLE.y+TEMPLE.h/2)*TS-(P.py+TS/2);
+    if(Math.hypot(dcx,dcy)>TS*8) TEMPLE.open=false;   // 遠ざかると閉じる（中にいる間は近いので閉じない）
+  } else TEMPLE.openT=Math.max(0,TEMPLE.openT-0.07);
   // strawberry regrow
   const now=Date.now();
   for(let i=PICKED.length-1;i>=0;i--) if(now>=PICKED[i].at){ M[PICKED[i].r][PICKED[i].c]=PICKED[i].ripe; PICKED.splice(i,1); }
@@ -1123,6 +1180,7 @@ function update(){
       if(Math.hypot(BEAR.px-BEAR.hx,BEAR.py-BEAR.hy)<TS*3){dx=d[0];dy=d[1];}else{BEAR.mdir=null;BEAR.t=60;} }
     moveEnt(BEAR,dx,dy,0.35);
   }
+  if(!dlgOpen&&!panelOpen) updatePheasants();   // 雉の親子が一列で歩く
   if(!dlgOpen&&!panelOpen){
     let dx=0,dy=0;
     if(keys['arrowup']||keys['w']||keys['_up'])dy=-1;
@@ -1154,7 +1212,10 @@ function update(){
   for(const s of SPOTS){const d=Math.hypot((s.x+s.w/2)*TS-P.px,(s.y+s.h)*TS-P.py);if(d<nd){nd=d;near=s;}}
   for(const n of NPCS){if(npcHidden(n))continue;const d=Math.hypot(n.px-P.px,n.py-P.py);if(d<nd-4){nd=d+999;}}
   let label;
+  const nearTempleDoor = Math.abs(P.px-TEMPLE.door.c*TS)<TS*1.4 && P.py>(TEMPLE.door.r)*TS && P.py<(TEMPLE.door.r+2.5)*TS;
   if(P.onWarp){ label='✨ <b>ワープサークル</b> — サービスサイトへ'; }
+  else if(TEMPLE.open && P.px>TEMPLE.x*TS && P.px<(TEMPLE.x+TEMPLE.w)*TS && P.py>TEMPLE.y*TS && P.py<(TEMPLE.y+TEMPLE.h)*TS){ label='🛖 <b>問いの寺</b> — 導師に話しかけてみよう'; }
+  else if(!TEMPLE.open && nearTempleDoor){ label='🚪 <b>問いの寺</b> — 扉を調べて入る'; }
   else if(P.swim){ label='🏊 <b>泳いでいる！</b>'; }
   else if(P.inBrush){ label='🌳 <b>茂みの中</b> — すこしゆっくり'; }
   else if(P.inPaddy){ label='🌾 <b>ちいさな田んぼ</b>'; }
@@ -1289,6 +1350,62 @@ function drawBuilding(s){
   if(s.icon){ ctx.font='13px serif'; ctx.fillText(s.icon,x+w/2,y+TS-3); }
   if(s.label){ ctx.font='9px monospace'; px(x+w/2-18,y+h+2,36,11,'rgba(20,18,15,.8)');
     ctx.fillStyle='#fff'; ctx.fillText(s.label,x+w/2,y+h+11); }
+}
+/* ── 問いの寺：上から見た間取り（地面レイヤー） ── */
+function drawTempleFloor(){
+  const T=TEMPLE, X=T.x*TS-cam.x, Y=T.y*TS-cam.y, W=T.w*TS, H=T.h*TS;
+  const cell=(c,r)=>[X+(c-T.x)*TS, Y+(r-T.y)*TS];
+  px(X-2,Y+H-2,W+5,4,'rgba(0,0,0,.22)');               // 影
+  px(X,Y,W,H,'#b89464');                                // 縁側の板の間
+  const ix=X+TS, iy=Y+TS, iw=W-2*TS, ih=H-2*TS;
+  px(ix,iy,iw,ih,'#c3b682');                            // 畳の座敷
+  ctx.fillStyle='#a89a64';                              // 畳割り（間取りのマス目）
+  for(let k=1;k<4;k++) ctx.fillRect(ix+((iw*k/4)|0),iy,1,ih);
+  for(let k=1;k<4;k++) ctx.fillRect(ix,iy+((ih*k/4)|0),iw,1);
+  // 床の間（奥の北側）＋掛軸＋花
+  px(ix,iy,iw,5,'#6a4e30');                             // 床板
+  px(X+W/2-7,iy-1,14,4,'#e8e0cc'); px(X+W/2-1,iy-1,2,4,'#b03a3a'); // 掛軸
+  px(X+W/2+10,iy+1,2,3,'#3a6a8a'); px(X+W/2+10,iy,2,1,'#e57ba0');  // 花瓶＋花
+  // 座布団：導師（赤・北）と客（藍・南）が膝をつき合わせる
+  let [rx,ry]=cell(30,33); px(rx+3,ry+3,10,10,'#a83a3a'); px(rx+4,ry+4,8,1,'#c25a5a');
+  let [gx,gy]=cell(30,34); px(gx+3,gy+3,10,10,'#36508f'); px(gx+4,gy+4,8,1,'#5a7ac0');
+  // 中央に香炉のともしび
+  let [hx,hy]=cell(31,33); px(hx+6,hy+6,3,4,'#5a4028'); px(hx+7,hy+4,1,2,'#ffd27a');
+  // 外壁（上から見た枠）＋扉の開口
+  const wc='#7a5a38', wl='#8d6a44';
+  px(X,Y,W,3,wc); px(X,Y+H-3,W,3,wc); px(X,Y,3,H,wc); px(X+W-3,Y,3,H,wc);
+  px(X,Y,W,1,wl);
+  const ddx=X+(T.door.c-T.x)*TS;
+  px(ddx,Y+H-3,TS,3,'#b89464');                         // 扉の開口（壁を抜く）
+  px(ddx-3,Y+H-4,3,4,'#5a4028'); px(ddx+TS,Y+H-4,3,4,'#5a4028'); // 開いた扉板
+}
+/* ── 問いの寺：屋根（常に最前面・openTで左右にぱかっと開いて消える） ── */
+function roofHalf(rx,ry,rw,rh,left){
+  px(rx,ry,rw,rh,'#3f4a55');                            // 瓦
+  for(let yy=3;yy<rh;yy+=4) px(rx,ry+yy,rw,1,'#34404a');
+  px(rx,ry,rw,2,'#5a6776');                             // 棟側ハイライト
+  px(rx,ry+rh-3,rw,3,'#7a5a38'); px(rx,ry+rh-1,rw,1,'#5a4028'); // 軒（木）
+  px(left?rx+rw-1:rx,ry,1,rh,'#2a323b');                // 中央の合わせ目
+}
+function drawTempleRoof(){
+  const T=TEMPLE, X=T.x*TS-cam.x, Y=T.y*TS-cam.y, W=T.w*TS, H=T.h*TS;
+  // 館名ラベル（常に表示）
+  ctx.font='9px monospace'; px(X+W/2-26,Y+H+2,52,11,'rgba(20,18,15,.82)');
+  ctx.fillStyle='#fff'; ctx.fillText('🛖 問いの寺',X+W/2,Y+H+11);
+  const o=T.openT, a=1-o; if(a<=0.02) return;
+  const slide=o*(W*0.62), lift=o*8;
+  const rY=Y-7, rH=H+4;
+  ctx.globalAlpha=a;
+  roofHalf(X-slide, rY-lift, (W/2+3)|0, rH, true);            // 左半分
+  roofHalf(X+W/2-3+slide, rY-lift, (W/2+3)|0, rH, false);     // 右半分
+  // 宝珠（金の擬宝珠）と閉じた扉（閉じているときだけ）
+  if(o<0.6){ ctx.globalAlpha=Math.min(1,a*1.5);
+    px(X+W/2-2,rY-5,4,6,'#caa23a'); px(X+W/2-1,rY-9,2,5,'#e8c84a'); px(X+W/2-3,rY+1,6,2,'#a4801f'); // 宝珠
+    const ddx=X+(T.door.c-T.x)*TS;
+    px(ddx,Y+H-13,TS,13,'#5a3d28'); px(ddx+1,Y+H-12,TS-2,11,'#3a2718');
+    px(ddx+TS/2-1,Y+H-12,1,11,'#5a3d28');                                 // 扉の合わせ目
+    px(ddx+3,Y+H-7,2,2,'#caa23a'); px(ddx+TS-5,Y+H-7,2,2,'#caa23a'); }    // 取手
+  ctx.globalAlpha=1;
 }
 function drawChar(x,y,dir,frame,moving,c1,c2,hair,cat){
   const bob=moving?(Math.floor(frame)%2):0, sx=Math.round(x), sy=Math.round(y);
@@ -1495,6 +1612,38 @@ function drawAnimal(x,y,dir,frame,moving,type){
     px(R?sx+1:sx+12,sy+5+bob,1,4,head); px(R?sx:sx+11,sy+8+bob,2,1,head); }  // 巻きしっぽ
   else if(type==='sheep'){ px(hx,sy+3+bob,4,2,head); }
 }
+function drawPheasant(x,y,dir,frame,moving,kind){
+  const sx=Math.round(x),sy=Math.round(y),bob=moving?(Math.floor(frame)%2):0,R=dir!=='left';
+  px(sx+4,sy+13,8,2,'rgba(0,0,0,.22)');                          // 影
+  if(kind==='chick'){                                            // 雛（小さくふわふわ）
+    px(sx+6,sy+9+bob,4,4,'#d8c070'); px(sx+6,sy+9+bob,4,1,'#e8d68a');
+    px(R?sx+9:sx+5,sy+8+bob,2,2,'#e8d68a');                      // 頭
+    px(R?sx+10:sx+5,sy+9+bob,1,1,'#2a1d12');                     // 目
+    px(R?sx+11:sx+4,sy+9+bob,1,1,'#c8902a');                     // くちばし
+    px(sx+6,sy+13,1,1,'#c8902a'); px(sx+9,sy+13,1,1,'#c8902a');  // 脚
+    return; }
+  px(sx+6,sy+11+bob,1,3,'#c8902a'); px(sx+9,sy+11+bob,1,3,'#c8902a'); // 脚
+  if(kind==='hen'){                                              // 雌雉（地味な保護色）
+    px(R?sx-1:sx+10,sy+7+bob,4,3,'#7a5a34'); px(R?sx-1:sx+10,sy+8+bob,4,1,'#6b4a2c'); // 短い尾
+    px(sx+3,sy+6+bob,8,6,'#9a7a4a'); px(sx+4,sy+5+bob,6,3,'#a98a58'); px(sx+5,sy+8+bob,5,1,'#7a5a34');
+    px(sx+4,sy+7+bob,7,1,'#876a40');                             // まだら
+    const hx=R?sx+9:sx+3; px(hx,sy+4+bob,3,3,'#8a6a3e');
+    px(R?hx+1:hx+1,sy+5+bob,1,1,'#2a1d12'); px(R?hx+3:hx-1,sy+5+bob,1,1,'#c8902a');
+    return; }
+  // 雄雉（優雅な色合い：玉虫色の頭・赤い顔・白い首輪・銅金の体・長い尾）
+  const tx=R?sx-4:sx+10;
+  px(tx,sy+5+bob,7,2,'#6b4a2c'); px(tx,sy+7+bob,7,2,'#caa264');  // 長い尾（縞）
+  px(tx,sy+6+bob,7,1,'#8a6a3a'); px(R?tx:tx+6,sy+5+bob,1,4,'#5a3d24');
+  px(sx+3,sy+6+bob,8,6,'#a6602a'); px(sx+4,sy+5+bob,6,3,'#c47a32'); // 体（銅色）
+  px(sx+4,sy+6+bob,6,1,'#e0a24a'); px(sx+5,sy+8+bob,5,1,'#7a4420'); // 金の照り＋腹影
+  px(sx+5,sy+7+bob,2,1,'#3a2a18'); px(sx+8,sy+8+bob,1,1,'#3a2a18'); // 斑点
+  const hx=R?sx+9:sx+2;
+  px(hx,sy+3+bob,3,4,'#1f6b3a'); px(hx,sy+3+bob,3,1,'#2f9d52');   // 玉虫色の頭
+  px(R?hx-1:hx+2,sy+6+bob,2,1,'#f0f0e8');                         // 白い首輪
+  px(R?hx+2:hx,sy+4+bob,1,2,'#d83a3a');                           // 赤い顔の肉垂
+  px(R?hx+1:hx+1,sy+4+bob,1,1,'#101010');                        // 目
+  px(R?hx+3:hx-1,sy+4+bob,1,1,'#caa23a');                        // くちばし
+}
 function render(){
   refreshSeasonPal();   // 現在の季節の植物パレットを反映
   const c0=(cam.x/TS)|0, r0=(cam.y/TS)|0, ox=cam.x%TS, oy=cam.y%TS;
@@ -1503,9 +1652,11 @@ function render(){
     drawTile(mc,mr,c*TS-ox,r*TS-oy);
   }
   drawWarp(); // magic circle on the ground (under entities)
+  drawTempleFloor(); // 問いの寺の間取り（地面・閉じている間は屋根の下に隠れる）
   // depth-sorted entities
   const ents=[];
   ents.push({y:(SIGN.y+1)*TS,fn:drawSign});
+  ents.push({y:(TEMPLE.y+TEMPLE.h)*TS+9999,fn:drawTempleRoof}); // 屋根は常に最前面
   DECO.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
   BOULDERS.forEach(b=>ents.push({y:(b.y+b.h)*TS,fn:()=>drawBoulder(b)}));
   OBJS.forEach(o=>ents.push({y:(o.y+o.h)*TS,fn:()=>drawObj(o)}));
@@ -1524,6 +1675,9 @@ function render(){
     drawAnimal(a.px-cam.x,a.py-cam.y,a.dir,a.frame,a.moving,a.type); ctx.globalAlpha=1; }}); });
   if(!HERON.gone) ents.push({y:HERON.py+TS,fn:drawHeron});
   ents.push({y:BEAR.py+2*TS,fn:drawBear});
+  { const L=PHEASANTS.lead;
+    ents.push({y:L.py+TS,fn:()=>drawPheasant(L.px-cam.x,L.py-cam.y,L.dir,L.frame,L.moving,'male')});
+    PHEASANTS.followers.forEach(f=>ents.push({y:f.py+TS,fn:()=>drawPheasant(f.px-cam.x,f.py-cam.y,f.dir,f.frame,f.moving,f.kind)})); }
   PROPS.forEach(p=>ents.push({y:p.y*TS+TS,fn:()=>drawFire(p.x*TS-cam.x,p.y*TS-cam.y)}));
   const wob=Date.now()<P.slowUntil?Math.sin(Date.now()/110)*1.6:0;
   ents.push({y:P.py+TS,fn:()=>{
