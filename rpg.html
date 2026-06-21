@@ -896,7 +896,6 @@ function eatCrop(){
 let timeMode='auto';
 const TINT={morning:'rgba(255,176,120,0.15)',day:null,evening:'rgba(255,108,40,0.27)',night:'rgba(10,14,44,0.58)'};
 const TORDER=['auto','morning','day','evening','night'];
-const STARS=[]; for(let i=0;i<46;i++) STARS.push([(Math.random()*cv.width)|0,(Math.random()*cv.height*0.62)|0,Math.random()<.3?2:1]);
 function curMode(){ if(timeMode!=='auto')return timeMode; const h=new Date().getHours();
   if(h>=5&&h<10)return 'morning'; if(h>=10&&h<16)return 'day'; if(h>=16&&h<19)return 'evening'; return 'night'; }
 function isNight(){ return curMode()==='night'; }
@@ -906,9 +905,7 @@ function npcHidden(n){ return isNight() && !n.keepNight && !n.cat && n.gives==nu
 function animalHidden(a){ return a.night && !isNight(); }
 function applyTint(){ const m=curMode(),c=TINT[m];
   if(c){ ctx.fillStyle=c; ctx.fillRect(0,0,cv.width,cv.height); }
-  if(m==='night'){ ctx.fillStyle='#fff';
-    for(const s of STARS){ ctx.globalAlpha=0.45+0.5*(0.5+0.5*Math.sin(Date.now()/600+s[0])); ctx.fillRect(s[0],s[1],s[2],s[2]); }
-    ctx.globalAlpha=1;
+  if(m==='night'){
     // 各家の窓からこぼれる灯り（夜の闇の上に暖色をにじませる）
     for(const s of HOUSES){
       const bx=s.x*TS-cam.x, by=s.y*TS-cam.y, bw=s.w*TS;
