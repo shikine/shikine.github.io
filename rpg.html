@@ -699,7 +699,8 @@ for(let i=0;i<16;i++){ const r=14+Math.random()*18; const cc=6+Math.sin((r-13)*0
 function fireflySeason(){ return new Date().getMonth()===5; }
 function drawFireflies(){
   if(!fireflySeason()) return;
-  const m=curMode(), boost = m==='night'?1 : m==='evening'?0.8 : 0.4;
+  const m=curMode(); if(m!=='night') return;   // 蛍は夜だけ出る
+  const boost = 1;
   const t=Date.now();
   for(const f of FIREFLIES){
     const wx=f.ax + Math.sin(t/1700+f.dr)*10 + Math.cos(t/2300+f.ph)*6;
