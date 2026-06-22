@@ -323,9 +323,11 @@ for(let r=29;r<34;r++)for(let c=17;c<28;c++)set(c,r,(r-29)%2===0?12:5);
 for(let r=8;r<13;r++)for(let c=34;c<45;c++)set(c,r,(r-8)%2===0?14:5);
 // lettuce field (レタス畑) — central
 for(let r=20;r<24;r++)for(let c=34;c<45;c++)set(c,r,(r-20)%2===0?16:5);
-// small tomato field (小さなトマト畑) — レタスの左隣：成長6段階（枯れ21・苗22・花20・青い実23・完熟19・枯れ始め24）
-{const TS6=[21,22,20,23,19,24];let _si=0;
- for(let r=20;r<24;r++)for(let c=28;c<32;c++)set(c,r,(r-20)%2===0?TS6[_si++%6]:5);}
+// small tomato field (小さなトマト畑) — レタスの左隣：成長段階を四季と連動させる（株マスを記録）
+const TOMATO_CELLS=[];
+for(let r=20;r<24;r++)for(let c=28;c<32;c++){
+  if((r-20)%2===0){ set(c,r,19); TOMATO_CELLS.push({c,r}); } else set(c,r,5);
+}
 // hippie meadow (自由の広場) — top-left, east of the pond: grass + flowers
 for(let r=6;r<12;r++)for(let c=15;c<23;c++)set(c,r, rnd()>.62?4:0);
 // small rice paddy (ちいさな田んぼ) — south-central
@@ -1036,7 +1038,15 @@ const VEGPAL={
           bush:['#4a5a48','#56684f','#3a4a3a'],flowers:null,snow:true},
 };
 let VEG=VEGPAL.summer;                       // 描画のたびに render() 冒頭で現在の季節へ更新
-function refreshSeasonPal(){ VEG=VEGPAL[curSeason()]; }
+// トマトの成長を四季と連動：春＝苗(22)→花(20)／夏＝青い実(23)→完熟(19)／秋＝完熟(19)→枯れ始め(24)／冬＝枯れ(21)
+const TOMATO_STAGE={ spring:[22,20], summer:[23,19], autumn:[19,24], winter:[21] };
+function applyTomatoSeason(se){ const seq=TOMATO_STAGE[se]||[19]; let i=0;
+  for(const cell of TOMATO_CELLS){ const stage=seq[i++%seq.length];
+    if(PICKED.some(p=>p.c===cell.c&&p.r===cell.r)) continue;   // 収穫直後で再生待ちのマスは上書きしない
+    M[cell.r][cell.c]=stage; } }
+let _lastSeason=null;
+function refreshSeasonPal(){ const se=curSeason(); VEG=VEGPAL[se];
+  if(se!==_lastSeason){ _lastSeason=se; applyTomatoSeason(se); } }   // 季節が変わったら畑全体の成長段階を更新
 
 /* ── 富士見町のリアルタイム天候（Open-Meteo・APIキー不要／晴・曇・雨・雪・強風） ── */
 const WEATHER={cond:'sunny', windy:false, wind:0, temp:null, icon:'🌤', label:'取得中…'};
