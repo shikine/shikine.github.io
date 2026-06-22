@@ -421,6 +421,8 @@ set(48,33,0); set(48,34,0);
 set(11,34,7);
 // keep the bear-side spawn tile walkable (land, just below the bear)
 set(4,18,0);
+// open south pasture for the grazing horse (clear trees/bushes to grass)
+for(let r=34;r<=38;r++)for(let c=31;c<=36;c++) if(M[r][c]!==2) set(c,r,0);
 // clear ground under the warp circle (walkable sand) and the signpost tile
 for(let r=WARP.y;r<WARP.y+WARP.h;r++)for(let c=WARP.x;c<WARP.x+WARP.w;c++)set(c,r,7);
 set(SIGN.x,SIGN.y,7);
@@ -692,8 +694,15 @@ const ANIMALS=[
         '「温もりは分けても減らない。むしろ、増える。」',
         '「ひとりで賢くなるより、みなで暖かいほうがいい。」',
         '「君には——背を預けられる、だれかがいるか？」']},
+ // ── 南の草地に放牧された一頭のウマ ──
+ {x:33,y:36,type:'horse', say:'（ブルルッ……と鼻を鳴らした）',
+  talk:['（一頭の馬が、南の草地でゆったりと草を食んでいる）',
+        'ウマ「私は、走るために生まれた。けれど、いまは留まることを知った。」',
+        '「軛（くびき）を負うことは、縛られることではない。だれかと、同じ道をゆくこと。」',
+        '「野を駆ける自由と、人とあゆむ約束——そのあわいに、私は立っている。」',
+        '「君は——だれと、歩調を合わせている？」']},
 ];
-const ANAME={goat:'ヤギ',sheep:'ひつじ',rabbit:'うさぎ',deer:'しか',monkey:'さる'};
+const ANAME={goat:'ヤギ',sheep:'ひつじ',rabbit:'うさぎ',deer:'しか',monkey:'さる',horse:'ウマ'};
 /* それぞれ もののけ・畏怖をまとう哲学的な生命として、生きる意味を語る */
 const ATALK={
  goat:[
@@ -2132,6 +2141,30 @@ function drawSwimmer(x,y,dir,frame){
 function drawAnimal(x,y,dir,frame,moving,type){
   const sx=Math.round(x),sy=Math.round(y),bob=moving?(Math.floor(frame)%2):0;
   const R=dir!=='left';
+  if(type==='horse'){            // 一頭のウマ（他より大きく、たてがみ・長い首・尾）
+    const co='#8a5630', dk='#6e4424', mane='#3a2616', hoof='#241a12', hi='#a06a3e';
+    px(sx+2,sy+14,12,2,'rgba(0,0,0,.24)');                          // 影
+    px(sx+4,sy+10,2,4+bob,dk); px(sx+12,sy+10,2,4-bob,dk);          // 前後の脚（歩調）
+    px(sx+7,sy+10,2,4-bob,dk); px(sx+10,sy+10,2,4+bob,dk);
+    px(sx+4,sy+13+bob,2,1,hoof); px(sx+12,sy+13-bob,2,1,hoof);       // ひづめ
+    px(sx+3,sy+5,12,6,co); px(sx+3,sy+5,12,1,hi); px(sx+3,sy+10,12,1,dk); // 胴
+    if(R){
+      px(sx+11,sy+1,3,5,co);                                        // 首
+      px(sx+12,sy-1,4,3,co); px(sx+15,sy+1,1,2,dk);                 // 頭・鼻面
+      px(sx+14,sy,1,1,'#1c140d');                                   // 目
+      px(sx+13,sy-3,1,2,co); px(sx+11,sy-2,1,2,co);                 // 耳
+      px(sx+10,sy-1,2,7,mane); px(sx+11,sy+1,3,1,mane);             // たてがみ
+      px(sx+1,sy+5,2,7,mane); px(sx,sy+8,1,3,mane);                 // 尾
+    } else {
+      px(sx+2,sy+1,3,5,co);
+      px(sx,sy-1,4,3,co); px(sx,sy+1,1,2,dk);
+      px(sx+1,sy,1,1,'#1c140d');
+      px(sx+2,sy-3,1,2,co); px(sx+4,sy-2,1,2,co);
+      px(sx+4,sy-1,2,7,mane); px(sx+2,sy+1,3,1,mane);
+      px(sx+13,sy+5,2,7,mane); px(sx+15,sy+8,1,3,mane);
+    }
+    return;
+  }
   px(sx+3,sy+13,10,2,'rgba(0,0,0,.22)');
   const C={sheep:['#efe9df','#3c352d','#3c352d'],goat:['#c7b9a0','#9c8f78','#6e6253'],
            rabbit:['#e9e3d7','#e9e3d7','#d2cabb'],deer:['#a9794e','#8a6038','#5e4126'],
