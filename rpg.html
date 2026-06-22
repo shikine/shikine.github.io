@@ -328,13 +328,10 @@ const TOMATO_CELLS=[];
 for(let r=20;r<24;r++)for(let c=28;c<32;c++){
   if((r-20)%2===0){ set(c,r,19); TOMATO_CELLS.push({c,r}); } else set(c,r,5);
 }
-// mushroom grove (きのこの森) — 池と川の南の湿った木陰：きのこは“まばらに・１箇所ずつ”点々と生える
-const MUSHROOM_CELLS=[
-  {c:10,r:15},{c:14,r:14},{c:17,r:16},{c:9,r:18},
-  {c:13,r:18},{c:16,r:19},{c:11,r:21},{c:15,r:21},
-];
+// mushroom grove (きのこの森) — 池と川の南の湿った木陰：きのこは木のそばに３つだけ、道を塞がぬよう点在
+const MUSHROOM_CELLS=[ {c:13,r:16},{c:17,r:17},{c:12,r:19} ];
 for(const m of MUSHROOM_CELLS) set(m.c,m.r,25);
-set(12,16,3); set(16,17,3); set(11,19,3);   // 木陰をつくる木（点在）
+set(12,16,3); set(16,17,3); set(11,19,3);   // 木陰をつくる木（各きのこの隣）
 // hippie meadow (自由の広場) — top-left, east of the pond: grass + flowers
 for(let r=6;r<12;r++)for(let c=15;c<23;c++)set(c,r, rnd()>.62?4:0);
 // small rice paddy (ちいさな田んぼ) — south-central
