@@ -1047,7 +1047,7 @@ document.getElementById('mapBtn').addEventListener('click',openMapPanel);
 /* ── 断層図（地質断面）：現在地を通る南北の断面で、起伏と土地の成り立ちを見る ── */
 function openCrossPanel(){
   closeMenu();
-  const W=720,H=400, c0=Math.max(0,Math.min(MW-1,(P.px/TS+0.5)|0)), prow=Math.max(0,Math.min(MH-1,(P.py/TS+0.5)|0));
+  const W=900,H=520, c0=Math.max(0,Math.min(MW-1,(P.px/TS+0.5)|0)), prow=Math.max(0,Math.min(MH-1,(P.py/TS+0.5)|0));
   const pcf=v=>v.toFixed(2);
   // 現在地の経線にそって、北(八ヶ岳)→南の標高プロファイルをタイルから起こす
   const elevTile=t=> t===11?24 : t===9?15 : t===8?13 : (t===3||t===6)?9 : t===2?2 : (t===7||t===10)?5 : t===18?6 : 8;
@@ -1058,36 +1058,43 @@ function openCrossPanel(){
     raw[r]=v; }
   const e=[]; for(let r=0;r<MH;r++){ let s=0,n=0; for(let k=-1;k<=1;k++){const rr=r+k; if(rr>=0&&rr<MH){s+=raw[rr];n++;}} e[r]=s/n; }
   const eMax=Math.max(...e), eMin=Math.min(...e);
-  const topY=58, botY=182, floor=372, ts=12, as=34, lv=34, T=24, rf=Math.round(MH*0.52), stripW=W/MH;
-  const surfY=r=> botY - (e[r]-eMin)/Math.max(0.001,eMax-eMin)*(botY-topY);
-  const xF=(rf+1)*stripW;
+  const topY=70, botY=232, ts=16, as=46, lv=44, T=32, rf=Math.round(MH*0.52), magmaBase=480;
+  // 行を補間して高解像度に（1px単位で断面を描く）
+  const EF=fr=>{ const a=Math.max(0,Math.min(MH-1,fr)), i=Math.floor(a), f=a-i; return e[i]+(e[Math.min(MH-1,i+1)]-e[i])*f; };
+  const surfY=fr=> botY - (EF(fr)-eMin)/Math.max(0.001,eMax-eMin)*(botY-topY);
+  const magmaY=fr=> magmaBase - 108*Math.exp(-Math.pow((fr-3)/7,2)) - 7*Math.sin(fr*0.6);   // 八ヶ岳直下でせり上がる
+  const capTile=fr=> M[Math.max(0,Math.min(MH-1,Math.round(fr)))][c0];
+  const rowToX=r=> r/(MH-1)*W, xToRow=x=> x/W*(MH-1);
+  const xF=rowToX(rf), xc=rowToX(3);
   // ラベル（px→％）
   const L=[], add=(t,x,y,cls)=>L.push({t,x:x/W*100,y:y/H*100,cls:cls||'marea'});
-  add('← 北 ・ 八ヶ岳側', W*0.13,H*0.05); add('南 →', W*0.9,H*0.05);
-  add('⛰ 八ヶ岳（火山）', 2.5*stripW, surfY(2)-12,'mspot');
-  add('富士見の台地（河岸段丘）', W*0.42, surfY(18)-12);
+  add('← 北 ・ 八ヶ岳側', W*0.13,H*0.045); add('南 →', W*0.9,H*0.045);
+  add('⛰ 八ヶ岳（火山）', rowToX(2.5), surfY(2)-14,'mspot');
+  add('富士見の台地（河岸段丘）', W*0.44, surfY(18)-14);
   let lowR=6; for(let r=7;r<MH-2;r++) if(e[r]<e[lowR]) lowR=r;
-  add('🌊 谷（水のしみる低み）', (lowR+0.5)*stripW, surfY(lowR)+12);
-  add('南の森', (MH-2.5)*stripW, surfY(MH-3)-12);
-  add('⚡ 断層（ずれ）', xF, surfY(rf)-16,'mspot');
+  add('🌊 谷（水のしみる低み）', rowToX(lowR), surfY(lowR)+14);
+  add('南の森', rowToX(MH-2.5), surfY(MH-3)-14);
+  add('⚡ 断層（ずれ）', xF, surfY(rf)-18,'mspot');
+  add('🔥 マグマだまり', rowToX(5), (magmaY(4)+H)/2,'mspot');
+  add('火道', xc+20, (surfY(3)+magmaY(3))/2,'mspot');
   const sYr=surfY(MH-2);
-  add('表土（黒ボク土）', W*0.8, sYr+3+ts/2,'mstrat');
-  add('火山灰・軽石層', W*0.8, sYr+3+ts+(as+T)/2,'mstrat');
-  add('溶岩・火砕流', W*0.8, sYr+3+ts+as+T+lv/2,'mstrat');
-  add('基盤岩', W*0.8, (sYr+3+ts+as+T+lv+floor)/2,'mstrat');
+  add('表土（黒ボク土）', W*0.82, sYr+4+ts/2,'mstrat');
+  add('火山灰・軽石層', W*0.82, sYr+4+ts+(as+T)/2,'mstrat');
+  add('溶岩・火砕流', W*0.82, sYr+4+ts+as+T+lv/2,'mstrat');
+  add('基盤岩', W*0.82, (sYr+4+ts+as+T+lv+magmaY(MH-2))/2,'mstrat');
   let lab=''; for(const o of L) lab+='<div class="mlab '+o.cls+'" style="left:'+pcf(o.x)+'%;top:'+pcf(o.y)+'%">'+o.t+'</div>';
-  const xP=(prow+0.5)*stripW, yP=surfY(prow);
+  const xP=rowToX(prow), yP=surfY(prow);
   lab+='<div class="mhere" style="left:'+pcf(xP/W*100)+'%;top:'+pcf(yP/H*100)+'%"></div>';
-  lab+='<div class="mlab mspot" style="left:'+pcf(xP/W*100)+'%;top:'+pcf((yP-15)/H*100)+'%">現在地</div>';
-  const legend=[['#eef2f8','地表'],['#5b4632','表土（黒ボク土）'],['#c8a86a','火山灰層'],['#7a4a44','溶岩・火砕流'],['#6b6e76','基盤岩'],['#d04030','断層']];
+  lab+='<div class="mlab mspot" style="left:'+pcf(xP/W*100)+'%;top:'+pcf((yP-16)/H*100)+'%">現在地</div>';
+  const legend=[['#eef2f8','地表'],['#5b4632','表土（黒ボク土）'],['#c8a86a','火山灰層'],['#7a4a44','溶岩・火砕流'],['#6b6e76','基盤岩'],['#ff7a24','マグマ']];
   let leg='<div class="mlegend">'; for(const[col,n] of legend) leg+='<span class="mli"><i style="background:'+col+'"></i>'+n+'</span>'; leg+='</div>';
   openPanel('⛰ あわい村 — 断層図（土地の成り立ち）',
     '<style>'
     +'.mwrap{position:relative;width:100%;line-height:0}'
     +'.mwrap canvas{width:100%;display:block;border:2px solid #4a4030;background:#0e1410}'
     +'.mlab{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;text-shadow:0 1px 2px #000,0 0 3px #000;line-height:1}'
-    +'.marea{font-size:10px;color:#f2ecda;opacity:.95}'
-    +'.mspot{font-size:10px;color:#ffe49a;font-weight:bold}'
+    +'.marea{font-size:11px;color:#f2ecda;opacity:.95}'
+    +'.mspot{font-size:11px;color:#ffe49a;font-weight:bold}'
     +'.mstrat{font-size:10px;font-weight:bold;color:#22180e;background:rgba(240,235,222,.8);padding:1px 4px;border-radius:3px;text-shadow:none}'
     +'.mhere{position:absolute;width:11px;height:11px;border-radius:50%;background:#ff3b3b;border:2px solid #fff;transform:translate(-50%,-50%);animation:mpulse 1.2s ease-out infinite;pointer-events:none;z-index:2}'
     +'@keyframes mpulse{0%{box-shadow:0 0 0 1px rgba(255,59,59,.55)}100%{box-shadow:0 0 0 10px rgba(255,59,59,0)}}'
@@ -1098,26 +1105,42 @@ function openCrossPanel(){
     +'<div class="mwrap"><canvas id="xcv" width="'+W+'" height="'+H+'"></canvas>'+lab+'</div>'
     +'<div style="margin-top:8px;font-size:12px;line-height:1.7;color:#b7ad97">'
     +'🔴 いまの現在地を通る、北（八ヶ岳）→南の断面。八ヶ岳の噴火が積もり、川が削って段丘をつくった。'
-    +'高さは強調して表示——平らに見えて、<b>意外と起伏のある土地</b>です。</div>'
+    +'深部には<b>マグマだまり</b>が八ヶ岳を支える。高さは強調表示——平らに見えて、<b>意外と起伏のある土地</b>です。</div>'
     +leg);
   const cv2=document.getElementById('xcv'); if(!cv2)return;
   const g=cv2.getContext('2d');
-  const sky=g.createLinearGradient(0,0,0,H); sky.addColorStop(0,'#1b2a3a'); sky.addColorStop(0.55,'#2a3a4a'); sky.addColorStop(1,'#0e1410');
+  const sky=g.createLinearGradient(0,0,0,H); sky.addColorStop(0,'#1b2a3a'); sky.addColorStop(0.5,'#2a3a4a'); sky.addColorStop(1,'#0e1410');
   g.fillStyle=sky; g.fillRect(0,0,W,H);
   const cap=t=> t===11?'#eef2f8' : t===2?'#4f86ab' : t===8?'#e0531e' : (t===7||t===10)?'#dcc486' : (t===3||t===6)?'#2f6b3a' : '#5a9356';
-  for(let r=0;r<MH;r++){ const x0=Math.floor(r*stripW), w=Math.ceil(stripW)+1, sY=surfY(r), sh=r>rf?T:0;
-    g.fillStyle=cap(M[r][c0]); g.fillRect(x0,sY,w,3);                 // 地表（生物相）
-    let y=sY+3;
-    g.fillStyle='#5b4632'; g.fillRect(x0,y,w,ts); y+=ts;             // 表土・黒ボク土
-    g.fillStyle='#c8a86a'; g.fillRect(x0,y,w,as+sh); y+=as+sh;       // 火山灰・軽石層
-    g.fillStyle='#7a4a44'; g.fillRect(x0,y,w,lv); y+=lv;             // 溶岩・火砕流
-    g.fillStyle='#6b6e76'; g.fillRect(x0,y,w,Math.max(0,floor-y)); } // 基盤岩
+  for(let x=0;x<W;x++){ const fr=xToRow(x), sY=surfY(fr), sh=fr>rf?T:0;
+    g.fillStyle=cap(capTile(fr)); g.fillRect(x,sY,1,4);              // 地表（生物相）
+    let y=sY+4;
+    g.fillStyle='#5b4632'; g.fillRect(x,y,1,ts); y+=ts;             // 表土・黒ボク土
+    g.fillStyle='#c8a86a'; g.fillRect(x,y,1,as+sh); y+=as+sh;       // 火山灰・軽石層
+    g.fillStyle='#7a4a44'; g.fillRect(x,y,1,lv); y+=lv;             // 溶岩・火砕流
+    g.fillStyle='#6b6e76'; g.fillRect(x,y,1,Math.max(0,magmaY(fr)-y)); } // 基盤岩
+  // マグマ（地下のマグマ＋八ヶ岳直下のマグマだまり）
+  g.save(); g.beginPath(); g.moveTo(0,H); g.lineTo(0,magmaY(0));
+  for(let x=0;x<=W;x+=3) g.lineTo(x,magmaY(xToRow(x)));
+  g.lineTo(W,H); g.closePath(); g.clip();
+  const mg=g.createLinearGradient(0,360,0,H); mg.addColorStop(0,'#a82c0e'); mg.addColorStop(.5,'#ff7a24'); mg.addColorStop(1,'#d24010');
+  g.fillStyle=mg; g.fillRect(0,360,W,H-360);
+  const cyc=(magmaY(3)+H)/2, rad=g.createRadialGradient(xc,cyc,5,xc,cyc,160);
+  rad.addColorStop(0,'rgba(255,240,160,.95)'); rad.addColorStop(.5,'rgba(255,150,40,.5)'); rad.addColorStop(1,'rgba(255,120,30,0)');
+  g.fillStyle=rad; g.fillRect(0,320,W,H-320); g.restore();
+  g.strokeStyle='#ffd24a'; g.lineWidth=2; g.beginPath();                 // マグマ上面の光るふち
+  for(let x=0;x<=W;x+=3){ const y=magmaY(xToRow(x)); x?g.lineTo(x,y):g.moveTo(x,y); } g.stroke();
+  // 火道（マグマが八ヶ岳へのぼる通り道）
+  g.save(); g.beginPath(); g.moveTo(xc-3,surfY(3)); g.lineTo(xc+3,surfY(3)); g.lineTo(xc+11,magmaY(3)); g.lineTo(xc-11,magmaY(3)); g.closePath(); g.clip();
+  const cg=g.createLinearGradient(0,surfY(3),0,magmaY(3)); cg.addColorStop(0,'rgba(255,120,40,.12)'); cg.addColorStop(1,'rgba(255,165,60,.85)');
+  g.fillStyle=cg; g.fillRect(xc-12,surfY(3),24,magmaY(3)-surfY(3)); g.restore();
+  // 地表のりんかく線
   g.strokeStyle='rgba(20,15,10,.55)'; g.lineWidth=1.5; g.beginPath();
-  for(let r=0;r<MH;r++){ const x=r*stripW+stripW/2, y=surfY(r); r?g.lineTo(x,y):g.moveTo(x,y); } g.stroke();
-  g.strokeStyle='#d04030'; g.lineWidth=2; g.setLineDash([5,4]);
-  g.beginPath(); g.moveTo(xF,surfY(rf)-6); g.lineTo(xF+10,floor); g.stroke(); g.setLineDash([]);
-  g.fillStyle='#d04030'; g.fillText('↓',xF+13,floor-20); g.fillText('↑',xF-13,floor-20);
-  g.fillStyle='rgba(0,0,0,.25)'; g.fillRect(0,floor,W,H-floor);
+  for(let x=0;x<=W;x+=2){ const y=surfY(xToRow(x)); x?g.lineTo(x,y):g.moveTo(x,y); } g.stroke();
+  // 断層
+  g.strokeStyle='#d04030'; g.lineWidth=2; g.setLineDash([6,4]);
+  g.beginPath(); g.moveTo(xF,surfY(rf)-6); g.lineTo(xF+12,magmaY(rf)); g.stroke(); g.setLineDash([]);
+  g.fillStyle='#ffd0c4'; g.font='bold 13px sans-serif'; const ya=(surfY(rf)+magmaY(rf))/2; g.fillText('↓',xF+15,ya); g.fillText('↑',xF-13,ya);
 }
 document.getElementById('crossBtn').addEventListener('click',openCrossPanel);
 
