@@ -903,51 +903,112 @@ function closePanel(){panel.classList.remove('show');panelOpen=false;}
 panel.addEventListener('click',e=>{if(e.target===panel)closePanel();});
 
 /* ── 全体マップ（メニューから表示） ── */
-function mapColor(t){ switch(t){
-  case 2: return '#4f86ab';            // 水
-  case 3: return '#2f6b3a';            // 木
-  case 6: return '#3a7d45';            // 茂み
-  case 4: return '#7aa860';            // 花（草地）
-  case 1: return '#cbb079';            // 道
-  case 5: return '#8a6a44';            // 畑の畝（土）
-  case 7: return '#dcc486';            // 砂
-  case 8: return '#e0531e';            // 溶岩
-  case 9: return '#8b8a86';            // 岩
-  case 10: return '#3a7d45';           // サボテン
-  case 11: return '#6b7486';           // 八ヶ岳
-  case 18: return '#6f93a0';           // 田んぼ
-  case 12: case 13: return '#c64a52';  // いちご畑
-  case 14: case 15: return '#6b4a8a';  // ぶどう畑
-  case 16: case 17: return '#6cb05a';  // レタス畑
-  case 19: case 20: case 21: case 22: case 23: case 24: return '#d9533a';  // トマト畑
-  case 25: case 26: return '#b5603f';  // きのこの森
-  default: return '#5a9356';           // 草地
-}}
+// 全体マップ用：タイルごとに小さなモチーフを描いて“詳細な地図”にする
+function drawMapTile(mx,t,x,y,sc,c,r){
+  const rv=((c*73856093)^(r*19349663))>>>0, h=(rv%1000)/1000;
+  const F=(dx,dy,w,hh,col)=>{mx.fillStyle=col;mx.fillRect(x+dx,y+dy,w,hh);};
+  const dot=(cx,cy,rr,col)=>{mx.fillStyle=col;mx.beginPath();mx.arc(x+cx,y+cy,rr,0,7);mx.fill();};
+  const g1=(c+r)%2?'#5a9356':'#54914f';
+  switch(t){
+    case 2: // 水・川
+      F(0,0,sc,sc,'#4f86ab'); F(0,0,sc,Math.max(1,sc*0.18),'#6aa0c4');
+      if(h>0.5)F(sc*0.2,sc*0.55,sc*0.4,Math.max(1,sc*0.1),'#9cc6dc'); break;
+    case 1: // 道
+      F(0,0,sc,sc,'#cbb079'); if(h>0.6)F(sc*0.3,sc*0.45,sc*0.22,sc*0.15,'#bda06a'); break;
+    case 7: // 砂
+      F(0,0,sc,sc,'#dcc486'); if(h>0.5)F(sc*0.25,sc*0.3,Math.max(1,sc*0.14),Math.max(1,sc*0.14),'#ccb274'); break;
+    case 8: // 溶岩
+      F(0,0,sc,sc,'#e0531e'); dot(sc*0.5,sc*0.5,sc*0.24,'#ffae3a'); dot(sc*0.32,sc*0.7,sc*0.1,'#ffe08a'); break;
+    case 9: // 岩
+      F(0,0,sc,sc,g1); dot(sc*0.5,sc*0.56,sc*0.34,'#8b8a86'); dot(sc*0.42,sc*0.46,sc*0.2,'#a7a6a1'); break;
+    case 10: // サボテン
+      F(0,0,sc,sc,'#dcc486'); F(sc*0.42,sc*0.18,sc*0.16,sc*0.62,'#3a8047'); F(sc*0.22,sc*0.42,sc*0.2,sc*0.12,'#3a8047'); break;
+    case 11: { // 八ヶ岳
+      F(0,0,sc,sc,'#6b7486');
+      mx.fillStyle='#5a6376'; mx.beginPath(); mx.moveTo(x,y+sc); mx.lineTo(x+sc*0.5,y+sc*0.12); mx.lineTo(x+sc,y+sc); mx.closePath(); mx.fill();
+      mx.fillStyle='#eef2f8'; mx.beginPath(); mx.moveTo(x+sc*0.5,y+sc*0.12); mx.lineTo(x+sc*0.36,y+sc*0.42); mx.lineTo(x+sc*0.64,y+sc*0.42); mx.closePath(); mx.fill();
+      break; }
+    case 3: // 木
+      F(0,0,sc,sc,'#4a7a4a'); F(sc*0.44,sc*0.55,sc*0.12,sc*0.42,'#6b4a2c');
+      dot(sc*0.5,sc*0.4,sc*0.42,'#2f6b3a'); dot(sc*0.4,sc*0.34,sc*0.26,'#3c8147'); break;
+    case 6: // 茂み
+      F(0,0,sc,sc,g1); dot(sc*0.5,sc*0.6,sc*0.34,'#3a7d45'); dot(sc*0.36,sc*0.52,sc*0.2,'#4f9a57'); break;
+    case 5: // 畑の土・畝
+      F(0,0,sc,sc,'#8a6a44'); F(0,sc*0.5,sc,Math.max(1,sc*0.14),'#795c39'); break;
+    case 18: // 田んぼ
+      F(0,0,sc,sc,'#6f93a0'); F(sc*0.22,sc*0.2,Math.max(1,sc*0.1),sc*0.6,'#5a9a4c'); F(sc*0.56,sc*0.25,Math.max(1,sc*0.1),sc*0.55,'#6cb05a'); break;
+    case 12: case 13: // いちご畑
+      F(0,0,sc,sc,'#4a7a4a'); dot(sc*0.5,sc*0.55,sc*0.24,'#2f6b3a'); if(t===12)dot(sc*0.52,sc*0.62,sc*0.12,'#e23b4a'); break;
+    case 14: case 15: // ぶどう畑
+      F(0,0,sc,sc,'#4a7a4a'); F(sc*0.12,sc*0.18,sc*0.76,Math.max(1,sc*0.14),'#3a7d45'); if(t===14)dot(sc*0.46,sc*0.62,sc*0.16,'#5b2f7a'); break;
+    case 16: case 17: // レタス畑
+      F(0,0,sc,sc,'#4a7a4a'); dot(sc*0.5,sc*0.55,sc*0.27,'#4f9a44'); dot(sc*0.5,sc*0.52,sc*0.15,'#6cc05a'); break;
+    case 19: case 20: case 21: case 22: case 23: case 24: { // トマト畑（段階で実の色が変わる）
+      F(0,0,sc,sc,'#4a7a4a'); dot(sc*0.5,sc*0.5,sc*0.24,'#2f6b3a');
+      const fc=(t===19)?'#e0402a':(t===23)?'#3d8c2a':(t===24)?'#c03020':(t===20)?'#e8d24f':null;
+      if(fc)dot(sc*0.5,sc*0.6,sc*0.13,fc); break; }
+    case 25: case 26: // きのこの森
+      F(0,0,sc,sc,'#3f6e42'); F(0,sc*0.62,sc,sc*0.38,'#5a4a38');
+      if(t===25){ F(sc*0.28,sc*0.42,sc*0.2,sc*0.16,'#d23b32'); dot(sc*0.66,sc*0.56,sc*0.1,'#9a6a3a'); } break;
+    default: // 草地（＋花）
+      F(0,0,sc,sc,g1);
+      if(t===4){ const fc=['#e8d24f','#e57ba0','#ffffff','#d98cf0'][rv%4]; dot(sc*0.5,sc*0.42,sc*0.16,fc); }
+      else if(h>0.75) F(sc*0.3,sc*0.55,Math.max(1,sc*0.1),sc*0.3,'#4e864e');
+  }
+}
 function openMapPanel(){
   closeMenu();
-  const sc=6, w=MW*sc, h=MH*sc;
+  const sc=12, w=MW*sc, h=MH*sc;
+  const pc=v=>(v).toFixed(2);
+  // エリア名ラベル（タイル座標→％）
+  const areas=[
+    {t:'⛰ 八ヶ岳',x:32,y:2},{t:'💧 西の池',x:9,y:9},{t:'💧 東の池',x:55,y:23},
+    {t:'🎶 自由の広場',x:19,y:8},{t:'🍄 きのこの森',x:11,y:16.5},{t:'🌊 川',x:6,y:27},
+    {t:'🍓 いちご畑',x:22,y:31},{t:'🍇 ぶどう畑',x:39,y:10},{t:'🥬 レタス畑',x:39,y:22},
+    {t:'🍅 トマト畑',x:30,y:22},{t:'🌾 田んぼ',x:24,y:21.5},{t:'🏜 砂漠',x:10,y:38},
+    {t:'🌋 溶岩地帯',x:52,y:39},
+  ];
+  let lab='';
+  for(const a of areas) lab+='<div class="mlab marea" style="left:'+pc(a.x/MW*100)+'%;top:'+pc(a.y/MH*100)+'%">'+a.t+'</div>';
+  for(const s of SPOTS) lab+='<div class="mlab mspot" style="left:'+pc((s.x+s.w/2)/MW*100)+'%;top:'+pc((s.y+s.h/2)/MH*100)+'%">'+s.icon+' '+s.label+'</div>';
+  lab+='<div class="mlab mspot" style="left:'+pc((WARP.x+WARP.w/2)/MW*100)+'%;top:'+pc((WARP.y+WARP.h/2)/MH*100)+'%">✨ ワープ</div>';
+  lab+='<div class="mhere" style="left:'+pc((P.px/TS+0.5)/MW*100)+'%;top:'+pc((P.py/TS+0.5)/MH*100)+'%"></div>';
+  // 凡例
+  const legend=[['#4f86ab','水・川'],['#2f6b3a','森・木'],['#5a9356','草地'],['#cbb079','道'],
+    ['#dcc486','砂'],['#6b7486','八ヶ岳'],['#e0531e','溶岩'],['#8a6a44','畑の土']];
+  let leg='<div class="mlegend">';
+  for(const[col,n] of legend) leg+='<span class="mli"><i style="background:'+col+'"></i>'+n+'</span>';
+  leg+='</div>';
   openPanel('🗺 あわい村 — 全体マップ',
-    '<canvas id="mapcv" width="'+w+'" height="'+h+'" style="width:100%;image-rendering:pixelated;'
-    +'border:2px solid #4a4030;background:#1a1712;display:block"></canvas>'
-    +'<div style="margin-top:8px;font-size:12px;line-height:1.8;color:#b7ad97">'
-    +'🔴 いまの現在地 ／ アイコンは各施設。歩きまわって村を探そう。</div>');
+    '<style>'
+    +'.mwrap{position:relative;width:100%;line-height:0}'
+    +'.mwrap canvas{width:100%;display:block;border:2px solid #4a4030;background:#1a1712}'
+    +'.mlab{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;'
+    +'text-shadow:0 1px 2px #000,0 0 3px #000,0 0 3px #000;line-height:1}'
+    +'.marea{font-size:10px;color:#f2ecda;opacity:.94}'
+    +'.mspot{font-size:10px;color:#ffe49a;font-weight:bold}'
+    +'.mhere{position:absolute;width:11px;height:11px;border-radius:50%;background:#ff3b3b;'
+    +'border:2px solid #fff;transform:translate(-50%,-50%);animation:mpulse 1.2s ease-out infinite;pointer-events:none;z-index:2}'
+    +'@keyframes mpulse{0%{box-shadow:0 0 0 1px rgba(255,59,59,.55)}100%{box-shadow:0 0 0 10px rgba(255,59,59,0)}}'
+    +'.mlegend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:10px}'
+    +'.mli{display:flex;align-items:center;gap:5px;font-size:11px;color:#c9c0aa}'
+    +'.mli i{width:11px;height:11px;border-radius:2px;display:inline-block;border:1px solid #00000040}'
+    +'</style>'
+    +'<div class="mwrap"><canvas id="mapcv" width="'+w+'" height="'+h+'"></canvas>'+lab+'</div>'
+    +'<div style="margin-top:8px;font-size:12px;line-height:1.7;color:#b7ad97">'
+    +'🔴 いまの現在地。季節や天候で畑や森の様子も移ろう。歩きまわって村を探そう。</div>'
+    +leg);
   const mc=document.getElementById('mapcv'); if(!mc)return;
-  const mx=mc.getContext('2d'); mx.imageSmoothingEnabled=false;
-  for(let r=0;r<MH;r++)for(let c=0;c<MW;c++){ mx.fillStyle=mapColor(M[r][c]); mx.fillRect(c*sc,r*sc,sc,sc); }
-  // 装飾の家
-  mx.fillStyle='rgba(120,90,60,.85)';
-  DECO.forEach(s=>mx.fillRect(s.x*sc,s.y*sc,s.w*sc,s.h*sc));
-  // 施設（アイコン入り）
-  mx.textAlign='center'; mx.textBaseline='middle'; mx.font=(sc*2.4|0)+'px serif';
-  for(const s of SPOTS){
-    mx.fillStyle='rgba(40,30,20,.55)'; mx.fillRect(s.x*sc,s.y*sc,s.w*sc,s.h*sc);
-    mx.fillText(s.icon,(s.x+s.w/2)*sc,(s.y+s.h/2)*sc); }
-  // ワープサークル
-  mx.fillStyle='#c9a6e8'; mx.fillText('✨',(WARP.x+WARP.w/2)*sc,(WARP.y+WARP.h/2)*sc);
-  // 現在地
-  const pcx=(P.px/TS+0.5)*sc, pcy=(P.py/TS+0.5)*sc;
-  mx.beginPath(); mx.arc(pcx,pcy,sc*0.7,0,7); mx.fillStyle='#ff3b3b'; mx.fill();
-  mx.lineWidth=2; mx.strokeStyle='#fff'; mx.stroke();
+  const mx=mc.getContext('2d');
+  mx.fillStyle='#3a5a3a'; mx.fillRect(0,0,w,h);
+  for(let r=0;r<MH;r++)for(let c=0;c<MW;c++) drawMapTile(mx,M[r][c],c*sc,r*sc,sc,c,r);
+  // 装飾の家（小さな屋根）
+  for(const s of DECO){ mx.fillStyle=s.roof; mx.fillRect(s.x*sc,s.y*sc,s.w*sc,s.h*sc);
+    mx.fillStyle='rgba(255,255,255,.16)'; mx.fillRect(s.x*sc,s.y*sc,s.w*sc,Math.max(1,sc*0.36)); }
+  // 施設の建物（屋根色＋棟のハイライト）
+  for(const s of SPOTS){ mx.fillStyle=s.roof; mx.fillRect(s.x*sc,s.y*sc,s.w*sc,s.h*sc);
+    mx.fillStyle='rgba(0,0,0,.28)'; mx.fillRect(s.x*sc,(s.y+s.h)*sc-Math.max(1,sc*0.3),s.w*sc,Math.max(1,sc*0.3));
+    mx.fillStyle='rgba(255,255,255,.2)'; mx.fillRect(s.x*sc,s.y*sc,s.w*sc,Math.max(1,sc*0.32)); }
 }
 document.getElementById('mapBtn').addEventListener('click',openMapPanel);
 
