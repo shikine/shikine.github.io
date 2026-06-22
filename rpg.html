@@ -200,6 +200,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <div id="hud">
   <div class="tag" id="loc">📍 <b>あわい村</b></div>
+  <div class="tag" id="weather">🌤 <b>富士見の天気…</b></div>
   <div class="tag" id="crops">🍓 <b>×0</b>&ensp;🍇 <b>×0</b>&ensp;🥬 <b>×0</b></div>
   <div class="tag" id="treas">💎 <b>0/8</b></div>
 </div>
@@ -1027,6 +1028,60 @@ const VEGPAL={
 };
 let VEG=VEGPAL.summer;                       // 描画のたびに render() 冒頭で現在の季節へ更新
 function refreshSeasonPal(){ VEG=VEGPAL[curSeason()]; }
+
+/* ── 富士見町のリアルタイム天候（Open-Meteo・APIキー不要／晴・曇・雨・雪・強風） ── */
+const WEATHER={cond:'sunny', windy:false, wind:0, temp:null, icon:'🌤', label:'取得中…'};
+function classifyWeather(code, windMs){
+  let cond='sunny', icon='☀️', label='晴れ';
+  if((code>=71&&code<=77)||code===85||code===86){ cond='snow'; icon='❄️'; label='雪'; }
+  else if((code>=51&&code<=67)||(code>=80&&code<=82)||code>=95){ cond='rain'; icon='🌧'; label='雨'; }
+  else if(code===45||code===48){ cond='cloudy'; icon='🌫'; label='霧'; }
+  else if(code===3){ cond='cloudy'; icon='☁️'; label='くもり'; }
+  else if(code===1||code===2){ cond='sunny'; icon='⛅'; label='晴れ'; }
+  const windy=windMs>=7;
+  if(windy){ icon='💨'; label+='・強風'; }
+  return {cond,windy,icon,label};
+}
+function updateWeatherHud(){ const e=document.getElementById('weather'); if(!e)return;
+  e.innerHTML=WEATHER.icon+' <b>富士見 '+WEATHER.label+(WEATHER.temp!=null?(' '+Math.round(WEATHER.temp)+'°C'):'')+'</b>'; }
+async function fetchWeather(){
+  try{
+    const url='https://api.open-meteo.com/v1/forecast?latitude=35.9146&longitude=138.2306'
+      +'&current=temperature_2m,weather_code,wind_speed_10m&wind_speed_unit=ms&timezone=Asia%2FTokyo';
+    const d=await (await fetch(url)).json(); const cur=d.current||{};
+    const c=classifyWeather(cur.weather_code|0, cur.wind_speed_10m||0);
+    WEATHER.cond=c.cond; WEATHER.windy=c.windy; WEATHER.wind=cur.wind_speed_10m||0;
+    WEATHER.temp=(cur.temperature_2m!=null?cur.temperature_2m:null); WEATHER.icon=c.icon; WEATHER.label=c.label;
+  }catch(e){ WEATHER.icon='🌤'; WEATHER.label='天気を取得できず'; }
+  updateWeatherHud();
+}
+let WX=[];   // 雨・雪・強風の粒子
+function updateWeather(){
+  const w=WEATHER, push=(w.windy?2.4:0.5)*(w.wind>=12?1.3:1);
+  const cap = w.cond==='rain'?90 : w.cond==='snow'?68 : (w.windy?26:0);
+  while(WX.length<cap && Math.random()<0.6){
+    WX.push({ x:Math.random()*(cv.width+60)-30, y:-8-Math.random()*30, ph:Math.random()*6.28,
+      vy: w.cond==='rain'?(6+Math.random()*3) : w.cond==='snow'?(0.8+Math.random()*0.8) : (0.4+Math.random()*0.6),
+      vx: push*(0.6+Math.random()*0.8) + (w.cond==='rain'?1.0:0),
+      len: w.cond==='rain'?(5+Math.random()*4):0 });
+  }
+  for(let i=WX.length-1;i>=0;i--){ const p=WX[i];
+    p.ph+=0.05; p.y+=p.vy; p.x+=p.vx + (w.cond==='snow'?Math.sin(p.ph)*0.6:0);
+    if(p.y>cv.height+12||p.x>cv.width+34||p.x<-34) WX.splice(i,1); }
+  if(WX.length>cap) WX.length=cap;
+}
+const WTINT={sunny:null, cloudy:'rgba(150,156,168,0.20)', rain:'rgba(70,84,108,0.30)', snow:'rgba(208,220,238,0.16)'};
+function drawWeather(){
+  const w=WEATHER, c=WTINT[w.cond];
+  if(c){ ctx.fillStyle=c; ctx.fillRect(0,0,cv.width,cv.height); }
+  for(const p of WX){
+    if(w.cond==='rain'){ ctx.strokeStyle='rgba(175,198,228,0.55)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x-p.vx*0.7, p.y-p.len); ctx.stroke(); }
+    else if(w.cond==='snow'){ ctx.fillStyle='rgba(255,255,255,0.92)'; ctx.fillRect(p.x|0,p.y|0,2,2); }
+    else { ctx.strokeStyle='rgba(228,226,210,0.35)'; ctx.lineWidth=1;   // 強風の舞い（晴・曇でも）
+      ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x-7,p.y-1); ctx.stroke(); }
+  }
+}
 const SNAME={spring:'🌸 春',summer:'☀️ 夏',autumn:'🍁 秋',winter:'❄️ 冬'};
 function updateSeasonBtn(){ document.querySelectorAll('#seasonSeg button').forEach(b=>b.classList.toggle('on',b.dataset.s===seasonMode)); }
 function cycleSeason(){ seasonMode=SORDER[(SORDER.indexOf(seasonMode)+1)%SORDER.length]; updateSeasonBtn();
@@ -1222,6 +1277,7 @@ function moveEnt(ent,dx,dy,spd){
   ent.frame = ent.moving ? ent.frame+0.16 : 0;
 }
 function update(){
+  updateWeather();   // 富士見の天候（雨・雪・強風の舞い）
   // strawberry regrow
   const now=Date.now();
   for(let i=PICKED.length-1;i>=0;i--) if(now>=PICKED[i].at){ M[PICKED[i].r][PICKED[i].c]=PICKED[i].ripe; PICKED.splice(i,1); }
@@ -1729,6 +1785,7 @@ function render(){
   ctx.fillStyle=grd;ctx.fillRect(0,0,cv.width,cv.height);
   applyTint();   // time-of-day color
   drawFireflies(); // 川辺のホタル（6月限定）
+  drawWeather();   // 富士見のリアルタイム天候（晴・曇・雨・雪・強風）
   // fireworks on top
   for(const p of FW){ ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.col;
     ctx.fillRect(p.x|0,p.y|0,2,2); }
@@ -1808,6 +1865,7 @@ addEventListener('resize', setupViewport);
 addEventListener('orientationchange', setupViewport);
 setupViewport();
 updateTimeBtn(); updateSeasonBtn(); updateTreasHud(); update();render(); // draw a frame behind title
+fetchWeather(); setInterval(fetchWeather, 15*60*1000);   // 富士見の天候を取得し15分ごとに更新
 if(_autostart) startGame();
 </script>
 </body>
