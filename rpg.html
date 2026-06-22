@@ -323,8 +323,9 @@ for(let r=29;r<34;r++)for(let c=17;c<28;c++)set(c,r,(r-29)%2===0?12:5);
 for(let r=8;r<13;r++)for(let c=34;c<45;c++)set(c,r,(r-8)%2===0?14:5);
 // lettuce field (レタス畑) — central
 for(let r=20;r<24;r++)for(let c=34;c<45;c++)set(c,r,(r-20)%2===0?16:5);
-// small tomato field (小さなトマト畑) — レタスの左隣
-for(let r=20;r<24;r++)for(let c=28;c<32;c++)set(c,r,(r-20)%2===0?19:5);
+// small tomato field (小さなトマト畑) — レタスの左隣：成長6段階（枯れ21・苗22・花20・青い実23・完熟19・枯れ始め24）
+{const TS6=[21,22,20,23,19,24];let _si=0;
+ for(let r=20;r<24;r++)for(let c=28;c<32;c++)set(c,r,(r-20)%2===0?TS6[_si++%6]:5);}
 // hippie meadow (自由の広場) — top-left, east of the pond: grass + flowers
 for(let r=6;r<12;r++)for(let c=15;c<23;c++)set(c,r, rnd()>.62?4:0);
 // small rice paddy (ちいさな田んぼ) — south-central
@@ -798,7 +799,7 @@ const PHEASANT_TALK={
 /* ── player ── */
 const P={px:HUB[0]*TS, py:HUB[1]*TS+TS, dir:'down', speed:1.5, frame:0, moving:false,
          swim:false, berries:0, grapes:0, lettuce:0, tomato:0, lastCrop:'', boostUntil:0, slowUntil:0};
-const SOLID=new Set([2,3,6,8,9,10,11,12,13,14,15,16,17,19,20]);
+const SOLID=new Set([2,3,6,8,9,10,11,12,13,14,15,16,17,19,20,21,22,23,24]);
 const PICKED=[]; // {c,r,at,ripe} for crop regrow
 /* harvestable crops: ripe tile -> info */
 const CROP={
@@ -807,7 +808,7 @@ const CROP={
  16:{name:'レタス',icon:'🥬',picked:17,key:'lettuce'},
  19:{name:'トマト',icon:'🍅',picked:20,key:'tomato'},
 };
-const PICKEDTILE=new Set([13,15,17,20]);
+const PICKEDTILE=new Set([13,15,17,20,21,22,23,24]);
 const inB=(c,r)=>{for(const s of SPOTS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
   for(const s of DECO)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
   for(const s of BOULDERS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
@@ -908,7 +909,7 @@ function mapColor(t){ switch(t){
   case 12: case 13: return '#c64a52';  // いちご畑
   case 14: case 15: return '#6b4a8a';  // ぶどう畑
   case 16: case 17: return '#6cb05a';  // レタス畑
-  case 19: case 20: return '#d9533a';  // トマト畑
+  case 19: case 20: case 21: case 22: case 23: case 24: return '#d9533a';  // トマト畑
   default: return '#5a9356';           // 草地
 }}
 function openMapPanel(){
@@ -1391,7 +1392,7 @@ function update(){
     else if(here===12||here===13||around(12)||around(13)) label='🍓 <b>いちご畑</b> — 調べて収穫';
     else if(here===14||here===15||around(14)||around(15)) label='🍇 <b>ぶどう畑</b>（ワイン用）— 調べて収穫';
     else if(here===16||here===17||around(16)||around(17)) label='🥬 <b>レタス畑</b> — 調べて収穫';
-    else if(here===19||here===20||around(19)||around(20)) label='🍅 <b>トマト畑</b> — 観測機もある';
+    else if([19,20,21,22,23,24].includes(here)||[19,20,21,22,23,24].some(t=>around(t))) label='🍅 <b>トマト畑</b> — 成長6段階・観測機もある';
     else if(here===7||around(10)) label='🏜 <b>砂漠</b> を歩いている';
     else if(around(8))       label='🌋 <b>溶岩地帯</b> — 熱い！';
     else if(here===2||around(2)) label='💧 <b>池のほとり</b>';
@@ -1494,11 +1495,36 @@ function drawTile(c,r,sx,sy){
     px(sx+5,sy+9,3,3,'#e0402a'); px(sx+9,sy+8,3,3,'#e0402a');      // トマトの実
     px(sx+6,sy+9,1,1,'#ff7a5a'); px(sx+10,sy+8,1,1,'#ff7a5a');     // ハイライト
     px(sx+6,sy+8,1,1,'#3a7d45'); px(sx+10,sy+7,1,1,'#3a7d45'); }   // へた
-  else if(t===20){ // picked tomato (regrowing)
+  else if(t===20){ // 花 — 花期（picked tomato regrowing）
     grassBase();
     px(sx+7,sy+6,2,6,'#5a3d24');
     px(sx+3,sy+6,10,6,'#2f6b3a'); px(sx+4,sy+5,8,3,'#3a7d45');
     px(sx+7,sy+8,2,2,'#e8d24f'); }                                 // 黄色い花
+  else if(t===21){ // 枯れ — 枯死した株
+    grassBase();
+    px(sx+7,sy+5,2,10,'#6b4a2c');                                   // 細い枯れ茎
+    px(sx+4,sy+7,4,1,'#6b4a2c'); px(sx+8,sy+9,4,1,'#6b4a2c');      // 枯れ枝
+    px(sx+3,sy+8,2,1,'#7a6040'); px(sx+11,sy+10,2,1,'#7a6040');     // 枯れ葉の残骸
+    px(sx+5,sy+12,6,2,'#5a3d18'); }                                  // 根元の暗い土
+  else if(t===22){ // 苗 — 発芽直後の小さな苗
+    grassBase();
+    px(sx+7,sy+9,2,5,'#6b8c3a');                                     // 細い茎
+    px(sx+5,sy+9,2,2,'#5aa05a'); px(sx+9,sy+10,2,2,'#5aa05a');      // 双葉
+    px(sx+6,sy+7,4,2,'#7acc5a'); }                                   // 頂芽の若葉
+  else if(t===23){ // 青い実 — 未熟な緑のトマト
+    grassBase();
+    px(sx+7,sy+4,2,9,'#5a3d24');                                     // 支柱
+    px(sx+3,sy+5,10,7,'#2f6b3a'); px(sx+4,sy+4,8,3,'#3a7d45');      // 葉
+    px(sx+5,sy+9,3,3,'#3d8c2a'); px(sx+9,sy+8,3,3,'#3d8c2a');       // 青い実
+    px(sx+6,sy+9,1,1,'#6abf40'); px(sx+10,sy+8,1,1,'#6abf40');      // 実のハイライト
+    px(sx+6,sy+8,1,1,'#3a7d45'); px(sx+10,sy+7,1,1,'#3a7d45'); }    // へた
+  else if(t===24){ // 枯れ始め — 完熟後の萎れかけ
+    grassBase();
+    px(sx+7,sy+4,2,9,'#5a3d24');                                     // 支柱
+    px(sx+3,sy+6,10,6,'#7a6a30'); px(sx+4,sy+5,8,3,'#9a8040');      // 黄ばんだ葉
+    px(sx+5,sy+9,3,3,'#c03020'); px(sx+9,sy+8,3,3,'#c03020');       // しぼんだ実
+    px(sx+6,sy+9,1,1,'#e05040'); px(sx+10,sy+8,1,1,'#e05040');      // わずかなハイライト
+    px(sx+4,sy+10,2,1,'#7a6a30'); px(sx+10,sy+11,2,1,'#7a6a30'); }  // 垂れた葉
 }
 function drawBuilding(s){
   const x=s.x*TS-cam.x, y=s.y*TS-cam.y, w=s.w*TS, h=s.h*TS;
