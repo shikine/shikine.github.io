@@ -328,6 +328,12 @@ const TOMATO_CELLS=[];
 for(let r=20;r<24;r++)for(let c=28;c<32;c++){
   if((r-20)%2===0){ set(c,r,19); TOMATO_CELLS.push({c,r}); } else set(c,r,5);
 }
+// mushroom grove (きのこの森) — 池と川のあいだ、湿った木陰：梅雨〜秋にいろんなきのこが生える
+const MUSHROOM_CELLS=[];
+for(let r=15;r<19;r++)for(let c=9;c<14;c++){
+  if((r-15)%2===0){ set(c,r,25); MUSHROOM_CELLS.push({c,r}); } else set(c,r,5);
+}
+set(8,14,3); set(14,14,3); set(8,18,3); set(14,18,3);   // 木陰をつくる四隅の木
 // hippie meadow (自由の広場) — top-left, east of the pond: grass + flowers
 for(let r=6;r<12;r++)for(let c=15;c<23;c++)set(c,r, rnd()>.62?4:0);
 // small rice paddy (ちいさな田んぼ) — south-central
@@ -801,8 +807,8 @@ const PHEASANT_TALK={
 
 /* ── player ── */
 const P={px:HUB[0]*TS, py:HUB[1]*TS+TS, dir:'down', speed:1.5, frame:0, moving:false,
-         swim:false, berries:0, grapes:0, lettuce:0, tomato:0, lastCrop:'', boostUntil:0, slowUntil:0};
-const SOLID=new Set([2,3,6,8,9,10,11,12,13,14,15,16,17,19,20,21,22,23,24]);
+         swim:false, berries:0, grapes:0, lettuce:0, tomato:0, mushroom:0, lastCrop:'', boostUntil:0, slowUntil:0};
+const SOLID=new Set([2,3,6,8,9,10,11,12,13,14,15,16,17,19,20,21,22,23,24,25,26]);
 const PICKED=[]; // {c,r,at,ripe} for crop regrow
 /* harvestable crops: ripe tile -> info */
 const CROP={
@@ -810,8 +816,9 @@ const CROP={
  14:{name:'ぶどう',icon:'🍇',picked:15,key:'grapes'},
  16:{name:'レタス',icon:'🥬',picked:17,key:'lettuce'},
  19:{name:'トマト',icon:'🍅',picked:20,key:'tomato'},
+ 25:{name:'きのこ',icon:'🍄',picked:26,key:'mushroom'},
 };
-const PICKEDTILE=new Set([13,15,17,20,21,22,23,24]);
+const PICKEDTILE=new Set([13,15,17,20,21,22,23,24,26]);
 const inB=(c,r)=>{for(const s of SPOTS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
   for(const s of DECO)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
   for(const s of BOULDERS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
@@ -913,6 +920,7 @@ function mapColor(t){ switch(t){
   case 14: case 15: return '#6b4a8a';  // ぶどう畑
   case 16: case 17: return '#6cb05a';  // レタス畑
   case 19: case 20: case 21: case 22: case 23: case 24: return '#d9533a';  // トマト畑
+  case 25: case 26: return '#b5603f';  // きのこの森
   default: return '#5a9356';           // 草地
 }}
 function openMapPanel(){
@@ -948,7 +956,7 @@ let _toastT;
 function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg;
   t.classList.add('show'); clearTimeout(_toastT); _toastT=setTimeout(()=>t.classList.remove('show'),1700); }
 function updateCropHud(){ document.getElementById('crops').innerHTML=
-  '🍓 <b>×'+P.berries+'</b>&ensp;🍇 <b>×'+P.grapes+'</b>&ensp;🥬 <b>×'+P.lettuce+'</b>&ensp;🍅 <b>×'+P.tomato+'</b>'; }
+  '🍓 <b>×'+P.berries+'</b>&ensp;🍇 <b>×'+P.grapes+'</b>&ensp;🥬 <b>×'+P.lettuce+'</b>&ensp;🍅 <b>×'+P.tomato+'</b>&ensp;🍄 <b>×'+P.mushroom+'</b>'; }
 /* ── treasure hunt ── */
 function treasCount(){ return TREASURES.filter(t=>t.found).length; }
 function updateTreasHud(){ const e=document.getElementById('treas'); if(e)e.innerHTML='💎 <b>'+treasCount()+'/8</b>'; }
@@ -975,12 +983,13 @@ function renderTreasLog(){
 }
 function eatCrop(){
   let key=P.lastCrop;
-  if(!key||P[key]<=0) key=['berries','grapes','lettuce','tomato'].find(k=>P[k]>0);
+  if(!key||P[key]<=0) key=['berries','grapes','lettuce','tomato','mushroom'].find(k=>P[k]>0);
   if(!key){ showToast('🍴 食べるものを持っていない'); return; }
   P[key]--; updateCropHud();
   if(key==='berries'){ P.boostUntil=Date.now()+5000; P.slowUntil=0; showToast('🍓 もぐもぐ… あまい！ すこし速くなった！'); }
   else if(key==='grapes'){ P.slowUntil=Date.now()+6000; P.boostUntil=0; showToast('🍇 ほろ酔い… ふらふら〜（少し遅くなった）'); }
   else if(key==='tomato'){ showToast('🍅 完熟トマト！ 太陽の味がする。'); }
+  else if(key==='mushroom'){ showToast('🍄 きのこ！ 森の滋味…ほっと温まる。'); }
   else { showToast('🥬 みずみずしい！'); }
 }
 /* ── time-of-day tint + manual switch ── */
@@ -1044,17 +1053,24 @@ function applyTomatoSeason(se){ const seq=TOMATO_STAGE[se]||[19]; let i=0;
   for(const cell of TOMATO_CELLS){ const stage=seq[i++%seq.length];
     if(PICKED.some(p=>p.c===cell.c&&p.r===cell.r)) continue;   // 収穫直後で再生待ちのマスは上書きしない
     M[cell.r][cell.c]=stage; } }
+// きのこの森：梅雨〜秋（夏・秋）にいろんなきのこが生え、春はまばら、冬は出ない
+const MUSHROOM_STAGE={ spring:[25,5], summer:[25], autumn:[25], winter:[5] };
+function applyMushroomSeason(se){ const seq=MUSHROOM_STAGE[se]||[25]; let i=0;
+  for(const cell of MUSHROOM_CELLS){ const stage=seq[i++%seq.length];
+    if(PICKED.some(p=>p.c===cell.c&&p.r===cell.r)) continue;   // 収穫直後で再生待ちのマスは上書きしない
+    M[cell.r][cell.c]=stage; } }
 let _lastSeason=null;
 function refreshSeasonPal(){ const se=curSeason(); VEG=VEGPAL[se];
-  if(se!==_lastSeason){ _lastSeason=se; applyTomatoSeason(se); } }   // 季節が変わったら畑全体の成長段階を更新
+  if(se!==_lastSeason){ _lastSeason=se; applyTomatoSeason(se); applyMushroomSeason(se); } }   // 季節が変わったら畑・森を更新
 
-/* ── 富士見町のリアルタイム天候（Open-Meteo・APIキー不要／晴・曇・雨・雪・強風） ── */
+/* ── 富士見町のリアルタイム天候（Open-Meteo・APIキー不要／晴・曇・雨・雪・霧・強風） ── */
 const WEATHER={cond:'sunny', windy:false, wind:0, temp:null, icon:'🌤', label:'取得中…'};
 function classifyWeather(code, windMs){
   let cond='sunny', icon='☀️', label='晴れ';
   if((code>=71&&code<=77)||code===85||code===86){ cond='snow'; icon='❄️'; label='雪'; }
   else if((code>=51&&code<=67)||(code>=80&&code<=82)||code>=95){ cond='rain'; icon='🌧'; label='雨'; }
-  else if(code===45||code===48){ cond='cloudy'; icon='🌫'; label='霧'; }
+  else if(code===45){ cond='fog'; icon='🌫'; label='霧'; }
+  else if(code===48){ cond='fog'; icon='🌫'; label='濃い霧'; }
   else if(code===3){ cond='cloudy'; icon='☁️'; label='くもり'; }
   else if(code===1||code===2){ cond='sunny'; icon='⛅'; label='晴れ'; }
   const windy=windMs>=7;
@@ -1119,6 +1135,29 @@ function drawRainbow(){
     ctx.beginPath();
     ctx.arc(cx, cy, baseR-i*band, Math.PI, Math.PI*2);  // 空にかかる上半分のアーチ
     ctx.stroke();
+  }
+  ctx.restore(); ctx.globalAlpha=1;
+}
+// 濃い霧（霧・濃い霧）：白い靄がゆっくり流れ、視界がぼやける。出はじめ・晴れ間に淡くなる
+let fogA=0;
+function drawFog(){
+  const isFog=(WEATHER.cond==='fog');
+  const target=isFog?1:0;
+  fogA += (target-fogA)*0.02;                          // ゆっくり立ちこめ・晴れる
+  if(fogA<0.01) return;
+  const dense=(WEATHER.label==='濃い霧')?1.35:1;        // rime fog はより濃く
+  const t=Date.now();
+  ctx.save();
+  ctx.fillStyle='rgba(214,220,226,'+(0.22*dense*fogA)+')';  // 全面のうっすらした靄
+  ctx.fillRect(0,0,cv.width,cv.height);
+  for(let i=0;i<4;i++){                                 // 流れる靄のかたまり
+    const span=cv.width+220, y=cv.height*(0.15+i*0.24);
+    const sp=0.006+i*0.002, x=((t*sp + i*180) % span) - 110;
+    const r=70+i*16;
+    const g=ctx.createRadialGradient(x,y,0, x,y,r);
+    g.addColorStop(0,'rgba(232,236,240,'+(0.18*dense*fogA)+')');
+    g.addColorStop(1,'rgba(232,236,240,0)');
+    ctx.fillStyle=g; ctx.fillRect(x-r,y-r,r*2,r*2);
   }
   ctx.restore(); ctx.globalAlpha=1;
 }
@@ -1423,6 +1462,7 @@ function update(){
     else if(here===14||here===15||around(14)||around(15)) label='🍇 <b>ぶどう畑</b>（ワイン用）— 調べて収穫';
     else if(here===16||here===17||around(16)||around(17)) label='🥬 <b>レタス畑</b> — 調べて収穫';
     else if([19,20,21,22,23,24].includes(here)||[19,20,21,22,23,24].some(t=>around(t))) label='🍅 <b>トマト畑</b> — 成長6段階・観測機もある';
+    else if(here===25||here===26||around(25)||around(26)) label='🍄 <b>きのこの森</b> — いろんなきのこ（調べて収穫）';
     else if(here===7||around(10)) label='🏜 <b>砂漠</b> を歩いている';
     else if(around(8))       label='🌋 <b>溶岩地帯</b> — 熱い！';
     else if(here===2||around(2)) label='💧 <b>池のほとり</b>';
@@ -1555,6 +1595,20 @@ function drawTile(c,r,sx,sy){
     px(sx+5,sy+9,3,3,'#c03020'); px(sx+9,sy+8,3,3,'#c03020');       // しぼんだ実
     px(sx+6,sy+9,1,1,'#e05040'); px(sx+10,sy+8,1,1,'#e05040');      // わずかなハイライト
     px(sx+4,sy+10,2,1,'#7a6a30'); px(sx+10,sy+11,2,1,'#7a6a30'); }  // 垂れた葉
+  else if(t===25){ // いろんなきのこ（収穫できる）
+    grassBase();
+    px(sx,sy+12,TS,4,'#5a4a38'); px(sx,sy+12,TS,1,'#6b5a44');       // 湿った森の地面
+    px(sx+2,sy+8,5,3,'#d23b32'); px(sx+2,sy+7,5,1,'#e8584a');       // 赤いきのこの傘
+    px(sx+3,sy+8,1,1,'#fff'); px(sx+5,sy+9,1,1,'#fff');             // 白い斑点
+    px(sx+3,sy+11,3,3,'#f0e6d0');                                   // 軸
+    px(sx+9,sy+9,4,2,'#9a6a3a'); px(sx+9,sy+8,4,1,'#b5824a');       // 茶色いきのこの傘
+    px(sx+10,sy+11,2,3,'#e8dcc0');                                  // 軸
+    px(sx+7,sy+12,2,2,'#e8e2d0'); px(sx+7,sy+13,1,1,'#cfc6b0'); }   // 小さな白きのこ
+  else if(t===26){ // 収穫後（菌糸が育ちなおす）
+    grassBase();
+    px(sx,sy+12,TS,4,'#5a4a38'); px(sx,sy+12,TS,1,'#6b5a44');       // 湿った地面
+    px(sx+5,sy+12,1,1,'#cfc6b0'); px(sx+9,sy+13,1,1,'#cfc6b0');     // 残った軸
+    px(sx+7,sy+11,1,1,'#8a7a5a'); px(sx+3,sy+13,1,1,'#7a6a4a'); }   // 胞子のあと
 }
 function drawBuilding(s){
   const x=s.x*TS-cam.x, y=s.y*TS-cam.y, w=s.w*TS, h=s.h*TS;
@@ -1892,7 +1946,8 @@ function render(){
   applyTint();   // time-of-day color
   drawRainbow();   // 雨の日の虹（雨粒の奥にかかる）
   drawFireflies(); // 川辺のホタル（6月限定）
-  drawWeather();   // 富士見のリアルタイム天候（晴・曇・雨・雪・強風）
+  drawWeather();   // 富士見のリアルタイム天候（晴・曇・雨・雪・霧・強風）
+  drawFog();       // 濃い霧（白い靄が立ちこめる）
   // fireworks on top
   for(const p of FW){ ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.col;
     ctx.fillRect(p.x|0,p.y|0,2,2); }
