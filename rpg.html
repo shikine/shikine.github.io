@@ -323,6 +323,8 @@ for(let r=29;r<34;r++)for(let c=17;c<28;c++)set(c,r,(r-29)%2===0?12:5);
 for(let r=8;r<13;r++)for(let c=34;c<45;c++)set(c,r,(r-8)%2===0?14:5);
 // lettuce field (レタス畑) — central
 for(let r=20;r<24;r++)for(let c=34;c<45;c++)set(c,r,(r-20)%2===0?16:5);
+// small tomato field (小さなトマト畑) — レタスの左隣
+for(let r=20;r<24;r++)for(let c=28;c<32;c++)set(c,r,(r-20)%2===0?19:5);
 // hippie meadow (自由の広場) — top-left, east of the pond: grass + flowers
 for(let r=6;r<12;r++)for(let c=15;c<23;c++)set(c,r, rnd()>.62?4:0);
 // small rice paddy (ちいさな田んぼ) — south-central
@@ -368,6 +370,8 @@ const OBJS=[
  {x:15,y:10,w:2,h:2,type:'tent', c:'#5aa05a'},  // 緑テント
  // 川の上手・熊の上：竪穴式住居（縄文の名残）
  {x:3, y:11,w:2,h:2,type:'pit'},
+ // トマト畑のそばの観測機（将来 raspi の観測データを反映予定）
+ {x:27,y:21,w:1,h:1,type:'sensor'},
 ];
 /* ── 宝さがし：8つの宝（箱／隠し場所／村人がくれる） ── */
 const TREASURES=[
@@ -793,16 +797,17 @@ const PHEASANT_TALK={
 
 /* ── player ── */
 const P={px:HUB[0]*TS, py:HUB[1]*TS+TS, dir:'down', speed:1.5, frame:0, moving:false,
-         swim:false, berries:0, grapes:0, lettuce:0, lastCrop:'', boostUntil:0, slowUntil:0};
-const SOLID=new Set([2,3,6,8,9,10,11,12,13,14,15,16,17]);
+         swim:false, berries:0, grapes:0, lettuce:0, tomato:0, lastCrop:'', boostUntil:0, slowUntil:0};
+const SOLID=new Set([2,3,6,8,9,10,11,12,13,14,15,16,17,19,20]);
 const PICKED=[]; // {c,r,at,ripe} for crop regrow
 /* harvestable crops: ripe tile -> info */
 const CROP={
  12:{name:'いちご',icon:'🍓',picked:13,key:'berries'},
  14:{name:'ぶどう',icon:'🍇',picked:15,key:'grapes'},
  16:{name:'レタス',icon:'🥬',picked:17,key:'lettuce'},
+ 19:{name:'トマト',icon:'🍅',picked:20,key:'tomato'},
 };
-const PICKEDTILE=new Set([13,15,17]);
+const PICKEDTILE=new Set([13,15,17,20]);
 const inB=(c,r)=>{for(const s of SPOTS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
   for(const s of DECO)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
   for(const s of BOULDERS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
@@ -903,6 +908,7 @@ function mapColor(t){ switch(t){
   case 12: case 13: return '#c64a52';  // いちご畑
   case 14: case 15: return '#6b4a8a';  // ぶどう畑
   case 16: case 17: return '#6cb05a';  // レタス畑
+  case 19: case 20: return '#d9533a';  // トマト畑
   default: return '#5a9356';           // 草地
 }}
 function openMapPanel(){
@@ -938,7 +944,7 @@ let _toastT;
 function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg;
   t.classList.add('show'); clearTimeout(_toastT); _toastT=setTimeout(()=>t.classList.remove('show'),1700); }
 function updateCropHud(){ document.getElementById('crops').innerHTML=
-  '🍓 <b>×'+P.berries+'</b>&ensp;🍇 <b>×'+P.grapes+'</b>&ensp;🥬 <b>×'+P.lettuce+'</b>'; }
+  '🍓 <b>×'+P.berries+'</b>&ensp;🍇 <b>×'+P.grapes+'</b>&ensp;🥬 <b>×'+P.lettuce+'</b>&ensp;🍅 <b>×'+P.tomato+'</b>'; }
 /* ── treasure hunt ── */
 function treasCount(){ return TREASURES.filter(t=>t.found).length; }
 function updateTreasHud(){ const e=document.getElementById('treas'); if(e)e.innerHTML='💎 <b>'+treasCount()+'/8</b>'; }
@@ -965,11 +971,12 @@ function renderTreasLog(){
 }
 function eatCrop(){
   let key=P.lastCrop;
-  if(!key||P[key]<=0) key=['berries','grapes','lettuce'].find(k=>P[k]>0);
+  if(!key||P[key]<=0) key=['berries','grapes','lettuce','tomato'].find(k=>P[k]>0);
   if(!key){ showToast('🍴 食べるものを持っていない'); return; }
   P[key]--; updateCropHud();
   if(key==='berries'){ P.boostUntil=Date.now()+5000; P.slowUntil=0; showToast('🍓 もぐもぐ… あまい！ すこし速くなった！'); }
   else if(key==='grapes'){ P.slowUntil=Date.now()+6000; P.boostUntil=0; showToast('🍇 ほろ酔い… ふらふら〜（少し遅くなった）'); }
+  else if(key==='tomato'){ showToast('🍅 完熟トマト！ 太陽の味がする。'); }
   else { showToast('🥬 みずみずしい！'); }
 }
 /* ── time-of-day tint + manual switch ── */
@@ -1083,6 +1090,19 @@ function drawWeather(){
     else { ctx.strokeStyle='rgba(228,226,210,0.22)'; ctx.lineWidth=1;   // 強風の舞い（晴・曇でも）
       ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x-7,p.y-1); ctx.stroke(); }
   }
+}
+// 観測機の表示内容（いまは現在の気象値。将来は raspi のセンサー値を反映予定）
+function sensorPages(){
+  const w=WEATHER;
+  const temp=(w.temp!=null)?(Math.round(w.temp*10)/10+'℃'):'—';
+  const wind=(w.wind!=null)?(Math.round(w.wind*10)/10+' m/s'):'—';
+  return [
+    '（畑のかたわらで、小さな観測機がランプを点滅させている）',
+    '📡 <b>いまの観測値</b><br>・気温：'+temp+'<br>・風速：'+wind+'<br>・天候：'+w.label,
+    'この観測機は、やがて畑に置かれた<b>ラズベリーパイ</b>のセンサーとつながり、',
+    '土の湿りや気温・日射などの<b>リアルの観測データ</b>を、ここに映し出す予定だ。',
+    '（いまは準備中。データ連携をお楽しみに）'
+  ];
 }
 const SNAME={spring:'🌸 春',summer:'☀️ 夏',autumn:'🍁 秋',winter:'❄️ 冬'};
 function updateSeasonBtn(){ document.querySelectorAll('#seasonSeg button').forEach(b=>b.classList.toggle('on',b.dataset.s===seasonMode)); }
@@ -1235,6 +1255,9 @@ function interact(){
     dlgConfirm=()=>{ HERON.flying=true; HERON.flyT=0; }; return; }
   // boulder? (話しかけられる古き岩)
   const btc=(fx/TS)|0, btr=(fy/TS)|0;
+  // 観測機? (トマト畑のセンサー：将来 raspi の観測データを反映)
+  for(const o of OBJS){ if(o.type==='sensor' && btc>=o.x&&btc<o.x+o.w&&btr>=o.y&&btr<o.y+o.h){
+    openDialog('観測機','📡 畑の観測データ', sensorPages()); return; } }
   for(const b of BOULDERS){ if(btc>=b.x&&btc<b.x+b.w&&btr>=b.y&&btr<b.y+b.h){
     openDialog('古き岩','',
       ['……。',
@@ -1368,6 +1391,7 @@ function update(){
     else if(here===12||here===13||around(12)||around(13)) label='🍓 <b>いちご畑</b> — 調べて収穫';
     else if(here===14||here===15||around(14)||around(15)) label='🍇 <b>ぶどう畑</b>（ワイン用）— 調べて収穫';
     else if(here===16||here===17||around(16)||around(17)) label='🥬 <b>レタス畑</b> — 調べて収穫';
+    else if(here===19||here===20||around(19)||around(20)) label='🍅 <b>トマト畑</b> — 観測機もある';
     else if(here===7||around(10)) label='🏜 <b>砂漠</b> を歩いている';
     else if(around(8))       label='🌋 <b>溶岩地帯</b> — 熱い！';
     else if(here===2||around(2)) label='💧 <b>池のほとり</b>';
@@ -1463,6 +1487,18 @@ function drawTile(c,r,sx,sy){
     px(sx+3,sy+5,1,7,'#5a9a4c'); px(sx+7,sy+4,1,8,'#5a9a4c'); px(sx+11,sy+6,1,6,'#5a9a4c'); // rice rows
     px(sx+5,sy+9,1,4,'#6cb05a'); px(sx+9,sy+8,1,5,'#6cb05a');
     px(sx+2,sy+12,3,1,'#9cc2cc'); px(sx+10,sy+13,3,1,'#9cc2cc'); } // ripples
+  else if(t===19){ // ripe tomato plant
+    grassBase();
+    px(sx+7,sy+4,2,9,'#5a3d24');                                   // 支柱
+    px(sx+3,sy+5,10,7,'#2f6b3a'); px(sx+4,sy+4,8,3,'#3a7d45');     // 葉
+    px(sx+5,sy+9,3,3,'#e0402a'); px(sx+9,sy+8,3,3,'#e0402a');      // トマトの実
+    px(sx+6,sy+9,1,1,'#ff7a5a'); px(sx+10,sy+8,1,1,'#ff7a5a');     // ハイライト
+    px(sx+6,sy+8,1,1,'#3a7d45'); px(sx+10,sy+7,1,1,'#3a7d45'); }   // へた
+  else if(t===20){ // picked tomato (regrowing)
+    grassBase();
+    px(sx+7,sy+6,2,6,'#5a3d24');
+    px(sx+3,sy+6,10,6,'#2f6b3a'); px(sx+4,sy+5,8,3,'#3a7d45');
+    px(sx+7,sy+8,2,2,'#e8d24f'); }                                 // 黄色い花
 }
 function drawBuilding(s){
   const x=s.x*TS-cam.x, y=s.y*TS-cam.y, w=s.w*TS, h=s.h*TS;
@@ -1592,6 +1628,18 @@ function drawObj(o){
     px(sx+mid-3,sy+1,3,4,'#5a4028'); px(sx+mid,sy+1,3,4,'#5a4028');        // 棟木（交差）
     px(sx+mid-3,sy+H-12,6,9,'#241a12'); px(sx+mid-2,sy+H-11,4,8,'#15100a'); // 入口の暗がり
     px(sx+mid-4,sy+H-12,1,9,'#4a3422'); px(sx+mid+3,sy+H-12,1,9,'#4a3422'); } // 入口の柱
+  else if(o.type==='sensor'){    // 観測機（気象・土壌センサー／将来 raspi 連携）
+    const t=Date.now();
+    px(sx+7,sy+5,2,9,'#9aa0a6');                                   // 支柱
+    px(sx+4,sy+13,8,2,'#6e7278');                                  // 台座
+    px(sx+3,sy+5,5,4,'#2c2f36'); px(sx+3,sy+5,5,1,'#454a54');      // 計測ボックス
+    const blink=(Math.sin(t/400)>0)?'#5af0a0':'#1f5a3a';
+    px(sx+4,sy+6,1,1,blink);                                       // 動作ランプ（点滅）
+    px(sx+9,sy+4,4,3,'#2f5a8a'); px(sx+9,sy+4,4,1,'#4a7ab0');      // ソーラーパネル
+    px(sx+8,sy+1,1,4,'#9aa0a6'); px(sx+7,sy+1,3,1,'#cfd3d8');      // アンテナ
+    // 風杯（くるくる回る）
+    const a=t/240, dx=Math.round(Math.cos(a)*2), dy=Math.round(Math.sin(a)*2);
+    px(sx+8+dx,sy+1+dy,1,1,'#e8e8e8'); px(sx+8-dx,sy+1-dy,1,1,'#e8e8e8'); }
 }
 function drawBear(){
   const sx=Math.round(BEAR.px-cam.x), sy=Math.round(BEAR.py-cam.y), bob=BEAR.moving?(Math.floor(BEAR.frame)%2):0;
