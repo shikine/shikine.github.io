@@ -200,7 +200,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <div id="hud">
   <div class="tag" id="loc">📍 <b>あわい村</b></div>
-  <div class="tag" id="weather">🌤 <b>富士見の天気…</b></div>
+  <div class="tag" id="weather">🌤 <b>天気…</b></div>
   <div class="tag" id="crops">🍓 <b>×0</b>&ensp;🍇 <b>×0</b>&ensp;🥬 <b>×0</b></div>
   <div class="tag" id="treas">💎 <b>0/8</b></div>
 </div>
@@ -1043,7 +1043,7 @@ function classifyWeather(code, windMs){
   return {cond,windy,icon,label};
 }
 function updateWeatherHud(){ const e=document.getElementById('weather'); if(!e)return;
-  e.innerHTML=WEATHER.icon+' <b>富士見 '+WEATHER.label+(WEATHER.temp!=null?(' '+Math.round(WEATHER.temp)+'°C'):'')+'</b>'; }
+  e.innerHTML=WEATHER.icon+' <b>'+WEATHER.label+(WEATHER.temp!=null?(' '+Math.round(WEATHER.temp)+'°C'):'')+'</b>'; }
 async function fetchWeather(){
   try{
     const url='https://api.open-meteo.com/v1/forecast?latitude=35.9146&longitude=138.2306'
