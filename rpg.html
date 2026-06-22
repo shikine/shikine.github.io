@@ -402,6 +402,7 @@ const SIGN={x:6,y:41,lines:[
   '【 ワープサークル 】',
   'この先の光の輪に乗ると、',
   'サービスサイト（渡邊織音の本サイト）へ飛べる。']};
+const SHRINE={x:59,y:21,w:2,h:2};  // 水神の祠（東の池のほとり）
 // carve path tiles & clear footprints
 function clear(c,r){if(r>=0&&r<MH&&c>=0&&c<MW)M[r][c]=0;}
 [...SPOTS,...DECO,...BOULDERS].forEach(s=>{
@@ -423,6 +424,9 @@ set(4,18,0);
 // clear ground under the warp circle (walkable sand) and the signpost tile
 for(let r=WARP.y;r<WARP.y+WARP.h;r++)for(let c=WARP.x;c<WARP.x+WARP.w;c++)set(c,r,7);
 set(SIGN.x,SIGN.y,7);
+// clear ground under the shrine and its approach (avoid overwriting water)
+for(let r=SHRINE.y-1;r<=SHRINE.y+SHRINE.h;r++) for(let c=SHRINE.x-1;c<=SHRINE.x+SHRINE.w;c++)
+  { if(r<0||r>=MH||c<0||c>=MW)continue; if(M[r][c]!==2) M[r][c]=0; }
 // simple paths: a horizontal main road + spurs to each door
 function road(c1,r1,c2,r2){ // L-shaped
   for(let c=Math.min(c1,c2);c<=Math.max(c1,c2);c++)if(M[r1][c]!==2)M[r1][c]=1;
@@ -870,7 +874,9 @@ const inB=(c,r)=>{for(const s of SPOTS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)r
   for(const s of BOULDERS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
   for(const s of OBJS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
   for(const t of TREASURES)if(t.type==='chest'&&c===t.x&&r===t.y)return true;
-  if(c===SIGN.x&&r===SIGN.y)return true;return false;};
+  if(c===SIGN.x&&r===SIGN.y)return true;
+  if(c>=SHRINE.x&&c<SHRINE.x+SHRINE.w&&r>=SHRINE.y&&r<SHRINE.y+SHRINE.h)return true;
+  return false;};
 function solidAt(px,py,self){
   const c=(px/TS)|0,r=(py/TS)|0;
   if(r<0||r>=MH||c<0||c>=MW)return true;
@@ -1010,7 +1016,7 @@ function openMapPanel(){
   const areas=[
     {t:'⛰ 八ヶ岳',x:32,y:2},{t:'💧 西の池',x:9,y:9},{t:'💧 東の池',x:55,y:23},
     {t:'🎶 自由の広場',x:19,y:8},{t:'🍄 きのこの森',x:11,y:16.5},{t:'🌊 川',x:6,y:27},
-    {t:'🗿 縄文の遺跡',x:6,y:9.5},
+    {t:'🗿 縄文の遺跡',x:6,y:9.5},{t:'⛩ 水神の祠',x:60,y:21.5},
     {t:'🍓 いちご畑',x:22,y:31},{t:'🍇 ぶどう畑',x:39,y:10},{t:'🥬 レタス畑',x:39,y:22},
     {t:'🍅 トマト畑',x:30,y:22},{t:'🌾 田んぼ',x:24,y:21.5},{t:'🏜 砂漠',x:10,y:38},
     {t:'🌋 溶岩地帯',x:52,y:39},
@@ -1384,6 +1390,15 @@ function sensorPages(){
     '（いまは準備中。データ連携をお楽しみに）'
   ];
 }
+// 水神の祠（東の池のほとり）
+function shrinePages(){ return [
+  '（東の池のほとりに、小さな石の祠がある。水引のように注がれた清水が、苔むした石をそっと濡らしている）',
+  'この八ヶ岳山麓には、古くから水を司る神への信仰が根づいている。',
+  '諏訪湖のほとりの大社では、湖面を渡って来る神を年に一度、迎えるという。',
+  '水は高いところから低いところへ——岩を削り、土を潤し、命をつないできた。',
+  '「構造とは、水の流れるべき道を、かたちにすることかもしれない。」',
+  '（祠の前でしばらく佇んでいると、池の底でかすかに何かが光った気がした……）',
+]; }
 // 縄文の環状列石（富士見の井戸尻遺跡にちなむ）
 function jomonPages(){ return [
   '（草に埋もれて、環状にならぶ石。だれかが、はるか昔に立てたものだ）',
@@ -1550,6 +1565,9 @@ function interact(){
   // 縄文の環状列石（井戸尻遺跡の名残）
   for(const o of OBJS){ if(o.type==='jomon' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
     openDialog('縄文の遺跡','🗿 環状列石', jomonPages()); return; } }
+  // 水神の祠（東の池のほとり）
+  if(btc>=SHRINE.x-1&&btc<=SHRINE.x+SHRINE.w&&btr>=SHRINE.y-1&&btr<=SHRINE.y+SHRINE.h){
+    openDialog('水神の祠','⛩ 水神の祠', shrinePages()); return; }
   for(const b of BOULDERS){ if(btc>=b.x&&btc<b.x+b.w&&btr>=b.y&&btr<b.y+b.h){
     openDialog('古き岩','',
       ['……。',
@@ -1689,6 +1707,7 @@ function update(){
     else if(here===25||here===26||around(25)||around(26)) label='🍄 <b>きのこの森</b> — いろんなきのこ（調べて収穫）';
     else if(here===7||around(10)) label='🏜 <b>砂漠</b> を歩いている';
     else if(around(8))       label='🌋 <b>溶岩地帯</b> — 熱い！';
+    else if(Math.hypot((SHRINE.x+1)*TS-P.px,(SHRINE.y+1)*TS-P.py)<TS*2.5) label='⛩ <b>水神の祠</b> のほとり — 調べてみよう';
     else if(here===2||around(2)) label='💧 <b>池のほとり</b>';
     else if(pr<7||around(11)) label='⛰ <b>八ヶ岳</b> のふもと';
     else label='📍 <b>あわい村</b> を探索中';
@@ -2034,6 +2053,34 @@ function drawWarp(){
     px(Math.round(cx+Math.cos(a)*13)-1, Math.round(cy+Math.sin(a)*7)-1, 2,2,'#cde6ff'); }
   px(Math.round(cx)-1,Math.round(cy)-1,2,2,'#eaf6ff');
 }
+function drawShrine(){
+  const sx=Math.round(SHRINE.x*TS-cam.x), sy=Math.round(SHRINE.y*TS-cam.y);
+  const W=SHRINE.w*TS, H=SHRINE.h*TS, cx=(sx+W/2)|0;
+  px(sx+3,sy+H-4,W-6,5,'rgba(0,0,0,.28)');   // 影
+  // 本殿（北側・奥）
+  px(cx-7,sy+2,14,2,'#686058');               // 棟（屋根の峰）
+  px(cx-9,sy+4,18,2,'#7a7268');              // 屋根の傾斜
+  px(cx-10,sy+6,20,1,'#807870');             // 軒先
+  px(cx-7,sy+7,14,8,'#8a8278');             // 壁
+  px(cx-7,sy+7,14,1,'#a49e92');             // 壁の上縁
+  px(cx-3,sy+9,7,5,'#1e1a18');             // 扉（内部の暗がり）
+  px(cx-1,sy+6,3,2,'#d4a820');            // 金の鈴
+  px(cx,sy+5,1,1,'#f0c840');             // 鈴のハイライト
+  // 手水鉢（左手前・手を清める水鉢）
+  px(cx-14,sy+14,5,4,'#6a8490');         // 石の鉢
+  px(cx-14,sy+15,5,1,'#8ab4b8');        // 水面の反射
+  // 鳥居（南側・手前）
+  px(cx-12,sy+14,24,2,'#c0b4a2');       // 笠木（上の横木）
+  px(cx-11,sy+16,22,1,'#b4a898');       // 島木（下の横木）
+  px(cx-11,sy+16,2,12,'#b4a898');       // 左柱
+  px(cx+9,sy+16,2,12,'#b4a898');        // 右柱
+  px(cx-10,sy+20,20,1,'#c0b8a8');       // 貫（柱の中間の横木）
+  // 石段
+  px(cx-8,sy+H-8,16,3,'#c0b8ac');       // 上の段
+  px(cx-10,sy+H-5,20,4,'#b8b0a4');      // 下の段（手前）
+  // 足元の苔・湿気
+  px(sx,sy+H-3,4,2,'#5a8a44'); px(sx+W-4,sy+H-4,4,2,'#4a7236');
+}
 function drawSign(){
   const x=SIGN.x*TS-cam.x, y=SIGN.y*TS-cam.y;
   px(x+5,y+13,6,3,'rgba(0,0,0,.28)');
@@ -2148,6 +2195,7 @@ function render(){
   // depth-sorted entities
   const ents=[];
   ents.push({y:(SIGN.y+1)*TS,fn:drawSign});
+  ents.push({y:(SHRINE.y+SHRINE.h)*TS,fn:drawShrine});
   DECO.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
   BOULDERS.forEach(b=>ents.push({y:(b.y+b.h)*TS,fn:()=>drawBoulder(b)}));
   OBJS.forEach(o=>ents.push({y:(o.y+o.h)*TS,fn:()=>drawObj(o)}));
