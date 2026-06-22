@@ -536,7 +536,7 @@ const NPCS=[
          '「詩とは、答えではなく、応えること。構造と物語のあいだに、息づくものさ。」',
          '「きみも、立ちどまって耳をすませてごらん。野が、なにか言っている。」']},
  // ── 村を歩く：「NO WAR」のプラカードを掲げる平和の行進者（移動する） ──
- {x:25,y:18, placard:true, dir:'left', c1:'#3a7a5c',c2:'#e8c39a',hair:'#2a2a2a',name:'平和の行進者',
+ {x:25,y:18, placard:true, dir:'left', until:new Date('2026-06-23T12:00:00+09:00').getTime(), c1:'#3a7a5c',c2:'#e8c39a',hair:'#2a2a2a',name:'平和の行進者',
   pages:['（手書きの「NO WAR」のプラカードを掲げ、ゆっくりと歩いている）',
          '平和の行進者「やあ。わたしは、ただ歩いているだけ。」',
          '「遠い国では、いまも誰かの畑が焼かれ、子が泣いている。」',
@@ -1092,7 +1092,9 @@ function curMode(){ if(timeMode!=='auto')return timeMode; const h=new Date().get
   if(h>=5&&h<10)return 'morning'; if(h>=10&&h<16)return 'day'; if(h>=16&&h<19)return 'evening'; return 'night'; }
 function isNight(){ return curMode()==='night'; }
 // 夜は里の人が寝静まる：keepNight 指定・ねこ・宝を授ける者だけ残し、ほかの村人は隠す
-function npcHidden(n){ return isNight() && !n.keepNight && !n.cat && n.gives==null; }
+// until 指定の者（例：平和の行進者）はその時刻まで昼夜とも常駐し、過ぎたら去る
+function npcHidden(n){ if(n.until!=null) return Date.now()>=n.until;
+  return isNight() && !n.keepNight && !n.cat && n.gives==null; }
 // night:true の獣は夜だけ里へ下りてくる（昼は不在）
 function animalHidden(a){ return a.night && !isNight(); }
 function applyTint(){ const m=curMode(),c=TINT[m];
