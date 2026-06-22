@@ -1103,6 +1103,25 @@ function drawWeather(){
       ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x-7,p.y-1); ctx.stroke(); }
   }
 }
+// 雨の日の虹（光が要るので夜は出さない。降り出すと淡く現れ、止むと消える）
+let rainbowA=0;
+const RBCOL=['#ff7a7a','#ffb24d','#ffe866','#8ce99a','#74c0fc','#7c8cff','#b78cff'];
+function drawRainbow(){
+  const target=(WEATHER.cond==='rain' && curMode()!=='night') ? 1 : 0;
+  rainbowA += (target-rainbowA)*0.03;                 // ゆっくり淡く現れ・消える
+  if(rainbowA<0.012) return;
+  const cx=cv.width*0.6, cy=cv.height*1.18, baseR=cv.height*0.92;
+  const band=Math.max(2, Math.round(cv.height*0.013));
+  ctx.save(); ctx.lineWidth=band+0.5;
+  for(let i=0;i<RBCOL.length;i++){
+    ctx.globalAlpha=0.16*rainbowA;
+    ctx.strokeStyle=RBCOL[i];
+    ctx.beginPath();
+    ctx.arc(cx, cy, baseR-i*band, Math.PI, Math.PI*2);  // 空にかかる上半分のアーチ
+    ctx.stroke();
+  }
+  ctx.restore(); ctx.globalAlpha=1;
+}
 // 観測機の表示内容（いまは現在の気象値。将来は raspi のセンサー値を反映予定）
 function sensorPages(){
   const w=WEATHER;
@@ -1871,6 +1890,7 @@ function render(){
   grd.addColorStop(0,'rgba(0,0,0,0)');grd.addColorStop(1,'rgba(0,0,0,0.28)');
   ctx.fillStyle=grd;ctx.fillRect(0,0,cv.width,cv.height);
   applyTint();   // time-of-day color
+  drawRainbow();   // 雨の日の虹（雨粒の奥にかかる）
   drawFireflies(); // 川辺のホタル（6月限定）
   drawWeather();   // 富士見のリアルタイム天候（晴・曇・雨・雪・強風）
   // fireworks on top
