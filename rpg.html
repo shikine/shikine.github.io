@@ -336,6 +336,8 @@ set(12,16,3); set(16,17,3); set(11,19,3);   // 木陰をつくる木（各きの
 for(let r=6;r<12;r++)for(let c=15;c<23;c++)set(c,r, rnd()>.62?4:0);
 // small rice paddy (ちいさな田んぼ) — south-central
 for(let r=21;r<23;r++)for(let c=22;c<26;c++)set(c,r,18);
+// 詩人の野原（花の咲く開けた草地）— 郵便屋とメルマガのあいだ
+for(let r=26;r<31;r++)for(let c=35;c<43;c++) if(M[r][c]===0 && rnd()>.62) set(c,r,4);
 // river (川) — meanders south out of the west pond; the bear lingers near it
 for(let r=13;r<34;r++){ const cc=6+Math.round(Math.sin((r-13)*0.55)); for(let c=cc-1;c<=cc+1;c++) if(c>=3&&c<=7) set(c,r,2); }
 
@@ -525,6 +527,22 @@ const NPCS=[
          '電気柵は壁じゃない。「ここから先は、おたがいのためにやめておこう」という約束。',
          '森に木を返すこと——それは熊のためだけじゃない。めぐりめぐって、人の水と土を守ること。',
          'やさしさは、感傷じゃない。設計なの。熊にも人にも生きられる構造を、ここでつくっている。']},
+ // ── 野原：詩人（風と草のあいだに言葉をひろう） ──
+ {x:38,y:28, still:true, dir:'up', c1:'#7a6ab0',c2:'#e8c39a',hair:'#3a2a2a',name:'詩人',
+  pages:['（野原のただなかに腰をおろし、詩人が八ヶ岳の空をながめている）',
+         '詩人「やあ。風の音を、書きとめていたところさ。」',
+         '「野原はいい。なにも主張せず、ただ在る。だから、言葉がよく降りてくる。」',
+         '——草は風に問わない。／風もまた、草に答えない。／ただ、揺れることで応えている。',
+         '「詩とは、答えではなく、応えること。構造と物語のあいだに、息づくものさ。」',
+         '「きみも、立ちどまって耳をすませてごらん。野が、なにか言っている。」']},
+ // ── 村を歩く：「NO WAR」のプラカードを掲げる平和の行進者（移動する） ──
+ {x:25,y:18, placard:true, dir:'left', c1:'#3a7a5c',c2:'#e8c39a',hair:'#2a2a2a',name:'平和の行進者',
+  pages:['（手書きの「NO WAR」のプラカードを掲げ、ゆっくりと歩いている）',
+         '平和の行進者「やあ。わたしは、ただ歩いているだけ。」',
+         '「遠い国では、いまも誰かの畑が焼かれ、子が泣いている。」',
+         'この村の、いちごやトマトが実る景色——それは、平和の別名だ。',
+         '「武器ではなく、種を。境界ではなく、畑を。」',
+         '「歩くことしかできない。でも、歩くのを、やめない。」']},
  // ── 自由の広場：テントを張り、焚き火を囲んで深く語り合うヒッピーたち ──
  {x:16,y:9, still:true, keepNight:true, dir:'right', c1:'#d4624a',c2:'#e8c39a',hair:'#7a3a1a',name:'ギター弾き',
   pages:['（ギターをそっと爪弾きながら、火を見つめている）',
@@ -2022,6 +2040,12 @@ function render(){
     if(n.mouse){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y); // ネズミの被り物（丸い耳）
       px(sx+2,sy-2,4,4,'#9a9a9a'); px(sx+10,sy-2,4,4,'#9a9a9a');
       px(sx+3,sy-1,2,2,'#c8a0a8'); px(sx+11,sy-1,2,2,'#c8a0a8'); }
+    if(n.placard){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y); // 「NO WAR」のプラカード
+      px(sx+11,sy-7,2,13,'#8a6a3a');                                          // 棒（持ち手）
+      px(sx+1,sy-17,21,10,'#f4f1e8'); px(sx+1,sy-17,21,1,'#d8d2c4'); px(sx+1,sy-8,21,1,'#bcb4a4'); // 板
+      px(sx+1,sy-17,1,10,'#d8d2c4'); px(sx+21,sy-17,1,10,'#bcb4a4');          // 板の枠
+      ctx.save(); ctx.font='bold 7px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle='#c0341f'; ctx.fillText('NO WAR', sx+11, sy-12); ctx.restore(); }
   }}); });
   ANIMALS.forEach(a=>{ if(a.gone||animalHidden(a))return; ents.push({y:a.py+TS,fn:()=>{
     const al=a.fleeing?Math.max(0,1-a.fleeT/90):1; if(al<1)ctx.globalAlpha=al;
