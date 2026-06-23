@@ -567,9 +567,9 @@ const NPCS=[
   pages:['近ごろ、この町へ移り住む人が増えてきた。',
          '織音さんも、2023年に東京からこの富士見町へ移ってきた一人だよ。',
          '〈構造と物語のあいだ〉に、ここで新しい空間が生まれている。']},
- // ── 水神の祠のほとり：愛媛から移ったコーチングの女性 mizu（黒髪ショート・芯がある） ──
- {x:58,y:20, still:true, keepNight:true, bob:true, cheeks:true, dir:'down',
-  c1:'#7bb8c4', c2:'#e8c39a', hair:'#1f1a16', name:'mizu', pages:COACH_PAGES},
+ // ── 水神の祠のほとり：愛媛から移ったコーチングの女性 mizu（黒髪ショート・無印風ミニマル・細身） ──
+ {x:58,y:20, still:true, keepNight:true, bob:true, cheeks:true, slim:true, dir:'down',
+  c1:'#cdc3ad', c2:'#e8c39a', hair:'#1f1a16', name:'mizu', pages:COACH_PAGES},
  // ── 川辺：熊を見守るワイルドライフの専門家（人と熊の共生をデザインする） ──
  {x:9, y:16, still:true, keepNight:true, dir:'left', c1:'#5a7a3a',c2:'#e8c39a',hair:'#4a3a28',name:'ワイルドライフの専門家',
   pages:['（双眼鏡を首にかけた人が、川の向こうの熊を、おだやかに見守っている）',
@@ -2298,8 +2298,9 @@ function render(){
   TREASURES.forEach(t=>{ if(t.type==='chest') ents.push({y:(t.y+1)*TS,fn:()=>drawChest(t)}); });
   SPOTS.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
   NPCS.forEach(n=>{ if(npcHidden(n))return; ents.push({y:n.py+TS,fn:()=>{
-    if(n.small){ const ax=n.px-cam.x+TS/2, ay=n.py-cam.y+TS;   // 小柄：足もとを軸に少し縮めて描く
-      ctx.save(); ctx.translate(ax,ay); ctx.scale(0.82,0.82); ctx.translate(-ax,-ay); }
+    const _sy=n.small?0.82:1, _sx=(n.slim?0.86:1)*_sy;        // small=縦横を縮小 / slim=横だけ細く
+    if(_sx!==1||_sy!==1){ const ax=n.px-cam.x+TS/2, ay=n.py-cam.y+TS;  // 足もと中心を軸に拡縮
+      ctx.save(); ctx.translate(ax,ay); ctx.scale(_sx,_sy); ctx.translate(-ax,-ay); }
     drawChar(n.px-cam.x,n.py-cam.y,n.dir,n.frame,n.moving,n.c1,n.c2,n.hair,n.cat);
     if(n.female){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y); // 長めの髪
       px(sx+3,sy+2,2,7,n.hair); px(sx+11,sy+2,2,7,n.hair); }
@@ -2307,8 +2308,8 @@ function render(){
       px(sx+4,sy+1,2,4,n.hair); px(sx+10,sy+1,2,4,n.hair);  // 両サイド（短め）
       px(sx+4,sy,8,1,n.hair);                                // 前髪のふち
       px(sx+4,sy+4,1,1,n.hair); px(sx+11,sy+4,1,1,n.hair); } // 毛先がちょこんと外ハネ
-    if(n.cheeks && n.dir!=='up'){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y); // ほんのりほっぺ
-      px(sx+5,sy+5,1,1,'#f2a8ac'); px(sx+10,sy+5,1,1,'#f2a8ac'); }
+    if(n.cheeks && n.dir!=='up'){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y); // ほんのり自然なほっぺ
+      px(sx+5,sy+5,1,1,'#e7b5ad'); px(sx+10,sy+5,1,1,'#e7b5ad'); }
     if(n.mouse){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y); // ネズミの被り物（丸い耳）
       px(sx+2,sy-2,4,4,'#9a9a9a'); px(sx+10,sy-2,4,4,'#9a9a9a');
       px(sx+3,sy-1,2,2,'#c8a0a8'); px(sx+11,sy-1,2,2,'#c8a0a8'); }
@@ -2318,7 +2319,7 @@ function render(){
       px(sx+1,sy-17,1,10,'#d8d2c4'); px(sx+21,sy-17,1,10,'#bcb4a4');          // 板の枠
       ctx.save(); ctx.font='bold 7px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillStyle='#c0341f'; ctx.fillText('NO WAR', sx+11, sy-12); ctx.restore(); }
-    if(n.small) ctx.restore();
+    if(_sx!==1||_sy!==1) ctx.restore();
   }}); });
   ANIMALS.forEach(a=>{ if(a.gone||animalHidden(a))return; ents.push({y:a.py+TS,fn:()=>{
     const al=a.fleeing?Math.max(0,1-a.fleeT/90):1; if(al<1)ctx.globalAlpha=al;
