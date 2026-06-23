@@ -2099,23 +2099,6 @@ function drawShrine(){
   // 足元の苔・湿気
   px(sx,sy+H-3,4,2,'#5a8a44'); px(sx+W-4,sy+H-4,4,2,'#4a7236');
 }
-// 放牧地の木柵（通り抜け可・装飾）。北と側面は後ろに、南の横木は手前に描く
-function fencePost(c,r){ const x=Math.round(c*TS-cam.x), y=Math.round(r*TS-cam.y);
-  px(x-1,y+1,3,10,'#6b4a2c'); px(x-1,y+1,3,1,'#7d5836'); px(x-1,y+10,3,1,'#4a3018'); }
-function fenceRailH(c1,c2,r){ const x=Math.round(c1*TS-cam.x), y=Math.round(r*TS-cam.y), w=(c2-c1)*TS;
-  px(x,y+3,w,2,'#9c7a4a'); px(x,y+6,w,2,'#866238'); }
-function fenceRailV(c,r1,r2){ const x=Math.round(c*TS-cam.x), y=Math.round(r1*TS-cam.y), h=(r2-r1)*TS;
-  px(x-1,y+3,2,h,'#9c7a4a'); px(x+1,y+6,2,h,'#866238'); }
-function drawPaddockBack(){ const X=PASTURE.x, Y=PASTURE.y, W=PASTURE.w, H=PASTURE.h;
-  fenceRailV(X,Y,Y+H); fenceRailV(X+W,Y,Y+H);            // 東西の縦木
-  fenceRailH(X,X+W,Y);                                   // 北の横木
-  for(let r=Y;r<=Y+H;r++){ fencePost(X,r); fencePost(X+W,r); }   // 側面の柱
-  for(let c=X;c<X+W;c++) fencePost(c,Y);                 // 北の柱
-}
-function drawPaddockFront(){ const X=PASTURE.x, Y=PASTURE.y, W=PASTURE.w, H=PASTURE.h;
-  fenceRailH(X,X+W,Y+H);                                 // 南の横木（手前）
-  for(let c=X+1;c<X+W;c++) fencePost(c,Y+H);             // 南の柱
-}
 function drawSign(){
   const x=SIGN.x*TS-cam.x, y=SIGN.y*TS-cam.y;
   px(x+5,y+13,6,3,'rgba(0,0,0,.28)');
@@ -2255,8 +2238,6 @@ function render(){
   const ents=[];
   ents.push({y:(SIGN.y+1)*TS,fn:drawSign});
   ents.push({y:(SHRINE.y+SHRINE.h)*TS,fn:drawShrine});
-  ents.push({y:PASTURE.y*TS,fn:drawPaddockBack});                  // 柵（奥）
-  ents.push({y:(PASTURE.y+PASTURE.h)*TS+TS,fn:drawPaddockFront});  // 柵（手前）
   DECO.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
   BOULDERS.forEach(b=>ents.push({y:(b.y+b.h)*TS,fn:()=>drawBoulder(b)}));
   OBJS.forEach(o=>ents.push({y:(o.y+o.h)*TS,fn:()=>drawObj(o)}));
