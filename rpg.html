@@ -403,6 +403,7 @@ const SIGN={x:6,y:41,lines:[
   'この先の光の輪に乗ると、',
   'サービスサイト（渡邊織音の本サイト）へ飛べる。']};
 const SHRINE={x:59,y:21,w:2,h:2};  // 水神の祠（東の池のほとり）
+const PASTURE={x:32,y:33,w:7,h:5}; // 南の放牧地（柵で囲った牧場・装飾／通り抜け可）
 // carve path tiles & clear footprints
 function clear(c,r){if(r>=0&&r<MH&&c>=0&&c<MW)M[r][c]=0;}
 [...SPOTS,...DECO,...BOULDERS].forEach(s=>{
@@ -421,8 +422,9 @@ set(48,33,0); set(48,34,0);
 set(11,34,7);
 // keep the bear-side spawn tile walkable (land, just below the bear)
 set(4,18,0);
-// open south pasture for the grazing horse (clear trees/bushes to grass)
-for(let r=34;r<=38;r++)for(let c=31;c<=36;c++) if(M[r][c]!==2) set(c,r,0);
+// open south paddock for the grazing horse (clear trees/bushes to grass)
+for(let r=PASTURE.y;r<=PASTURE.y+PASTURE.h;r++)for(let c=PASTURE.x;c<=PASTURE.x+PASTURE.w;c++)
+  if(r>=0&&r<MH&&c>=0&&c<MW&&M[r][c]!==2) set(c,r,0);
 // clear ground under the warp circle (walkable sand) and the signpost tile
 for(let r=WARP.y;r<WARP.y+WARP.h;r++)for(let c=WARP.x;c<WARP.x+WARP.w;c++)set(c,r,7);
 set(SIGN.x,SIGN.y,7);
@@ -694,8 +696,8 @@ const ANIMALS=[
         '「温もりは分けても減らない。むしろ、増える。」',
         '「ひとりで賢くなるより、みなで暖かいほうがいい。」',
         '「君には——背を預けられる、だれかがいるか？」']},
- // ── 南の草地に放牧された一頭のウマ ──
- {x:33,y:36,type:'horse', say:'（ブルルッ……と鼻を鳴らした）',
+ // ── 南の放牧地（柵の中）でくつろぐ一頭のウマ ──
+ {x:35,y:35,type:'horse', say:'（ブルルッ……と鼻を鳴らした）',
   talk:['（一頭の馬が、南の草地でゆったりと草を食んでいる）',
         'ウマ「私は、走るために生まれた。けれど、いまは留まることを知った。」',
         '「軛（くびき）を負うことは、縛られることではない。だれかと、同じ道をゆくこと。」',
@@ -1025,7 +1027,7 @@ function openMapPanel(){
   const areas=[
     {t:'⛰ 八ヶ岳',x:32,y:2},{t:'💧 西の池',x:9,y:9},{t:'💧 東の池',x:55,y:23},
     {t:'🎶 自由の広場',x:19,y:8},{t:'🍄 きのこの森',x:11,y:16.5},{t:'🌊 川',x:6,y:27},
-    {t:'🗿 縄文の遺跡',x:6,y:9.5},{t:'⛩ 水神の祠',x:60,y:21.5},
+    {t:'🗿 縄文の遺跡',x:6,y:9.5},{t:'⛩ 水神の祠',x:60,y:21.5},{t:'🐴 南の牧場',x:35.5,y:35.5},
     {t:'🍓 いちご畑',x:22,y:31},{t:'🍇 ぶどう畑',x:39,y:10},{t:'🥬 レタス畑',x:39,y:22},
     {t:'🍅 トマト畑',x:30,y:22},{t:'🌾 田んぼ',x:24,y:21.5},{t:'🏜 砂漠',x:10,y:38},
     {t:'🌋 溶岩地帯',x:52,y:39},
@@ -1716,6 +1718,7 @@ function update(){
     else if(here===25||here===26||around(25)||around(26)) label='🍄 <b>きのこの森</b> — いろんなきのこ（調べて収穫）';
     else if(here===7||around(10)) label='🏜 <b>砂漠</b> を歩いている';
     else if(around(8))       label='🌋 <b>溶岩地帯</b> — 熱い！';
+    else if(pc>=PASTURE.x&&pc<=PASTURE.x+PASTURE.w&&pr>=PASTURE.y&&pr<=PASTURE.y+PASTURE.h) label='🐴 <b>南の牧場</b> — ウマが放牧されている';
     else if(Math.hypot((SHRINE.x+1)*TS-P.px,(SHRINE.y+1)*TS-P.py)<TS*2.5) label='⛩ <b>水神の祠</b> のほとり — 調べてみよう';
     else if(here===2||around(2)) label='💧 <b>池のほとり</b>';
     else if(pr<7||around(11)) label='⛰ <b>八ヶ岳</b> のふもと';
@@ -2090,6 +2093,23 @@ function drawShrine(){
   // 足元の苔・湿気
   px(sx,sy+H-3,4,2,'#5a8a44'); px(sx+W-4,sy+H-4,4,2,'#4a7236');
 }
+// 放牧地の木柵（通り抜け可・装飾）。北と側面は後ろに、南の横木は手前に描く
+function fencePost(c,r){ const x=Math.round(c*TS-cam.x), y=Math.round(r*TS-cam.y);
+  px(x-1,y+1,3,10,'#6b4a2c'); px(x-1,y+1,3,1,'#7d5836'); px(x-1,y+10,3,1,'#4a3018'); }
+function fenceRailH(c1,c2,r){ const x=Math.round(c1*TS-cam.x), y=Math.round(r*TS-cam.y), w=(c2-c1)*TS;
+  px(x,y+3,w,2,'#9c7a4a'); px(x,y+6,w,2,'#866238'); }
+function fenceRailV(c,r1,r2){ const x=Math.round(c*TS-cam.x), y=Math.round(r1*TS-cam.y), h=(r2-r1)*TS;
+  px(x-1,y+3,2,h,'#9c7a4a'); px(x+1,y+6,2,h,'#866238'); }
+function drawPaddockBack(){ const X=PASTURE.x, Y=PASTURE.y, W=PASTURE.w, H=PASTURE.h;
+  fenceRailV(X,Y,Y+H); fenceRailV(X+W,Y,Y+H);            // 東西の縦木
+  fenceRailH(X,X+W,Y);                                   // 北の横木
+  for(let r=Y;r<=Y+H;r++){ fencePost(X,r); fencePost(X+W,r); }   // 側面の柱
+  for(let c=X;c<X+W;c++) fencePost(c,Y);                 // 北の柱
+}
+function drawPaddockFront(){ const X=PASTURE.x, Y=PASTURE.y, W=PASTURE.w, H=PASTURE.h;
+  fenceRailH(X,X+W,Y+H);                                 // 南の横木（手前）
+  for(let c=X+1;c<X+W;c++) fencePost(c,Y+H);             // 南の柱
+}
 function drawSign(){
   const x=SIGN.x*TS-cam.x, y=SIGN.y*TS-cam.y;
   px(x+5,y+13,6,3,'rgba(0,0,0,.28)');
@@ -2229,6 +2249,8 @@ function render(){
   const ents=[];
   ents.push({y:(SIGN.y+1)*TS,fn:drawSign});
   ents.push({y:(SHRINE.y+SHRINE.h)*TS,fn:drawShrine});
+  ents.push({y:PASTURE.y*TS,fn:drawPaddockBack});                  // 柵（奥）
+  ents.push({y:(PASTURE.y+PASTURE.h)*TS+TS,fn:drawPaddockFront});  // 柵（手前）
   DECO.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
   BOULDERS.forEach(b=>ents.push({y:(b.y+b.h)*TS,fn:()=>drawBoulder(b)}));
   OBJS.forEach(o=>ents.push({y:(o.y+o.h)*TS,fn:()=>drawObj(o)}));
