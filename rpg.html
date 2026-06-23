@@ -233,6 +233,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <input id="vol" type="range" min="0" max="100" value="45" aria-label="BGM音量"></div>
   </div>
   <div class="m-row">
+    <div class="m-label">BGMの情景（自動＝時間帯に連動）</div>
+    <div class="m-seg" id="bgmSeg">
+      <button data-b="auto">自動</button><button data-b="plateau">高原</button><button data-b="dusk">夕暮れ</button><button data-b="starry">星夜</button>
+    </div>
+  </div>
+  <div class="m-row">
     <div class="m-label" id="treasLabel">宝さがし</div>
     <div class="m-treas" id="treasLog"></div>
   </div>
@@ -2305,11 +2311,62 @@ function render(){
 let running=false;
 function loop(){ if(!running)return; update();render();requestAnimationFrame(loop); }
 function startGame(){ document.getElementById('title').classList.add('hide'); startAudio(); if(!running){running=true;loop();} }
-/* ── ambient BGM (procedural drone + slow pads) ── */
+/* ── ambient BGM (procedural drone + slow pads, 情景で切り替え) ── */
 let audioCtx=null, masterGain=null, audioOn=true, audioStarted=false, noteTimer=null;
 const volEl=document.getElementById('vol'), audioBtn=document.getElementById('audioBtn');
 function volFromSlider(){ return (volEl.value/100)*0.4; }
 function applyVol(){ if(masterGain) masterGain.gain.setTargetAtTime(audioOn?volFromSlider():0, audioCtx.currentTime, 0.2); }
+/* ── 情景パレット（3種・プロトタイプ）：ドローンの和音・フィルタ・旋律をひとまとめに ── */
+const BGM_PALETTES={
+  // ☀️ 高原 — 開いた5度/8度の明るいドローン（昼・朝）
+  plateau:{ base:110, filter:{freq:700,q:1.2,lfoRate:0.025,lfoDepth:280},
+    partials:[{r:1,type:'triangle',g:0.16},{r:1.5,type:'sine',g:0.10},{r:2,type:'triangle',g:0.08},{r:3,type:'sine',g:0.05}],
+    scale:[220,247,330,392,440], note:{peak:0.10,atk:2.2,rel:4.3,gapMin:3500,gapMax:8500,octUp:0.5,octDown:0.0} },
+  // 🌆 夕暮れ — 短調の翳り・暗く長い余韻（夕）
+  dusk:{ base:98, filter:{freq:480,q:1.4,lfoRate:0.02,lfoDepth:200},
+    partials:[{r:1,type:'triangle',g:0.17},{r:1.5,type:'sine',g:0.09},{r:2,type:'triangle',g:0.07},{r:2.4,type:'sine',g:0.05},{r:3,type:'sine',g:0.04}],
+    scale:[196,233,262,294,349], note:{peak:0.09,atk:2.8,rel:5.5,gapMin:4500,gapMax:10000,octUp:0.35,octDown:0.0} },
+  // 🌌 星夜 — 深いサブ＋まばらな高音のきらめき（夜）
+  starry:{ base:73.42, filter:{freq:420,q:1.0,lfoRate:0.015,lfoDepth:240},
+    partials:[{r:1,type:'sine',g:0.18},{r:2,type:'sine',g:0.10},{r:3,type:'sine',g:0.05},{r:4.5,type:'sine',g:0.03}],
+    scale:[587,659,740,880,988], note:{peak:0.07,atk:1.6,rel:6.5,gapMin:6000,gapMax:13000,octUp:0.0,octDown:0.0} },
+};
+let bgmMode='auto';                 // 'auto' | 'plateau' | 'dusk' | 'starry'
+let curPad=null;                    // 現在鳴っているパッド {gain, palette, stop()}
+function autoBgmKey(){ const m=curMode(); return (m==='evening')?'dusk':(m==='night')?'starry':'plateau'; }
+function targetBgmKey(){ return bgmMode==='auto'?autoBgmKey():bgmMode; }
+function activePalette(){ return BGM_PALETTES[curPad?curPad.palette:targetBgmKey()]; }
+/* パレットからドローン・パッドを1つ組み立てる（自前のゲインで包んでクロスフェード可能に） */
+function buildPad(key){
+  const pal=BGM_PALETTES[key];
+  const padGain=audioCtx.createGain(); padGain.gain.value=0; padGain.connect(masterGain);
+  const filter=audioCtx.createBiquadFilter(); filter.type='lowpass';
+  filter.frequency.value=pal.filter.freq; filter.Q.value=pal.filter.q; filter.connect(padGain);
+  const nodes=[];
+  pal.partials.forEach((p,i)=>{
+    const o=audioCtx.createOscillator(); o.type=p.type; o.frequency.value=pal.base*p.r; o.detune.value=(i-1.5)*4;
+    const g=audioCtx.createGain(); g.gain.value=p.g; o.connect(g); g.connect(filter); o.start(); nodes.push(o);
+    const lfo=audioCtx.createOscillator(); lfo.frequency.value=0.05+0.03*i;
+    const lg=audioCtx.createGain(); lg.gain.value=4; lfo.connect(lg); lg.connect(o.detune); lfo.start(); nodes.push(lfo);
+  });
+  const flfo=audioCtx.createOscillator(); flfo.frequency.value=pal.filter.lfoRate;
+  const fg=audioCtx.createGain(); fg.gain.value=pal.filter.lfoDepth; flfo.connect(fg); fg.connect(filter.frequency); flfo.start(); nodes.push(flfo);
+  return { gain:padGain, palette:key, stop(){ nodes.forEach(n=>{try{n.stop();}catch(e){}}); } };
+}
+/* 情景をクロスフェードで切り替える（継ぎ目を消すのが肝心） */
+function crossfadeTo(key, fade){
+  if(!audioStarted||!audioCtx) return;
+  if(curPad&&curPad.palette===key) return;
+  fade=fade||5;
+  const t=audioCtx.currentTime, next=buildPad(key);
+  next.gain.gain.setValueAtTime(0,t); next.gain.gain.linearRampToValueAtTime(1,t+fade);
+  if(curPad){ const old=curPad; old.gain.gain.cancelScheduledValues(t);
+    old.gain.gain.setValueAtTime(old.gain.gain.value,t); old.gain.gain.linearRampToValueAtTime(0,t+fade);
+    setTimeout(()=>old.stop(), (fade+0.5)*1000); }
+  curPad=next;
+}
+/* 目標の情景と現在がずれていれば切り替え（数秒ごと＆手動操作時に呼ぶ） */
+function syncBgm(){ if(audioStarted&&audioCtx&&audioCtx.state==='running') crossfadeTo(targetBgmKey()); }
 function startAudio(){
   try{
     if(audioStarted){ if(audioCtx.state==='suspended')audioCtx.resume(); return; }
@@ -2317,39 +2374,35 @@ function startAudio(){
     audioCtx=new (window.AudioContext||window.webkitAudioContext)();
     masterGain=audioCtx.createGain(); masterGain.gain.value=audioOn?volFromSlider():0;
     masterGain.connect(audioCtx.destination);
-    // drone pad
-    const filter=audioCtx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=620; filter.Q.value=1.5;
-    filter.connect(masterGain);
-    const base=110; // A2
-    [1,1.5,2,3].forEach((r,i)=>{
-      const o=audioCtx.createOscillator(); o.type=i%2?'sine':'triangle'; o.frequency.value=base*r; o.detune.value=(i-1.5)*4;
-      const g=audioCtx.createGain(); g.gain.value=0.16/(i+1); o.connect(g); g.connect(filter); o.start();
-      const lfo=audioCtx.createOscillator(); lfo.frequency.value=0.05+0.03*i;
-      const lg=audioCtx.createGain(); lg.gain.value=4; lfo.connect(lg); lg.connect(o.detune); lfo.start();
-    });
-    const flfo=audioCtx.createOscillator(); flfo.frequency.value=0.025;
-    const fg=audioCtx.createGain(); fg.gain.value=280; flfo.connect(fg); fg.connect(filter.frequency); flfo.start();
+    crossfadeTo(targetBgmKey(), 2.5);            // 最初の情景を立ち上げる
+    setInterval(syncBgm, 4000);                  // 時間帯の移ろいに追従
     scheduleNote();
   }catch(e){ console.warn('audio init failed',e); }
 }
-const SCALE=[220,247,330,392,440]; // A pentatonic
 function scheduleNote(){
   if(!audioStarted||!audioCtx) return;
+  const nt=activePalette().note;
   if(audioOn && audioCtx.state==='running'){
-    const f=SCALE[(Math.random()*SCALE.length)|0]*(Math.random()<.5?1:2);
+    const pal=activePalette(); const sc=pal.scale;
+    let f=sc[(Math.random()*sc.length)|0];
+    const rr=Math.random(); if(rr<nt.octUp)f*=2; else if(rr>1-nt.octDown)f*=0.5;
     const o=audioCtx.createOscillator(); o.type='sine'; o.frequency.value=f;
     const g=audioCtx.createGain(); g.gain.value=0; o.connect(g);
     const pan=audioCtx.createStereoPanner?audioCtx.createStereoPanner():null;
     if(pan){ pan.pan.value=Math.random()*2-1; g.connect(pan); pan.connect(masterGain); } else g.connect(masterGain);
     const t=audioCtx.currentTime;
-    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.10,t+2.2); g.gain.linearRampToValueAtTime(0,t+6.5);
-    o.start(t); o.stop(t+6.6);
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(nt.peak,t+nt.atk); g.gain.linearRampToValueAtTime(0,t+nt.atk+nt.rel);
+    o.start(t); o.stop(t+nt.atk+nt.rel+0.1);
   }
-  noteTimer=setTimeout(scheduleNote, 3500+Math.random()*5000);
+  noteTimer=setTimeout(scheduleNote, nt.gapMin+Math.random()*(nt.gapMax-nt.gapMin));
 }
 audioBtn.addEventListener('click',()=>{ audioOn=!audioOn; audioBtn.textContent=audioOn?'🔊':'🔇';
   if(audioOn&&audioCtx&&audioCtx.state==='suspended')audioCtx.resume(); applyVol(); });
 volEl.addEventListener('input',applyVol);
+/* BGM情景セグメント（自動／高原／夕暮れ／星夜） */
+function updateBgmBtn(){ document.querySelectorAll('#bgmSeg button').forEach(b=>b.classList.toggle('on',b.dataset.b===bgmMode)); }
+document.querySelectorAll('#bgmSeg button').forEach(b=>b.addEventListener('click',()=>{ bgmMode=b.dataset.b; updateBgmBtn(); syncBgm(); }));
+updateBgmBtn();
 /* どの入口（通常 / ?to=larry 自動開始）でも、最初のユーザー操作でBGMを開始・再開する */
 function unlockAudio(){ if(!audioStarted) startAudio(); else if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume(); }
 ['pointerdown','keydown','touchstart'].forEach(ev=>window.addEventListener(ev,unlockAudio));
