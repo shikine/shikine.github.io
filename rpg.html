@@ -567,7 +567,7 @@ const NPCS=[
          '織音さんも、2023年に東京からこの富士見町へ移ってきた一人だよ。',
          '〈構造と物語のあいだ〉に、ここで新しい空間が生まれている。']},
  // ── 水神の祠のほとり：コーチングの女性 mizu（黒髪ショート・無印風ミニマル・細身） ──
- {x:55,y:26, still:true, keepNight:true, hires:true, dir:'down',
+ {x:55,y:26, still:true, keepNight:true, hires:true, lively:true, dir:'down',
   c1:'#cdc3ad', c2:'#e8c39a', hair:'#1f1a16', name:'mizu', pages:COACH_PAGES},
  // ── 川辺：熊を見守るワイルドライフの専門家（人と熊の共生をデザインする） ──
  {x:9, y:16, still:true, keepNight:true, dir:'left', c1:'#5a7a3a',c2:'#e8c39a',hair:'#4a3a28',name:'ワイルドライフの専門家',
@@ -637,7 +637,9 @@ const NPCS=[
          '「告知、もう出てるんだ。チラ見してってよ！」',
          '［ スペース／クリックで告知ページを別タブで開く ↗ ］']},
 ];
-NPCS.forEach(n=>{n.px=n.x*TS;n.py=n.y*TS;n.hx=n.px;n.hy=n.py;n.dir=n.dir||'down';n.frame=0;n.t=rnd()*120;n.mdir=null;n.moving=false;});
+NPCS.forEach(n=>{n.px=n.x*TS;n.py=n.y*TS;n.hx=n.px;n.hy=n.py;n.dir=n.dir||'down';n.frame=0;n.t=rnd()*120;n.mdir=null;n.moving=false;n.hopT=0;n.hopY=0;n.hopCd=120+rnd()*180;});
+/* 元気なNPCの「ぴょこっ」アクション（amp=高さ, hops=回数） */
+function startHop(n,amp,hops){ n.hopAmp=amp; n.hopN=hops; n.hopDur=hops*13; n.hopT=n.hopDur; }
 const LARRY=NPCS.find(n=>n.name==='劇団員ラリー'); // 夜にスポットライトを当てる対象
 
 /* ── animals (放牧されている生きもの) ── */
@@ -1601,6 +1603,8 @@ function interact(){
     if(n.gives!=null && !TREASURES[n.gives].found){ const t=TREASURES[n.gives]; getTreasure(t);
       pages=n.pages.concat(['（'+t.icon+' <b>'+t.name+'</b> を授かった！ 💎'+treasCount()+'/8）']); }
     openDialog(n.name,'',pages);
+    if(n.lively){ startHop(n,3,1);                       // 話しかけたらぴょこっ
+      dlgConfirm=()=>startHop(n,5,3); }                  // 話し終わったら元気にぴょんぴょん
     if(n.link) dlgConfirm=()=>window.open(n.link,'_blank','noopener'); // 会話後に告知ページへ
     return; } }
   // animal? (もののけ的に語り、話し終えると走り去って消える)
@@ -1688,6 +1692,10 @@ function update(){
   // strawberry regrow
   const now=Date.now();
   for(let i=PICKED.length-1;i>=0;i--) if(now>=PICKED[i].at){ M[PICKED[i].r][PICKED[i].c]=PICKED[i].ripe; PICKED.splice(i,1); }
+  // 元気なNPCの跳ねるアクション（会話中も動くよう、ダイアログ中も更新）
+  for(const n of NPCS){ if(!n.lively) continue;
+    if(n.hopT>0){ n.hopT--; const p=1-n.hopT/n.hopDur; n.hopY=Math.abs(Math.sin(p*Math.PI*n.hopN))*n.hopAmp; }
+    else { n.hopY=0; if(!npcHidden(n)){ n.hopCd--; if(n.hopCd<=0){ startHop(n,3,1); n.hopCd=180+rnd()*240; } } } }  // たまにひとりでもぴょこっ
   // heron flying away (runs even during dialog so it leaves after the talk)
   if(HERON.flying && !HERON.gone){ HERON.flyT++; HERON.px+=0.9; HERON.py-=1.1; if(HERON.flyT>92) HERON.gone=true; }
   // fireworks (8つの宝コンプリート時。ダイアログ中も上がり続ける)
@@ -2013,18 +2021,20 @@ function ensureMizu(){ if(MIZU)return; MIZU={};
     const o=document.createElement('canvas'); o.width=32; o.height=32;
     paintMizu(o.getContext('2d'), d); MIZU[d]=o; }
 }
-function blitMizu(x,y,dir){
+function blitMizu(x,y,dir,hop){
   ensureMizu();
-  const sx=Math.round(x), sy=Math.round(y);
-  px(sx+4,sy+14,8,2,'rgba(0,0,0,.26)');                        // 影
+  const sx=Math.round(x), sy=Math.round(y), h=Math.round(hop||0);
+  // 影は地面に固定（跳ねるとすこし小さく・薄く）
+  const shr=Math.min(3,h);
+  px(sx+4+(shr>>1),sy+14,8-shr,2,'rgba(0,0,0,'+Math.max(0.12,0.26-h*0.02).toFixed(2)+')');
   const sm=ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled=true;
-  ctx.drawImage(MIZU[dir]||MIZU.down, sx, sy, 16, 16);         // 2倍→等倍で高品質縮小
+  ctx.drawImage(MIZU[dir]||MIZU.down, sx, sy-h, 16, 16);       // 2倍→等倍で高品質縮小（跳ねぶん上へ）
   ctx.imageSmoothingEnabled=sm;
   // 目は整数ピクセルの点で上描き（縮小でにじまない、くっきりした目）
-  const E='#231b13';
-  if(dir==='left') px(sx+6,sy+4,1,1,E);
-  else if(dir==='right') px(sx+9,sy+4,1,1,E);
-  else if(dir!=='up'){ px(sx+6,sy+4,1,1,E); px(sx+9,sy+4,1,1,E); }
+  const E='#231b13', ey=sy-h+4;
+  if(dir==='left') px(sx+6,ey,1,1,E);
+  else if(dir==='right') px(sx+9,ey,1,1,E);
+  else if(dir!=='up'){ px(sx+6,ey,1,1,E); px(sx+9,ey,1,1,E); }
 }
 function drawBoulder(b){
   const x=b.x*TS-cam.x, y=b.y*TS-cam.y, w=b.w*TS, h=b.h*TS;
@@ -2351,7 +2361,7 @@ function render(){
   TREASURES.forEach(t=>{ if(t.type==='chest') ents.push({y:(t.y+1)*TS,fn:()=>drawChest(t)}); });
   SPOTS.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
   NPCS.forEach(n=>{ if(npcHidden(n))return; ents.push({y:n.py+TS,fn:()=>{
-    if(n.hires){ blitMizu(n.px-cam.x,n.py-cam.y,n.dir); return; }   // 高解像度キャラ
+    if(n.hires){ blitMizu(n.px-cam.x,n.py-cam.y,n.dir,n.hopY); return; }   // 高解像度キャラ（跳ねる）
     drawChar(n.px-cam.x,n.py-cam.y,n.dir,n.frame,n.moving,n.c1,n.c2,n.hair,n.cat,n.slim);
     if(n.female){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y); // 長めの髪
       px(sx+3,sy+2,2,7,n.hair); px(sx+11,sy+2,2,7,n.hair); }
