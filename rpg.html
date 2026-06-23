@@ -567,7 +567,7 @@ const NPCS=[
          '織音さんも、2023年に東京からこの富士見町へ移ってきた一人だよ。',
          '〈構造と物語のあいだ〉に、ここで新しい空間が生まれている。']},
  // ── 水神の祠のほとり：愛媛から移ったコーチングの女性 mizu（黒髪ショート・無印風ミニマル・細身） ──
- {x:55,y:26, still:true, keepNight:true, bob:true, cheeks:true, slim:true, dir:'down',
+ {x:55,y:26, still:true, keepNight:true, hires:true, dir:'down',
   c1:'#cdc3ad', c2:'#e8c39a', hair:'#1f1a16', name:'mizu', pages:COACH_PAGES},
  // ── 川辺：熊を見守るワイルドライフの専門家（人と熊の共生をデザインする） ──
  {x:9, y:16, still:true, keepNight:true, dir:'left', c1:'#5a7a3a',c2:'#e8c39a',hair:'#4a3a28',name:'ワイルドライフの専門家',
@@ -1974,6 +1974,57 @@ function drawChar(x,y,dir,frame,moving,c1,c2,hair,cat,slim){
   else if(dir==='left'){px(sx+6,sy+4+bob,1,1,'#3a2a1a');}
   else {px(sx+9,sy+4+bob,1,1,'#3a2a1a');}
 }
+/* ── mizu だけ高解像度：2倍のオフスクリーンに精細に描き、高品質縮小で合成 ── */
+let MIZU=null;
+function paintMizu(g,dir){
+  const q=(x,y,w,h,c)=>{ g.fillStyle=c; g.fillRect(x,y,w,h); };
+  const SKIN='#ecc79e',SKSH='#d6a87e',HAIR='#211b16',
+        DR='#cfc5af',DRL='#e0d7c3',DRSH='#b2a78d',EYE='#27201a',
+        CHK='#e7b2aa',MOU='#c08a78',SHOE='#5f5141',LEG='#e3bd95';
+  const R=dir==='right', L=dir==='left', UP=dir==='up';
+  // 髪（後ろ）：あごラインのボブ
+  q(10,1,12,3,HAIR); q(8,3,16,9,HAIR);
+  q(8,11,3,6,HAIR);  q(21,11,3,6,HAIR);
+  q(9,16,2,2,HAIR);  q(21,16,2,2,HAIR);
+  if(!UP){
+    q(11,4,10,12,SKIN); q(10,6,1,7,SKIN); q(21,6,1,7,SKIN);   // 顔（角を丸める）
+    q(11,15,10,1,SKSH);                                       // あごの陰
+    q(10,3,12,3,HAIR); q(10,5,2,4,HAIR); q(20,5,2,4,HAIR);    // 前髪（フレーム）
+    q(12,6,2,1,HAIR); q(18,6,2,1,HAIR);                       // 前髪の毛先
+    q(14,16,4,2,SKIN); q(14,17,4,1,SKSH);                     // 首
+    if(R){ q(16,8,2,3,EYE); q(16,8,1,1,'#fff'); q(20,10,1,2,SKSH);   // 右向き：片目＋鼻先
+           q(18,11,2,1,CHK); q(17,13,2,1,MOU); }
+    else if(L){ q(14,8,2,3,EYE); q(14,8,1,1,'#fff'); q(11,10,1,2,SKSH);
+           q(12,11,2,1,CHK); q(13,13,2,1,MOU); }
+    else { q(13,8,2,3,EYE); q(17,8,2,3,EYE);                  // 正面：両目
+           q(13,8,1,1,'#fff'); q(17,8,1,1,'#fff');
+           q(12,11,2,1,CHK); q(18,11,2,1,CHK);                // ほっぺ
+           q(15,13,2,1,MOU); }                                // 口
+  } else {
+    q(9,4,14,12,HAIR); q(13,15,6,3,HAIR);                     // 後頭部
+  }
+  // 体：細身のナチュラルなワンピース
+  q(11,18,10,8,DR); q(9,24,14,4,DR);                          // 胴＋Aラインの裾
+  q(11,18,10,1,DRL); q(9,27,14,1,DRSH);                       // 襟の光・裾の陰
+  q(12,19,1,6,DRL);  q(19,19,1,7,DRSH);                       // 前あての光・脇の陰
+  q(9,19,2,6,DR); q(21,19,2,6,DR);                            // 袖
+  q(9,24,2,2,SKIN); q(21,24,2,2,SKIN);                        // 手
+  q(13,28,2,3,LEG); q(17,28,2,3,LEG);                         // 脚
+  q(12,30,3,2,SHOE); q(17,30,3,2,SHOE);                       // くつ
+}
+function ensureMizu(){ if(MIZU)return; MIZU={};
+  for(const d of ['down','up','left','right']){
+    const o=document.createElement('canvas'); o.width=32; o.height=32;
+    paintMizu(o.getContext('2d'), d); MIZU[d]=o; }
+}
+function blitMizu(x,y,dir){
+  ensureMizu();
+  const sx=Math.round(x), sy=Math.round(y);
+  px(sx+4,sy+14,8,2,'rgba(0,0,0,.26)');                        // 影
+  const sm=ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(MIZU[dir]||MIZU.down, sx, sy, 16, 16);         // 2倍→等倍で高品質縮小
+  ctx.imageSmoothingEnabled=sm;
+}
 function drawBoulder(b){
   const x=b.x*TS-cam.x, y=b.y*TS-cam.y, w=b.w*TS, h=b.h*TS;
   px(x-2,y+h-3,w+4,5,'rgba(0,0,0,.28)');        // ground shadow
@@ -2299,6 +2350,7 @@ function render(){
   TREASURES.forEach(t=>{ if(t.type==='chest') ents.push({y:(t.y+1)*TS,fn:()=>drawChest(t)}); });
   SPOTS.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
   NPCS.forEach(n=>{ if(npcHidden(n))return; ents.push({y:n.py+TS,fn:()=>{
+    if(n.hires){ blitMizu(n.px-cam.x,n.py-cam.y,n.dir); return; }   // 高解像度キャラ
     drawChar(n.px-cam.x,n.py-cam.y,n.dir,n.frame,n.moving,n.c1,n.c2,n.hair,n.cat,n.slim);
     if(n.female){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y); // 長めの髪
       px(sx+3,sy+2,2,7,n.hair); px(sx+11,sy+2,2,7,n.hair); }
