@@ -327,6 +327,12 @@ for(let r=33;r<MH-2;r++)for(let c=44;c<MW-2;c++){
   const d=(r-39)*(r-39)/16+(c-52)*(c-52)/40;
   if(d<1)set(c,r,8); else if(d<1.5)set(c,r,9);
 }
+// 温泉（露天風呂）— 溶岩のただ中に湯だまりを掘り、まわりを溶岩が囲む。北から細い石畳の参道でつなぐ
+const ONSEN_CELLS=[];
+for(let r=37;r<=41;r++)for(let c=48;c<=56;c++){
+  if((r-39)*(r-39)/2.2+(c-52)*(c-52)/8 < 1){ set(c,r,27); ONSEN_CELLS.push({c,r}); }
+}
+for(let r=35;r<=37;r++) set(52,r,28);   // 北の草地→湯への石畳（溶岩の中の安全な通路）
 // field rows (north-east plains)
 for(let r=13;r<17;r++)for(let c=40;c<48;c++)set(c,r, r%2?5:0);
 // strawberry field (いちご畑) — plant rows (12) alternate with walkable dirt (5)
@@ -637,7 +643,7 @@ const NPCS=[
          '「告知、もう出てるんだ。チラ見してってよ！」',
          '［ スペース／クリックで告知ページを別タブで開く ↗ ］']},
 ];
-NPCS.forEach(n=>{n.px=n.x*TS;n.py=n.y*TS;n.hx=n.px;n.hy=n.py;n.dir=n.dir||'down';n.frame=0;n.t=rnd()*120;n.mdir=null;n.moving=false;n.hopT=0;n.hopY=0;n.hopCd=120+rnd()*180;});
+NPCS.forEach(n=>{n.px=n.x*TS;n.py=n.y*TS;n.hx=n.px;n.hy=n.py;n.dir=n.dir||'down';n.frame=0;n.t=rnd()*120;n.mdir=null;n.moving=false;n.hopT=0;n.hopY=0;n.hopCd=120+rnd()*180;n.blinkOff=rnd()*4000;});
 /* 元気なNPCの「ぴょこっ」アクション（amp=高さ, hops=回数） */
 function startHop(n,amp,hops){ n.hopAmp=amp; n.hopN=hops; n.hopDur=hops*13; n.hopT=n.hopDur; }
 const LARRY=NPCS.find(n=>n.name==='劇団員ラリー'); // 夜にスポットライトを当てる対象
@@ -812,6 +818,28 @@ function drawFireflies(){
   }
 }
 
+/* ── 温泉の湯気（露天風呂のマスから、白い湯気がゆらめき立ちのぼる） ── */
+function drawOnsenSteam(){
+  if(typeof ONSEN_CELLS==='undefined') return;
+  const t=Date.now();
+  for(const m of ONSEN_CELLS){
+    const bx=m.c*TS+TS/2-cam.x, by=m.r*TS+TS/2-cam.y;
+    if(bx<-24||bx>cv.width+24||by<-40||by>cv.height+24) continue;
+    for(let i=0;i<2;i++){
+      const seed=m.c*7+m.r*13+i*131;
+      const rise=((t/24 + seed*37) % 64);                  // 0..64 上昇
+      const sx=bx + Math.sin(t/1300 + seed)*4 + Math.sin(t/520+seed)*1.5;
+      const sy=by + 5 - rise;
+      const a=0.16*(1-rise/64);                            // 上ほど薄く消える
+      if(a<=0.01) continue;
+      const rad=3+rise*0.09;
+      const g=ctx.createRadialGradient(sx,sy,0, sx,sy,rad);
+      g.addColorStop(0,'rgba(236,246,245,'+a.toFixed(3)+')'); g.addColorStop(1,'rgba(236,246,245,0)');
+      ctx.fillStyle=g; ctx.fillRect(sx-rad,sy-rad,rad*2,rad*2);
+    }
+  }
+}
+
 /* ── シロサギ（田んぼに佇み、話すと哲学を語って飛び去る） ── */
 const HERON={ x:24, y:21, dir:'left', flying:false, gone:false, flyT:0, frame:0,
   pages:[
@@ -896,7 +924,7 @@ const PHEASANT_TALK={
 
 /* ── player ── */
 const P={px:HUB[0]*TS, py:HUB[1]*TS+TS, dir:'down', speed:1.5, frame:0, moving:false,
-         swim:false, berries:0, grapes:0, lettuce:0, tomato:0, mushroom:0, lastCrop:'', boostUntil:0, slowUntil:0};
+         swim:false, berries:0, grapes:0, lettuce:0, tomato:0, mushroom:0, lastCrop:'', boostUntil:0, slowUntil:0, blinkOff:1700};
 const SOLID=new Set([2,3,6,8,9,10,11,12,13,14,15,16,17,19,20,21,22,23,24,25,26]);
 const PICKED=[]; // {c,r,at,ripe} for crop regrow
 /* harvestable crops: ripe tile -> info */
@@ -1074,6 +1102,10 @@ function drawMapTile(mx,t,x,y,sc,c,r){
     case 25: case 26: // きのこの森
       F(0,0,sc,sc,'#3f6e42'); F(0,sc*0.62,sc,sc*0.38,'#5a4a38');
       if(t===25){ F(sc*0.28,sc*0.42,sc*0.2,sc*0.16,'#d23b32'); dot(sc*0.66,sc*0.56,sc*0.1,'#9a6a3a'); } break;
+    case 27: // 温泉
+      F(0,0,sc,sc,'#5fb4b0'); F(0,0,sc,Math.max(1,sc*0.2),'#7fcfc8'); dot(sc*0.5,sc*0.5,sc*0.16,'#c7eeea'); break;
+    case 28: // 湯への石畳
+      F(0,0,sc,sc,'#847b73'); F(sc*0.5,0,Math.max(1,sc*0.12),sc,'#6a605a'); F(0,sc*0.5,sc,Math.max(1,sc*0.12),'#6a605a'); break;
     default: // 草地（＋花）
       F(0,0,sc,sc,g1);
       if(t===4){ const fc=['#e8d24f','#e57ba0','#ffffff','#d98cf0'][rv%4]; dot(sc*0.5,sc*0.42,sc*0.16,fc); }
@@ -1091,7 +1123,7 @@ function openMapPanel(){
     {t:'🗿 縄文の遺跡',x:6,y:9.5},{t:'⛩ 水神の祠',x:60,y:21.5},{t:'🐴 南の牧場',x:35.5,y:35.5},
     {t:'🍓 いちご畑',x:22,y:31},{t:'🍇 ぶどう畑',x:39,y:10},{t:'🥬 レタス畑',x:39,y:22},
     {t:'🍅 トマト畑',x:30,y:22},{t:'🌾 田んぼ',x:24,y:21.5},{t:'🏜 砂漠',x:10,y:38},
-    {t:'🌋 溶岩地帯',x:52,y:39},
+    {t:'🌋 溶岩地帯',x:52,y:42},{t:'♨ 温泉',x:52,y:39},
   ];
   let lab='';
   for(const a of areas) lab+='<div class="mlab marea" style="left:'+pc(a.x/MW*100)+'%;top:'+pc(a.y/MH*100)+'%">'+a.t+'</div>';
@@ -1747,9 +1779,11 @@ function update(){
     if(Date.now()<P.boostUntil) base=P.speed*1.8;
     else if(Date.now()<P.slowUntil) base=P.speed*0.5;
     const ctile=(M[((P.py+TS/2)/TS)|0]||[])[((P.px+TS/2)/TS)|0];
-    const inWater=ctile===2, inBrush=(ctile===3||ctile===6), inPaddy=ctile===18, inCrop=CROPTILE.has(ctile);
-    moveEnt(P,dx,dy, base*(inWater?0.55:((inBrush||inPaddy||inCrop)?0.6:1)));
+    const inWater=ctile===2, inBrush=(ctile===3||ctile===6), inPaddy=ctile===18, inCrop=CROPTILE.has(ctile), inOnsen=ctile===27;
+    moveEnt(P,dx,dy, base*(inWater?0.55:((inBrush||inPaddy||inCrop||inOnsen)?0.6:1)));
     P.swim=inWater; P.inBrush=inBrush; P.inPaddy=inPaddy; P.inCrop=inCrop;
+    if(inOnsen && !P.inOnsen){ showToast('♨ 温泉だ！ ほっと一息…'); P.slowUntil=0; P.boostUntil=0; }  // 入ると一息
+    P.inOnsen=inOnsen;
     // warp circle: entering it prompts to jump to the service site
     const wc=((P.px+TS/2)/TS)|0, wr=((P.py+TS-2)/TS)|0;
     const onWarp = wc>=WARP.x&&wc<WARP.x+WARP.w&&wr>=WARP.y&&wr<WARP.y+WARP.h;
@@ -1770,6 +1804,7 @@ function update(){
   let label;
   if(P.onWarp){ label='✨ <b>ワープサークル</b> — サービスサイトへ'; }
   else if(P.swim){ label='🏊 <b>泳いでいる！</b>'; }
+  else if(P.inOnsen){ label='♨ <b>溶岩の露天風呂</b> — ほっと一息'; }
   else if(P.inBrush){ label='🌳 <b>茂みの中</b> — すこしゆっくり'; }
   else if(P.inPaddy){ label='🌾 <b>ちいさな田んぼ</b>'; }
   else if(nd<40){ label=`📍 <b>${near.label}</b> の前 — 調べてみよう`; }
@@ -1931,6 +1966,18 @@ function drawTile(c,r,sx,sy){
     px(sx,sy+12,TS,4,'#5a4a38'); px(sx,sy+12,TS,1,'#6b5a44');       // 湿った地面
     px(sx+5,sy+12,1,1,'#cfc6b0'); px(sx+9,sy+13,1,1,'#cfc6b0');     // 残った軸
     px(sx+7,sy+11,1,1,'#8a7a5a'); px(sx+3,sy+13,1,1,'#7a6a4a'); }   // 胞子のあと
+  else if(t===27){ // 温泉（露天風呂）の湯
+    px(sx,sy,TS,TS,'#3a2018');                                      // 黒い岩肌の底
+    px(sx+1,sy+1,TS-2,TS-2,'#5fb4b0');                              // 乳青色の湯
+    px(sx+1,sy+1,TS-2,2,'#7fcfc8');                                 // 上縁の明るい湯気だまり
+    const w=(Date.now()/700+c*1.3+r)%6;
+    px(sx+2+w,sy+5,3,1,'#c7eeea'); px(sx+9,sy+10,2,1,'#a9e0db');     // ゆらめく波紋
+    px(sx+5,sy+12,3,1,'#aee2dd'); }
+  else if(t===28){ // 湯への石畳（溶岩の中の安全な参道）
+    px(sx,sy,TS,TS,'#6a605a');                                      // 石畳の目地
+    px(sx+1,sy+1,6,6,'#8c837b'); px(sx+9,sy+1,6,6,'#847b73');       // 石スラブ
+    px(sx+1,sy+9,6,6,'#827971'); px(sx+9,sy+9,6,6,'#8c837b');
+    px(sx+1,sy+1,6,1,'#a39a90'); px(sx+9,sy+9,6,1,'#a39a90'); }     // 角のハイライト
 }
 function drawBuilding(s){
   const x=s.x*TS-cam.x, y=s.y*TS-cam.y, w=s.w*TS, h=s.h*TS;
@@ -1959,7 +2006,9 @@ function drawBuilding(s){
   if(s.label){ ctx.font='9px monospace'; px(x+w/2-18,y+h+2,36,11,'rgba(20,18,15,.8)');
     ctx.fillStyle='#fff'; ctx.fillText(s.label,x+w/2,y+h+11); }
 }
-function drawChar(x,y,dir,frame,moving,c1,c2,hair,cat,slim){
+// たまに瞬きする（個体ごとにずらした位相で、約3.4秒に一度パッと目を閉じる）
+function isBlinking(off){ return ((Date.now()+(off||0))%3400) < 130; }
+function drawChar(x,y,dir,frame,moving,c1,c2,hair,cat,slim,blink){
   const bob=moving?(Math.floor(frame)%2):0, sx=Math.round(x), sy=Math.round(y);
   // slim=細身（整数ピクセルで胴を1pxずつ細く・頭は同じ幅なので髪/ほっぺの位置は不変）
   const bx=slim?4:3, bw=slim?8:10, aL=slim?3:2, aR=slim?12:13;
@@ -1976,11 +2025,13 @@ function drawChar(x,y,dir,frame,moving,c1,c2,hair,cat,slim){
   px(sx+aL,sy+7+bob,1,4,c1); px(sx+aR,sy+7+bob,1,4,c1);
   // head
   px(sx+5,sy+1+bob,6,6,c2); px(sx+5,sy+bob,6,2,hair); px(sx+4,sy+1+bob,1,3,hair); px(sx+11,sy+1+bob,1,3,hair);
-  // face by dir
-  if(dir==='down'){px(sx+6,sy+4+bob,1,1,'#3a2a1a');px(sx+9,sy+4+bob,1,1,'#3a2a1a');}
-  else if(dir==='up'){px(sx+5,sy+bob,6,3,hair);}
-  else if(dir==='left'){px(sx+6,sy+4+bob,1,1,'#3a2a1a');}
-  else {px(sx+9,sy+4+bob,1,1,'#3a2a1a');}
+  // face by dir（blink=瞬き中は目を閉じる＝目を描かない）
+  if(dir==='up'){px(sx+5,sy+bob,6,3,hair);}
+  else if(!blink){
+    if(dir==='down'){px(sx+6,sy+4+bob,1,1,'#3a2a1a');px(sx+9,sy+4+bob,1,1,'#3a2a1a');}
+    else if(dir==='left'){px(sx+6,sy+4+bob,1,1,'#3a2a1a');}
+    else {px(sx+9,sy+4+bob,1,1,'#3a2a1a');}
+  }
 }
 /* ── mizu だけ高解像度：2倍のオフスクリーンに精細に描き、高品質縮小で合成 ── */
 let MIZU=null;
@@ -2021,7 +2072,7 @@ function ensureMizu(){ if(MIZU)return; MIZU={};
     const o=document.createElement('canvas'); o.width=32; o.height=32;
     paintMizu(o.getContext('2d'), d); MIZU[d]=o; }
 }
-function blitMizu(x,y,dir,hop){
+function blitMizu(x,y,dir,hop,blink){
   ensureMizu();
   const sx=Math.round(x), sy=Math.round(y), h=Math.round(hop||0);
   // 影は地面に固定（跳ねるとすこし小さく・薄く）
@@ -2030,7 +2081,8 @@ function blitMizu(x,y,dir,hop){
   const sm=ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled=true;
   ctx.drawImage(MIZU[dir]||MIZU.down, sx, sy-h, 16, 16);       // 2倍→等倍で高品質縮小（跳ねぶん上へ）
   ctx.imageSmoothingEnabled=sm;
-  // 目は整数ピクセルの点で上描き（縮小でにじまない、くっきりした目）
+  // 目は整数ピクセルの点で上描き（瞬き中は閉じる＝描かない）
+  if(blink) return;
   const E='#231b13', ey=sy-h+4;
   if(dir==='left') px(sx+6,ey,1,1,E);
   else if(dir==='right') px(sx+9,ey,1,1,E);
@@ -2361,8 +2413,8 @@ function render(){
   TREASURES.forEach(t=>{ if(t.type==='chest') ents.push({y:(t.y+1)*TS,fn:()=>drawChest(t)}); });
   SPOTS.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
   NPCS.forEach(n=>{ if(npcHidden(n))return; ents.push({y:n.py+TS,fn:()=>{
-    if(n.hires){ blitMizu(n.px-cam.x,n.py-cam.y,n.dir,n.hopY); return; }   // 高解像度キャラ（跳ねる）
-    drawChar(n.px-cam.x,n.py-cam.y,n.dir,n.frame,n.moving,n.c1,n.c2,n.hair,n.cat,n.slim);
+    if(n.hires){ blitMizu(n.px-cam.x,n.py-cam.y,n.dir,n.hopY,isBlinking(n.blinkOff)); return; }   // 高解像度キャラ（跳ねる・瞬き）
+    drawChar(n.px-cam.x,n.py-cam.y,n.dir,n.frame,n.moving,n.c1,n.c2,n.hair,n.cat,n.slim,isBlinking(n.blinkOff));
     if(n.female){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y); // 長めの髪
       px(sx+3,sy+2,2,7,n.hair); px(sx+11,sy+2,2,7,n.hair); }
     if(n.bob){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y); // ふんわり短めのボブ
@@ -2393,12 +2445,13 @@ function render(){
   const wob=Date.now()<P.slowUntil?Math.sin(Date.now()/110)*1.6:0;
   ents.push({y:P.py+TS,fn:()=>{
     if(P.swim){ drawSwimmer(P.px-cam.x+wob,P.py-cam.y,P.dir,P.frame); return; }
-    drawChar(P.px-cam.x+wob,P.py-cam.y,P.dir,P.frame,P.moving,'#3a4a8a','#e8c39a','#3a2a1a');
+    drawChar(P.px-cam.x+wob,P.py-cam.y,P.dir,P.frame,P.moving,'#3a4a8a','#e8c39a','#3a2a1a',false,false,isBlinking(P.blinkOff));
     if(P.inBrush){ const sx=Math.round(P.px-cam.x+wob), sy=Math.round(P.py-cam.y); // 茂みが手前に
       px(sx+1,sy+11,4,4,'#2f6b3a'); px(sx+10,sy+12,4,3,'#27592f'); px(sx+5,sy+13,5,3,'#3a7d45');
       px(sx+3,sy+13,1,2,'#4f9a57'); px(sx+12,sy+12,1,2,'#4f9a57'); }
   }});
   ents.sort((a,b)=>a.y-b.y).forEach(e=>e.fn());
+  drawOnsenSteam();   // 温泉の湯気（地面・人物の上にゆらめき立ちのぼる）
   // vignette
   const grd=ctx.createRadialGradient(cv.width/2,cv.height/2,cv.height*0.4,cv.width/2,cv.height/2,cv.height*0.8);
   grd.addColorStop(0,'rgba(0,0,0,0)');grd.addColorStop(1,'rgba(0,0,0,0.28)');
