@@ -2316,6 +2316,29 @@ function drawSwimmer(x,y,dir,frame){
   const a=Math.floor(frame)%2;
   px(sx+3,sy+8+a,2,2,'#e8c39a'); px(sx+11,sy+9-a,2,2,'#e8c39a');
 }
+/* ── 入浴（温泉に肩までつかる。頭に手ぬぐい・ほっとした顔・湯にゆられる） ── */
+function drawBather(x,y){
+  const sx=Math.round(x),sy=Math.round(y),t=Date.now()/520;
+  const bob=Math.round(Math.sin(t)*0.7);                  // 湯にゆられてゆらゆら
+  // 湯面の波紋（あたたかい乳青）
+  ctx.strokeStyle='rgba(207,240,236,.75)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.ellipse(sx+8,sy+12,7+Math.sin(t*1.4)*1.3,3,0,0,7); ctx.stroke();
+  // 肩（湯にすこし沈んで色づく）
+  px(sx+3,sy+10+bob,10,3,'#5fb4b0'); px(sx+3,sy+10+bob,10,1,'#7fcfc8');
+  // 頭（湯の上）
+  px(sx+5,sy+4+bob,6,6,'#e8c39a');                         // 顔
+  px(sx+4,sy+4+bob,1,3,'#3a2a1a'); px(sx+11,sy+4+bob,1,3,'#3a2a1a'); // もみあげ
+  // 頭にのせた手ぬぐい（温泉の定番）
+  px(sx+4,sy+2+bob,8,2,'#f2f1ea'); px(sx+4,sy+2+bob,8,1,'#ffffff');
+  px(sx+5,sy+1+bob,2,1,'#e6e4da'); px(sx+9,sy+1+bob,2,1,'#e6e4da'); // 端の折り
+  // ほっとした顔（とじ目＋ほんのりほっぺ＋小さな口）
+  px(sx+6,sy+7+bob,1,1,'#3a2a1a'); px(sx+9,sy+7+bob,1,1,'#3a2a1a'); // とじ目
+  px(sx+5,sy+8+bob,1,1,'#e89a90'); px(sx+10,sy+8+bob,1,1,'#e89a90'); // ほっぺ
+  px(sx+7,sy+8+bob,2,1,'#b07a6a');                          // 口
+  // たまに「ふぅ…」と湯気がひとつ立つ
+  if((Date.now()%2600)<900){ const a=0.5*(1-((Date.now()%2600)/900));
+    ctx.fillStyle='rgba(236,246,245,'+a.toFixed(2)+')'; ctx.fillRect(sx+11,sy-2+bob-((Date.now()%2600)/120),2,2); }
+}
 function drawAnimal(x,y,dir,frame,moving,type){
   const sx=Math.round(x),sy=Math.round(y),bob=moving?(Math.floor(frame)%2):0;
   const R=dir!=='left';
@@ -2445,6 +2468,7 @@ function render(){
   const wob=Date.now()<P.slowUntil?Math.sin(Date.now()/110)*1.6:0;
   ents.push({y:P.py+TS,fn:()=>{
     if(P.swim){ drawSwimmer(P.px-cam.x+wob,P.py-cam.y,P.dir,P.frame); return; }
+    if(P.inOnsen){ drawBather(P.px-cam.x,P.py-cam.y); return; }   // 温泉では湯につかる姿に
     drawChar(P.px-cam.x+wob,P.py-cam.y,P.dir,P.frame,P.moving,'#3a4a8a','#e8c39a','#3a2a1a',false,false,isBlinking(P.blinkOff));
     if(P.inBrush){ const sx=Math.round(P.px-cam.x+wob), sy=Math.round(P.py-cam.y); // 茂みが手前に
       px(sx+1,sy+11,4,4,'#2f6b3a'); px(sx+10,sy+12,4,3,'#27592f'); px(sx+5,sy+13,5,3,'#3a7d45');
