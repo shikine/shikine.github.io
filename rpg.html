@@ -64,6 +64,11 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     padding:6px 14px;color:var(--gold);text-decoration:none;font-size:13px}
   #dlg .next{position:absolute;right:14px;bottom:10px;color:var(--gold);font-size:13px;
     animation:bl 1s steps(2) infinite}
+  #dlg .dlgq{margin-bottom:10px}
+  #dlg .dlgchoices{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+  #dlg .dlgchoice{background:rgba(231,200,120,.10);border:2px solid var(--gold);color:var(--paper);
+    font-family:inherit;font-size:14px;text-align:left;padding:11px 13px;cursor:pointer;line-height:1.5}
+  #dlg .dlgchoice:hover{background:var(--gold);color:#221d16}
 
   /* ── centered panel popup (works / apps) ── */
   #panel{position:fixed;inset:0;z-index:25;display:none;place-items:center;
@@ -503,6 +508,36 @@ const WORKS=[{y:'2026',items:[{m:'4〜',c:'空間構成',t:'たまに葡萄 ワ�
 {y:'2007',items:[{m:'12〜',c:'企画・展示',t:'オリジナルハンガーを作ろうWS＠早稲田大学 with 中田工芸'},{m:'11〜',c:'美術製作',t:'早稲田大学にてインスタレーション作品制作１ with Yusuke Kambayashi'},{m:'2〜',c:'記録',t:'Estuaire Jardin Etoire, Nantes, France フランス・ナントビエンナーレ学生WS参加'}]},
 {y:'2006',items:[{m:'8〜',c:'WS',t:'海外ワークショップへ参加＠スペイン with Nobuhiko Utsumi'},{m:'11〜',c:'美術製作',t:'帰国制作報告会の展示空間の制作・施工 with Masaki Ogasawara'}]}];
 
+/* ── 水神の祠のコーチ：会話の途中で2択の分岐がひらく ── */
+const COACH_PAGES=(()=>{
+  const close=[
+    'コーチ「……聴かせてくれて、ありがとう。話せた時点で、もう半分は整っているのよ。」',
+    'コーチ「セルフケアは、わがままじゃない。器が満ちていないと、だれかに分けてあげられないでしょう？」',
+    'コーチ「構造と物語のあいだ——あなたの暮らしにも、きっと美しい設計図がある。わたしには、見えるよ。」',
+    'コーチ「またいつでも、ここで風に吹かれにいらして。水の音が、こんがらがった糸をそっとほどいてくれるから。」'
+  ];
+  return [
+    '（水神の祠のほとりに、小柄な女性が静かに佇んでいる。黒髪が、水辺の風にやわらかく揺れる）',
+    'コーチ「こんにちは。……いい風ね。ここ、水の音がして、考えごとにちょうどいいの。」',
+    'コーチ「わたし、つい最近この愛媛に移ってきたばかり。畑と、田んぼと、子育て。毎日くたくた。ふふ。」',
+    'コーチ「でもね、人の話をただ静かに聴いていると、なぜだか、その人の心がほどけていくの。最近それを"コーチング"と呼ぶんだと教わって……気づけば、あちこちから頼られるようになっていて。」',
+    'コーチ「よかったら、すこし聴かせて。あなたは今、どんな心持ち？……無理に言葉にしなくていい。ただ、近いほうを選んでみて。」',
+    { q:'コーチ「どちらが、いまのあなたに近い？」', choices:[
+      { t:'① やることが多くて、追われている', next:[
+        'コーチ「そう、追われているのね。……まず、ひとつだけ。今日のあなたは、もう十分よくやっている。」',
+        'コーチ「全部を抱えなくていい。手放すことは、怠けることじゃない。余白をつくる、勇気なの。」',
+        'コーチ「畑だって、一日でぜんぶは収穫しないでしょう。実ったものから、順に摘む。心も、おなじ。」',
+        'コーチ「ひと呼吸おいて——いちばん小さな一歩は、なに？それだけ今日やってみる。あとは、明日のあなたに、そっと預けて。」',
+        ...close ] },
+      { t:'② 進む方向が、見えなくなっている', next:[
+        'コーチ「方向が、見えないのね。……だいじょうぶ。霧の中でも、足もとの一歩は、ちゃんと見えるから。」',
+        'コーチ「"どこへ行くか"より、まず"何を大切にしたいか"。道はいつも、価値のほうから立ちあがってくるの。」',
+        'コーチ「田んぼに水を引くとね、水は、いちばん低いところへ自分から流れていく。あなたの心も、ほんとうは行きたい先を、もう知っているのよ。」',
+        'コーチ「焦らなくていい。立ちどまる時間も、ちゃんと前へ進んでいる時間だから。」',
+        ...close ] },
+    ] }
+  ];
+})();
 /* ── NPCs (villagers) ── */
 const NPCS=[
  {x:32,y:20, c1:'#7a5cae',c2:'#e8c39a',hair:'#cfcfcf',name:'村長', gives:6,
@@ -532,6 +567,9 @@ const NPCS=[
   pages:['近ごろ、この町へ移り住む人が増えてきた。',
          '織音さんも、2023年に東京からこの富士見町へ移ってきた一人だよ。',
          '〈構造と物語のあいだ〉に、ここで新しい空間が生まれている。']},
+ // ── 水神の祠のほとり：愛媛から移ったコーチング上手な女性（小柄・黒髪・芯がある） ──
+ {x:58,y:20, still:true, keepNight:true, small:true, female:true, dir:'down',
+  c1:'#6e8f86', c2:'#e8c39a', hair:'#1f1a16', name:'コーチ', pages:COACH_PAGES},
  // ── 川辺：熊を見守るワイルドライフの専門家（人と熊の共生をデザインする） ──
  {x:9, y:16, still:true, keepNight:true, dir:'left', c1:'#5a7a3a',c2:'#e8c39a',hair:'#4a3a28',name:'ワイルドライフの専門家',
   pages:['（双眼鏡を首にかけた人が、川の向こうの熊を、おだやかに見守っている）',
@@ -923,6 +961,8 @@ const keys={};
 addEventListener('keydown',e=>{
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();
   keys[e.key.toLowerCase()]=true;
+  if(dlgOpen&&(e.key==='1'||e.key==='2')){ const cur=curPages[curIdx];
+    if(cur&&cur.choices){ chooseBranch(+e.key-1); return; } }   // 分岐は数字キーでも選べる
   if(e.key===' '||e.key==='Enter'){ if(!running)startGame(); else interact(); }
   if((e.key==='e'||e.key==='E')&&running&&!dlgOpen&&!panelOpen) eatCrop();
   if((e.key==='t'||e.key==='T')&&running) cycleTime();
@@ -951,14 +991,28 @@ function openDialog(who,title,pages){
   renderPage(); dlg.classList.add('show'); dlgOpen=true;
 }
 function renderPage(){
-  document.getElementById('dlgBody').innerHTML=curPages[curIdx];
-  document.getElementById('dlgNext').style.display=(curIdx<curPages.length-1)?'block':'none';
+  const cur=curPages[curIdx];
+  const body=document.getElementById('dlgBody'), next=document.getElementById('dlgNext');
+  if(cur&&typeof cur==='object'&&cur.choices){          // 分岐ページ：選択肢ボタンを出す
+    let h=cur.q?('<div class="dlgq">'+cur.q+'</div>'):'';
+    h+='<div class="dlgchoices">';
+    cur.choices.forEach((c,i)=>h+='<button class="dlgchoice" data-i="'+i+'">'+c.t+'</button>');
+    h+='</div>';
+    body.innerHTML=h; next.style.display='none';
+    body.querySelectorAll('.dlgchoice').forEach(b=>b.addEventListener('click',ev=>{ ev.stopPropagation(); chooseBranch(+b.dataset.i); }));
+  } else {
+    body.innerHTML=cur; next.style.display=(curIdx<curPages.length-1)?'block':'none';
+  }
 }
-function advance(){ if(curIdx<curPages.length-1){curIdx++;renderPage();}
+function chooseBranch(i){ const cur=curPages[curIdx]; if(!cur||!cur.choices||!cur.choices[i])return;
+  curPages=cur.choices[i].next||[]; curIdx=0; renderPage(); }
+function advance(){ const cur=curPages[curIdx];
+  if(cur&&typeof cur==='object'&&cur.choices) return;    // 選択待ち：スペース/クリックでは進めない
+  if(curIdx<curPages.length-1){curIdx++;renderPage();}
   else { const cb=dlgConfirm; dlgConfirm=null; closeDlg(); if(cb)cb(); } }
 function closeDlg(){dlg.classList.remove('show');dlgOpen=false;dlgConfirm=null;}
 function openConfirm(title,pages,onYes){ openDialog('',title,pages); dlgConfirm=onYes; }
-dlg.addEventListener('click',e=>{if(e.target.closest('a,.close'))return;advance();});
+dlg.addEventListener('click',e=>{if(e.target.closest('a,.close,.dlgchoice'))return;advance();});
 
 /* ── centered panel (works / apps) ── */
 let panelOpen=false;
@@ -2244,6 +2298,8 @@ function render(){
   TREASURES.forEach(t=>{ if(t.type==='chest') ents.push({y:(t.y+1)*TS,fn:()=>drawChest(t)}); });
   SPOTS.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
   NPCS.forEach(n=>{ if(npcHidden(n))return; ents.push({y:n.py+TS,fn:()=>{
+    if(n.small){ const ax=n.px-cam.x+TS/2, ay=n.py-cam.y+TS;   // 小柄：足もとを軸に少し縮めて描く
+      ctx.save(); ctx.translate(ax,ay); ctx.scale(0.82,0.82); ctx.translate(-ax,-ay); }
     drawChar(n.px-cam.x,n.py-cam.y,n.dir,n.frame,n.moving,n.c1,n.c2,n.hair,n.cat);
     if(n.female){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y); // 長めの髪
       px(sx+3,sy+2,2,7,n.hair); px(sx+11,sy+2,2,7,n.hair); }
@@ -2256,6 +2312,7 @@ function render(){
       px(sx+1,sy-17,1,10,'#d8d2c4'); px(sx+21,sy-17,1,10,'#bcb4a4');          // 板の枠
       ctx.save(); ctx.font='bold 7px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillStyle='#c0341f'; ctx.fillText('NO WAR', sx+11, sy-12); ctx.restore(); }
+    if(n.small) ctx.restore();
   }}); });
   ANIMALS.forEach(a=>{ if(a.gone||animalHidden(a))return; ents.push({y:a.py+TS,fn:()=>{
     const al=a.fleeing?Math.max(0,1-a.fleeT/90):1; if(al<1)ctx.globalAlpha=al;
