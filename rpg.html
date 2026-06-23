@@ -2517,7 +2517,7 @@ if(('ontouchstart' in window) || (window.matchMedia && window.matchMedia('(point
 /* deep-link spawn: ?to=larry など で最初からその場所に出現してゲーム開始 */
 let _autostart=false;
 (function(){ const q=new URLSearchParams(location.search);
-  const SPN={larry:[48,34,'up'], momo:[11,34,'up'], gallery:[56,9,'up'], bear:[4,18,'up']};
+  const SPN={larry:[48,34,'up'], momo:[11,34,'up'], gallery:[56,9,'up'], bear:[4,18,'up'], mizu:[56,26,'left']};
   const s=q.get('to')||q.get('spawn'); if(!s)return;
   const pos = SPN[s] || (/^\d+,\d+$/.test(s)?s.split(',').map(Number):null);
   if(pos){ P.px=pos[0]*TS; P.py=pos[1]*TS; if(pos[2])P.dir=pos[2]; _autostart=true; } })();
