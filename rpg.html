@@ -395,6 +395,7 @@ const OBJS=[
  {x:15,y:6, w:2,h:2,type:'tent', c:'#c4604a'},  // 赤テント
  {x:21,y:6, w:2,h:2,type:'tent', c:'#4a7ab0'},  // 青テント
  {x:15,y:10,w:2,h:2,type:'tent', c:'#5aa05a'},  // 緑テント
+ {x:19,y:10,w:1,h:1,type:'radio'},              // 焚き火ラジオ（ポッドキャスト・開局準備中）
  // 川の上手・熊の上：竪穴式住居（縄文の名残）
  {x:3, y:11,w:2,h:2,type:'pit'},
  // 竪穴住居のそば：縄文の環状列石（井戸尻遺跡の名残・調べられる）
@@ -1119,7 +1120,7 @@ function openMapPanel(){
   // エリア名ラベル（タイル座標→％）
   const areas=[
     {t:'⛰ 八ヶ岳',x:32,y:2},{t:'💧 西の池',x:9,y:9},{t:'💧 東の池',x:55,y:23},
-    {t:'🎶 自由の広場',x:19,y:8},{t:'🍄 きのこの森',x:11,y:16.5},{t:'🌊 川',x:6,y:27},
+    {t:'🎶 自由の広場',x:19,y:8},{t:'🎙 焚き火ラジオ',x:19.5,y:11.5},{t:'🍄 きのこの森',x:11,y:16.5},{t:'🌊 川',x:6,y:27},
     {t:'🗿 縄文の遺跡',x:6,y:9.5},{t:'⛩ 水神の祠',x:60,y:21.5},{t:'🐴 南の牧場',x:35.5,y:35.5},
     {t:'🍓 いちご畑',x:22,y:31},{t:'🍇 ぶどう畑',x:39,y:10},{t:'🥬 レタス畑',x:39,y:22},
     {t:'🍅 トマト畑',x:30,y:22},{t:'🌾 田んぼ',x:24,y:21.5},{t:'🏜 砂漠',x:10,y:38},
@@ -1595,6 +1596,19 @@ function galleryShow(i){
 }
 /* newsletter signup → GAS (重複チェック・登録・通知を一括処理) */
 const GAS_URL='https://script.google.com/macros/s/AKfycbxc09CWmHQr9pjykGosCwf3hiCGWc5jT2vDZdiLdJ2Z0yUj9ThR1G5p495gNmOYZvAgzg/exec';
+/* 焚き火ラジオ（ポッドキャスト）— いまは開局準備中。配信が決まったら下の枠に埋め込み/リンクを差し込む */
+function openPodcastPanel(){
+  openPanel('🔥 焚き火ラジオ — Podcast',
+    `<div style="font-size:14px;line-height:1.95">
+       <p>焚き火を囲んで、ぽつり、ぽつりと語るラジオ。<br>夜の村の小さな声を、いつか、ここから配信します。</p>
+       <div style="margin:14px 0;padding:16px 14px;border:2px dashed var(--gold);border-radius:4px;text-align:center;color:var(--gold)">
+         🎙 ただいま <b>開局準備中</b>…<br>
+         <span style="font-size:12px;color:#d8d2c4">近日配信予定</span>
+       </div>
+       <p style="font-size:12px;color:#b7ad97">エピソードが整い次第、この場でそのまま聴けるようにします。<br>（Spotify / Apple Podcasts / 音声ファイルのいずれにも対応できます）</p>
+       <a class="more" href="mailto:watanabeshikine@gmail.com?subject=%E7%84%9A%E3%81%8D%E7%81%AB%E3%83%A9%E3%82%B8%E3%82%AA%E3%81%AE%E9%85%8D%E4%BF%A1%E9%80%9A%E7%9F%A5%E5%B8%8C%E6%9C%9B">配信のお知らせを受け取る →</a>
+     </div>`);
+}
 function openNewsPanel(){
   openPanel('📜 メルマガ — Newsletter',
     `<form id="nlForm" class="nlform">
@@ -1675,6 +1689,9 @@ function interact(){
   // 縄文の環状列石（井戸尻遺跡の名残）
   for(const o of OBJS){ if(o.type==='jomon' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
     openDialog('縄文の遺跡','🗿 環状列石', jomonPages()); return; } }
+  // 焚き火ラジオ（ポッドキャスト）
+  for(const o of OBJS){ if(o.type==='radio' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
+    openPodcastPanel(); return; } }
   // 水神の祠（東の池のほとり）
   if(btc>=SHRINE.x-1&&btc<=SHRINE.x+SHRINE.w&&btr>=SHRINE.y-1&&btr<=SHRINE.y+SHRINE.h){
     openDialog('水神の祠','⛩ 水神の祠', shrinePages()); return; }
@@ -1816,7 +1833,8 @@ function update(){
     const pc=((P.px+TS/2)/TS)|0, pr=((P.py+TS-2)/TS)|0;
     const around=t=>{for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){const rr=pr+dr,cc=pc+dc;if(rr>=0&&rr<MH&&cc>=0&&cc<MW&&M[rr][cc]===t)return true;}return false;};
     const here=M[pr]&&M[pr][pc];
-    if(pc>=15&&pc<=22&&pr>=6&&pr<=11) label='🎶 <b>自由の広場</b> — ワイワイ';
+    if(Math.hypot(19.5*TS-(P.px+TS/2),10.5*TS-(P.py+TS/2))<TS*1.8) label='🎙 <b>焚き火ラジオ</b> — 調べる（準備中）';
+    else if(pc>=15&&pc<=22&&pr>=6&&pr<=11) label='🎶 <b>自由の広場</b> — ワイワイ';
     else if(here===12||here===13||around(12)||around(13)) label='🍓 <b>いちご畑</b> — 調べて収穫';
     else if(here===14||here===15||around(14)||around(15)) label='🍇 <b>ぶどう畑</b>（ワイン用）— 調べて収穫';
     else if(here===16||here===17||around(16)||around(17)) label='🥬 <b>レタス畑</b> — 調べて収穫';
@@ -2200,6 +2218,18 @@ function drawObj(o){
     px(Math.round(cx)-2,cy-7,4,9,'#9a9994');                          // 中央の立石
     px(Math.round(cx)-2,cy-7,4,1,'#b8b7b2'); px(Math.round(cx)-2,cy+1,4,1,'rgba(0,0,0,.25)');
     px(Math.round(cx),cy-5,1,1,'#6f8a5a'); }                          // 中央石の苔
+  else if(o.type==='radio'){     // 焚き火ラジオ（木箱ラジオ＋マイク＋ON AIRランプ）
+    px(sx+1,sy+7,9,7,'#8a5a3a'); px(sx+1,sy+7,9,1,'#a06a44');         // 木箱の本体
+    px(sx+1,sy+13,9,1,'#5a3a22');                                     // 底の影
+    px(sx+2,sy+9,4,4,'#2c241c'); px(sx+2,sy+9,4,1,'#4a3e30');         // スピーカーの網
+    px(sx+3,sy+10,1,2,'#3a4a3a'); px(sx+4,sy+10,1,2,'#3a4a3a');       // 網の目
+    px(sx+7,sy+9,2,2,'#caa46a'); px(sx+7,sy+12,2,1,'#caa46a');        // チューニングダイヤル
+    px(sx+8,sy+1,1,6,'#9aa0a6');                                      // アンテナ
+    const on=(Math.sin(Date.now()/360)>0);
+    px(sx+8,sy,2,2,on?'#ff4a4a':'#5a2424');                           // ON AIR ランプ（点滅）
+    px(sx+13,sy+6,1,8,'#6a6e74'); px(sx+11,sy+13,5,1,'#5a5e64');      // マイクのスタンド＋台座
+    px(sx+12,sy+2,3,5,'#2c2f36'); px(sx+12,sy+2,3,1,'#4a505a');       // マイクの頭
+    px(sx+13,sy+3,1,3,'#727880'); }                                  // マイクの網
 }
 function drawBear(){
   const sx=Math.round(BEAR.px-cam.x), sy=Math.round(BEAR.py-cam.y), bob=BEAR.moving?(Math.floor(BEAR.frame)%2):0;
