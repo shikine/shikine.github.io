@@ -1592,9 +1592,80 @@ if(SENSOR.supported){
   _obsAutoConnect();
 }
 fetchCloudObs();   // 起動時に一度、畑の最新観測値を取得しておく
+// ── 観測グラフ（1日/1週間/1か月/1年）— GASの ?range= から系列を取得して描画 ──
+const OBS_RANGES=[['day','1日'],['week','1週間'],['month','1か月'],['year','1年']];
+let _obsChart={range:'day',points:null,err:''};
+function _obsSegHTML(active){
+  return OBS_RANGES.map(r=>{ const on=r[0]===active;
+    const st='flex:1;min-width:56px;font-family:inherit;font-size:13px;padding:8px 6px;cursor:pointer;border:2px solid '
+      +(on?'var(--gold)':'#4a4030')+';background:'+(on?'var(--gold)':'rgba(231,200,120,.10)')+';color:'+(on?'#221d16':'var(--paper)')+';'+(on?'font-weight:bold;':'');
+    return '<button style="'+st+'" onclick="obsGraph(\''+r[0]+'\')">'+r[1]+'</button>'; }).join('');
+}
+function openObsGraph(){
+  const h='<div id="obsRangeSeg" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+_obsSegHTML(_obsChart.range)+'</div>'
+    +'<canvas id="obsChart" width="640" height="320" style="width:100%;height:auto;background:#15120d;border:2px solid #4a4030;display:block"></canvas>'
+    +'<div id="obsChartMsg" style="font-size:12px;color:#b7ad97;margin-top:8px;line-height:1.7"></div>';
+  openPanel('📈 畑の観測グラフ', h);
+  obsGraph(_obsChart.range||'day');
+}
+function obsGraph(range){
+  _obsChart.range=range; _obsChart.err='';
+  const seg=document.getElementById('obsRangeSeg'); if(seg) seg.innerHTML=_obsSegHTML(range);
+  const msg=document.getElementById('obsChartMsg'); if(msg) msg.textContent='読み込み中…';
+  const cb='_obsg'+Date.now(); const s=document.createElement('script'); let done=false;
+  const cleanup=()=>{ try{delete window[cb];}catch(e){window[cb]=undefined;} if(s.parentNode)s.parentNode.removeChild(s); };
+  window[cb]=function(d){ done=true;
+    if(d && d.points){ _obsChart.points=d.points; _obsChart.err=''; }
+    else { _obsChart.points=[]; _obsChart.err='グラフ用データが取得できません。GASを最新コードで再デプロイしてください。'; }
+    cleanup(); drawObsChart(); };
+  s.onerror=function(){ if(!done){ _obsChart.err='取得に失敗しました'; cleanup(); drawObsChart(); } };
+  s.src=GAS_OBS_URL+'?range='+range+'&callback='+cb+'&_='+Date.now();
+  document.head.appendChild(s);
+  setTimeout(()=>{ if(!done){ _obsChart.err='タイムアウト'; cleanup(); drawObsChart(); } },12000);
+}
+function drawObsChart(){
+  const cvs=document.getElementById('obsChart'); if(!cvs) return;
+  const g=cvs.getContext('2d'), W=cvs.width, H=cvs.height;
+  g.fillStyle='#15120d'; g.fillRect(0,0,W,H);
+  const msg=document.getElementById('obsChartMsg');
+  if(_obsChart.err){ if(msg) msg.textContent='⚠ '+_obsChart.err;
+    g.fillStyle='#6a6356'; g.font='14px sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('—', W/2, H/2); return; }
+  const pts=_obsChart.points||[];
+  if(!pts.length){ if(msg) msg.textContent='まだこの期間の記録がありません（10分ごとに増えていきます）';
+    g.fillStyle='#6a6356'; g.font='14px sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('データなし', W/2, H/2); return; }
+  const padL=42,padR=44,padT=16,padB=28, x0=padL,x1=W-padR,y0=padT,y1=H-padB;
+  const ts=pts.map(p=>p[0]),temps=pts.map(p=>p[1]);
+  const tmin=Math.min(...ts),tmax=Math.max(...ts);
+  let Tmn=Math.min(...temps),Tmx=Math.max(...temps);
+  if(Tmx-Tmn<2){const m=(Tmx+Tmn)/2;Tmn=m-1;Tmx=m+1;}
+  Tmn=Math.floor(Tmn-1);Tmx=Math.ceil(Tmx+1);
+  const xOf=t=>(tmax===tmin)?(x0+x1)/2:x0+(t-tmin)/(tmax-tmin)*(x1-x0);
+  const yT=v=>y1-(v-Tmn)/(Tmx-Tmn)*(y1-y0);
+  const yH=v=>y1-v/100*(y1-y0);
+  g.strokeStyle='#3a352b';g.lineWidth=1;g.font='10px sans-serif';g.textBaseline='middle';
+  for(let i=0;i<=4;i++){ const yy=y0+(y1-y0)*i/4;
+    g.beginPath();g.moveTo(x0,yy);g.lineTo(x1,yy);g.stroke();
+    g.fillStyle='#e0a060';g.textAlign='right';g.fillText((Tmx-(Tmx-Tmn)*i/4).toFixed(0)+'°',x0-4,yy);
+    g.fillStyle='#70a0d0';g.textAlign='left';g.fillText((100-100*i/4).toFixed(0)+'%',x1+4,yy);
+  }
+  const fmt=(ms)=>{const d=new Date(ms),r=_obsChart.range,p2=n=>('0'+n).slice(-2);
+    if(r==='day')return p2(d.getHours())+':'+p2(d.getMinutes());
+    if(r==='week'||r==='month')return (d.getMonth()+1)+'/'+d.getDate();
+    return (''+d.getFullYear()).slice(2)+'/'+(d.getMonth()+1);};
+  g.fillStyle='#8a8378';g.textAlign='center';g.textBaseline='top';
+  g.fillText(fmt(tmin),x0,y1+5); g.fillText(fmt(tmax),x1,y1+5);
+  g.lineWidth=2;
+  g.strokeStyle='#70a0d0';g.beginPath();pts.forEach((p,i)=>{const X=xOf(p[0]),Y=yH(p[2]);i?g.lineTo(X,Y):g.moveTo(X,Y);});g.stroke();
+  g.strokeStyle='#e0a060';g.beginPath();pts.forEach((p,i)=>{const X=xOf(p[0]),Y=yT(p[1]);i?g.lineTo(X,Y):g.moveTo(X,Y);});g.stroke();
+  g.textAlign='left';g.textBaseline='middle';g.font='12px sans-serif';
+  g.fillStyle='#e0a060';g.fillText('● 気温',x0+6,y0+6);
+  g.fillStyle='#70a0d0';g.fillText('● 湿度',x0+64,y0+6);
+  if(msg) msg.textContent=pts.length+'点 ・ '+fmt(tmin)+' 〜 '+fmt(tmax)+'（気温＝自動目盛／湿度＝0〜100%）';
+}
 function sensorPages(){
   return [
-    '（畑のかたわらで、小さな観測機がランプを点滅させている）<br><br><div id="obsBox">'+obsBoxHTML()+'</div>',
+    '（畑のかたわらで、小さな観測機がランプを点滅させている）<br><br><div id="obsBox">'+obsBoxHTML()+'</div>'
+      +'<a href="#" class="more" onclick="closeDlg();openObsGraph();return false;">📈 グラフで見る（1日／1週／1月／1年）</a>',
     'この観測機は、畑に置かれた<b>ラズベリーパイ Pico 2 W</b>のAHT20センサーとつながっている。',
     '気温と湿度は<b>10分ごとにクラウド（スプレッドシート）へ記録</b>され、ここに最新値が映し出される。',
     '（スマホでもPCでも見られる。記録はずっと残るので、畑の空気の移ろいを後から辿れるのだ）'
