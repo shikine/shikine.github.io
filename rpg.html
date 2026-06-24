@@ -925,7 +925,7 @@ const PHEASANT_TALK={
 
 /* ── player ── */
 const P={px:HUB[0]*TS, py:HUB[1]*TS+TS, dir:'down', speed:1.5, frame:0, moving:false,
-         swim:false, berries:0, grapes:0, lettuce:0, tomato:0, mushroom:0, lastCrop:'', boostUntil:0, slowUntil:0, blinkOff:1700};
+         swim:false, berries:0, grapes:0, lettuce:0, tomato:0, mushroom:0, flowers:0, lastCrop:'', boostUntil:0, slowUntil:0, blinkOff:1700};
 const SOLID=new Set([2,3,6,8,9,10,11,12,13,14,15,16,17,19,20,21,22,23,24,25,26]);
 const PICKED=[]; // {c,r,at,ripe} for crop regrow
 /* harvestable crops: ripe tile -> info */
@@ -1279,7 +1279,7 @@ let _toastT;
 function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg;
   t.classList.add('show'); clearTimeout(_toastT); _toastT=setTimeout(()=>t.classList.remove('show'),1700); }
 function updateCropHud(){ document.getElementById('crops').innerHTML=
-  '🍓 <b>×'+P.berries+'</b>&ensp;🍇 <b>×'+P.grapes+'</b>&ensp;🥬 <b>×'+P.lettuce+'</b>&ensp;🍅 <b>×'+P.tomato+'</b>&ensp;🍄 <b>×'+P.mushroom+'</b>'; }
+  '🍓 <b>×'+P.berries+'</b>&ensp;🍇 <b>×'+P.grapes+'</b>&ensp;🥬 <b>×'+P.lettuce+'</b>&ensp;🍅 <b>×'+P.tomato+'</b>&ensp;🍄 <b>×'+P.mushroom+'</b>&ensp;🌼 <b>×'+P.flowers+'</b>'; }
 /* ── treasure hunt ── */
 function treasCount(){ return TREASURES.filter(t=>t.found).length; }
 function updateTreasHud(){ const e=document.getElementById('treas'); if(e)e.innerHTML='💎 <b>'+treasCount()+'/8</b>'; }
@@ -1714,6 +1714,9 @@ function interact(){
     if(d<TS*1.6){ getTreasure(t); showToast(t.icon+' 宝を発見！ <'+t.name+'> 💎'+treasCount()+'/8'); return; } } }
   // crop harvest? (いちご / ぶどう / レタス)
   const stc=(fx/TS)|0, str=(fy/TS)|0, here=M[str]&&M[str][stc];
+  // 花を摘む（tile 4）— 摘むと手に持つ。20秒ほどで咲きなおす
+  if(here===4){ M[str][stc]=0; PICKED.push({c:stc,r:str,at:Date.now()+20000,ripe:4});
+    P.flowers++; updateCropHud(); showToast('🌼 花を摘んだ！  🌼 ×'+P.flowers); return; }
   const crop=CROP[here];
   if(crop){ M[str][stc]=crop.picked; PICKED.push({c:stc,r:str,at:Date.now()+20000,ripe:here});
     P[crop.key]++; P.lastCrop=crop.key; updateCropHud();
@@ -2373,6 +2376,25 @@ function drawBather(x,y){
   if((Date.now()%2600)<900){ const a=0.5*(1-((Date.now()%2600)/900));
     ctx.fillStyle='rgba(236,246,245,'+a.toFixed(2)+')'; ctx.fillRect(sx+11,sy-2+bob-((Date.now()%2600)/120),2,2); }
 }
+/* ── 摘んだ花を持つ（1〜3輪は片手に、4輪以上は両手で抱える） ── */
+function drawHeldFlowers(sx,sy,n,bob){
+  const COL=['#f4a6c0','#ffd24f','#ffffff','#e88ad0','#7fc6ff'], y=sy+bob;
+  if(n>=4){                                                     // 両手で抱える花束
+    px(sx+2,y+9,2,3,'#e8c39a'); px(sx+12,y+9,2,3,'#e8c39a');    // 両手
+    px(sx+4,y+10,8,2,'#3a7d45');                                 // 茎束
+    px(sx+3,y+6,3,3,COL[0]); px(sx+6,y+5,3,3,COL[1]); px(sx+9,y+6,3,3,COL[2]);   // 花（上段）
+    px(sx+5,y+8,2,2,COL[3]); px(sx+9,y+8,2,2,COL[4]);           // 花（下段）
+    px(sx+4,y+7,1,1,'#fff8'); px(sx+7,y+6,1,1,'#fff8'); px(sx+10,y+7,1,1,'#fff8'); // ハイライト
+    px(sx+3,y+9,1,1,'#2f6b3a'); px(sx+11,y+9,1,1,'#2f6b3a');    // 葉
+  } else {                                                      // 片手に一輪〜小さな花束
+    px(sx+10,y+9,3,3,'#e8c39a');                                // 手
+    px(sx+11,y+6,1,5,'#3a7d45');                                // 茎
+    px(sx+10,y+4,3,3,COL[0]); px(sx+11,y+5,1,1,'#fff8');        // 1輪目
+    if(n>=2){ px(sx+7,y+7,1,4,'#3a7d45'); px(sx+6,y+5,3,3,COL[1]); px(sx+7,y+6,1,1,'#fff8'); } // 2輪目
+    if(n>=3){ px(sx+9,y+7,2,2,COL[2]); }                        // 3輪目
+    px(sx+9,y+9,1,1,'#2f6b3a');                                 // 葉
+  }
+}
 function drawAnimal(x,y,dir,frame,moving,type){
   const sx=Math.round(x),sy=Math.round(y),bob=moving?(Math.floor(frame)%2):0;
   const R=dir!=='left';
@@ -2504,6 +2526,7 @@ function render(){
     if(P.swim){ drawSwimmer(P.px-cam.x+wob,P.py-cam.y,P.dir,P.frame); return; }
     if(P.inOnsen){ drawBather(P.px-cam.x,P.py-cam.y); return; }   // 温泉では湯につかる姿に
     drawChar(P.px-cam.x+wob,P.py-cam.y,P.dir,P.frame,P.moving,'#3a4a8a','#e8c39a','#3a2a1a',false,false,isBlinking(P.blinkOff));
+    if(P.flowers>0) drawHeldFlowers(Math.round(P.px-cam.x+wob), Math.round(P.py-cam.y), P.flowers, P.moving?(Math.floor(P.frame)%2):0);  // 摘んだ花を持つ
     if(P.inBrush){ const sx=Math.round(P.px-cam.x+wob), sy=Math.round(P.py-cam.y); // 茂みが手前に
       px(sx+1,sy+11,4,4,'#2f6b3a'); px(sx+10,sy+12,4,3,'#27592f'); px(sx+5,sy+13,5,3,'#3a7d45');
       px(sx+3,sy+13,1,2,'#4f9a57'); px(sx+12,sy+12,1,2,'#4f9a57'); }
