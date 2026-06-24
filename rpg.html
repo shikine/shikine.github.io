@@ -317,11 +317,11 @@ for(let r=6;r<13;r++)for(let c=5;c<14;c++)
 // 2nd pond (east)
 for(let r=20;r<26;r++)for(let c=51;c<60;c++)
   if((r-23)*(r-23)/9+(c-55)*(c-55)/16<1.05)set(c,r,2);
-// desert (south-west corner) + cacti & rocks
+// desert (south-west corner)
 for(let r=34;r<MH-2;r++)for(let c=3;c<19;c++)set(c,r,7);
-for(let r=34;r<MH-2;r++)for(let c=3;c<19;c++){
-  const v=rnd(); if(v>.94)set(c,r,10); else if(v>.88)set(c,r,9);
-}
+// 砂漠にはサボテンと岩をひとつずつだけ置く
+set(5,40,10);    // サボテン
+set(16,41,9);    // 岩
 // lava lake (south-east corner) ringed with rock
 for(let r=33;r<MH-2;r++)for(let c=44;c<MW-2;c++){
   const d=(r-39)*(r-39)/16+(c-52)*(c-52)/40;
@@ -391,6 +391,8 @@ const OBJS=[
  {x:13,y:36,w:1,h:1,type:'ladder'},   // 脚立
  {x:12,y:39,w:1,h:1,type:'lumber'},   // 木材
  {x:8, y:40,w:1,h:1,type:'paint'},    // 塗料
+ // アトリエ近くの砂漠：屋外の台所（カウンター＋コンロ＋鍋）
+ {x:16,y:37,w:2,h:1,type:'kitchen'},
  // 自由の広場：焚き火を囲むテント
  {x:15,y:6, w:2,h:2,type:'tent', c:'#c4604a'},  // 赤テント
  {x:21,y:6, w:2,h:2,type:'tent', c:'#4a7ab0'},  // 青テント
@@ -1123,7 +1125,8 @@ function openMapPanel(){
     {t:'🎶 自由の広場',x:19,y:8},{t:'🎙 焚き火ラジオ',x:21.5,y:12.5},{t:'🍄 きのこの森',x:11,y:16.5},{t:'🌊 川',x:6,y:27},
     {t:'🗿 縄文の遺跡',x:6,y:9.5},{t:'⛩ 水神の祠',x:60,y:21.5},{t:'🐴 南の牧場',x:35.5,y:35.5},
     {t:'🍓 いちご畑',x:22,y:31},{t:'🍇 ぶどう畑',x:39,y:10},{t:'🥬 レタス畑',x:39,y:22},
-    {t:'🍅 トマト畑',x:30,y:22},{t:'🌾 田んぼ',x:24,y:21.5},{t:'🏜 砂漠',x:10,y:38},
+    {t:'🍅 トマト畑',x:30,y:22},{t:'🌾 田んぼ',x:24,y:21.5},{t:'🏜 砂漠',x:8,y:39},
+    {t:'🍳 台所',x:17,y:37},
     {t:'🌋 溶岩地帯',x:52,y:42},{t:'♨ 温泉',x:52,y:39},
   ];
   let lab='';
@@ -1517,6 +1520,19 @@ function jomonPages(){ return [
   'この環状列石は、季節をはかる暦であり、祈りの場でもあったという。',
   '（石にふれると、遠い焚き火のはぜる音が、かすかに聞こえた気がした）'
 ]; }
+// アトリエの屋外台所
+function kitchenPages(){
+  const got=P.berries+P.grapes+P.lettuce+P.tomato+P.mushroom;
+  const base=[
+    '（砂漠のはずれ、アトリエの屋外台所。日に焼けた木のカウンターで、鍋がことこと鳴っている）',
+    'ここは、織音さんの台所。畑で採れたものが、ここで湯気になる。',
+    'トマトを煮て、レタスを刻んで、いちごはそのまま摘まんで。',
+    '〈つくる〉のあいだには、いつも〈食べる〉がある。手を動かし、火をかこむ。'];
+  base.push(got>0
+    ? '（収穫した野菜があるね。E ／ 🍴ボタンで、ここの火を思いながら食べてみよう）'
+    : '（鍋からいい匂い。畑で何か収穫してきたら、また寄ってみて）');
+  return base;
+}
 const SNAME={spring:'🌸 春',summer:'☀️ 夏',autumn:'🍁 秋',winter:'❄️ 冬'};
 function updateSeasonBtn(){ document.querySelectorAll('#seasonSeg button').forEach(b=>b.classList.toggle('on',b.dataset.s===seasonMode)); }
 function cycleSeason(){ seasonMode=SORDER[(SORDER.indexOf(seasonMode)+1)%SORDER.length]; updateSeasonBtn();
@@ -1692,6 +1708,9 @@ function interact(){
   // 焚き火ラジオ（ポッドキャスト）
   for(const o of OBJS){ if(o.type==='radio' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
     openPodcastPanel(); return; } }
+  // アトリエの屋外台所
+  for(const o of OBJS){ if(o.type==='kitchen' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
+    openDialog('台所','🍳 屋外キッチン', kitchenPages()); return; } }
   // 水神の祠（東の池のほとり）
   if(btc>=SHRINE.x-1&&btc<=SHRINE.x+SHRINE.w&&btr>=SHRINE.y-1&&btr<=SHRINE.y+SHRINE.h){
     openDialog('水神の祠','⛩ 水神の祠', shrinePages()); return; }
@@ -2238,6 +2257,21 @@ function drawObj(o){
     px(sx+13,sy+6,1,8,'#6a6e74'); px(sx+11,sy+13,5,1,'#5a5e64');      // マイクのスタンド＋台座
     px(sx+12,sy+2,3,5,'#2c2f36'); px(sx+12,sy+2,3,1,'#4a505a');       // マイクの頭
     px(sx+13,sy+3,1,3,'#727880'); }                                  // マイクの網
+  else if(o.type==='kitchen'){   // 屋外の台所（棚＋カウンター＋コンロ＋鍋）
+    px(sx+2,sy-4,W-4,4,'#8a6a44'); px(sx+2,sy-4,W-4,1,'#a07c50');     // 上の棚板
+    px(sx+5,sy-3,1,3,'#b8b8b8'); px(sx+4,sy-1,2,1,'#b8b8b8');         // つるしたおたま
+    px(sx+8,sy-3,1,3,'#caa060');                                      // 木べら
+    px(sx+1,sy+4,W-2,9,'#9a6a3a'); px(sx+1,sy+4,W-2,1,'#b07c44');     // カウンター天板
+    px(sx+1,sy+12,W-2,2,'#6a4628');                                   // 脚もとの影
+    for(let i=1;i*8<W-2;i++) px(sx+i*8,sy+5,1,8,'#7a5230');           // 板の継ぎ目
+    px(sx+4,sy+8,5,3,'#3a2a1a');                                      // コンロの五徳
+    const f=Math.round(Math.sin(Date.now()/120)*1.2);
+    ctx.fillStyle='#e0531e'; ctx.fillRect(sx+5,sy+6+f,3,3);           // 炎
+    ctx.fillStyle='#ffb24a'; ctx.fillRect(sx+6,sy+7+f,1,2);
+    px(sx+W-12,sy+5,8,5,'#3a3e44'); px(sx+W-12,sy+5,8,1,'#5a5e64');   // 鍋
+    px(sx+W-13,sy+4,10,1,'#6a6e74'); px(sx+W-9,sy+3,2,1,'#8a8e94');   // ふち＋とって
+    if((Date.now()%1800)<1000){ const a=0.4*(1-(Date.now()%1800)/1000);  // 鍋の湯気
+      ctx.fillStyle='rgba(236,246,245,'+a.toFixed(2)+')'; ctx.fillRect(sx+W-9,sy+1-((Date.now()%1800)/200),2,2); } }
 }
 function drawBear(){
   const sx=Math.round(BEAR.px-cam.x), sy=Math.round(BEAR.py-cam.y), bob=BEAR.moving?(Math.floor(BEAR.frame)%2):0;
