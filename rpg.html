@@ -395,7 +395,7 @@ const OBJS=[
  {x:15,y:6, w:2,h:2,type:'tent', c:'#c4604a'},  // 赤テント
  {x:21,y:6, w:2,h:2,type:'tent', c:'#4a7ab0'},  // 青テント
  {x:15,y:10,w:2,h:2,type:'tent', c:'#5aa05a'},  // 緑テント
- {x:19,y:10,w:1,h:1,type:'radio'},              // 焚き火ラジオ（ポッドキャスト・開局準備中）
+ {x:21,y:11,w:1,h:1,type:'radio'},              // 焚き火ラジオ（広場の南東・人から少し離して置く）
  // 川の上手・熊の上：竪穴式住居（縄文の名残）
  {x:3, y:11,w:2,h:2,type:'pit'},
  // 竪穴住居のそば：縄文の環状列石（井戸尻遺跡の名残・調べられる）
@@ -1120,7 +1120,7 @@ function openMapPanel(){
   // エリア名ラベル（タイル座標→％）
   const areas=[
     {t:'⛰ 八ヶ岳',x:32,y:2},{t:'💧 西の池',x:9,y:9},{t:'💧 東の池',x:55,y:23},
-    {t:'🎶 自由の広場',x:19,y:8},{t:'🎙 焚き火ラジオ',x:19.5,y:11.5},{t:'🍄 きのこの森',x:11,y:16.5},{t:'🌊 川',x:6,y:27},
+    {t:'🎶 自由の広場',x:19,y:8},{t:'🎙 焚き火ラジオ',x:21.5,y:12.5},{t:'🍄 きのこの森',x:11,y:16.5},{t:'🌊 川',x:6,y:27},
     {t:'🗿 縄文の遺跡',x:6,y:9.5},{t:'⛩ 水神の祠',x:60,y:21.5},{t:'🐴 南の牧場',x:35.5,y:35.5},
     {t:'🍓 いちご畑',x:22,y:31},{t:'🍇 ぶどう畑',x:39,y:10},{t:'🥬 レタス畑',x:39,y:22},
     {t:'🍅 トマト畑',x:30,y:22},{t:'🌾 田んぼ',x:24,y:21.5},{t:'🏜 砂漠',x:10,y:38},
@@ -1833,7 +1833,7 @@ function update(){
     const pc=((P.px+TS/2)/TS)|0, pr=((P.py+TS-2)/TS)|0;
     const around=t=>{for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){const rr=pr+dr,cc=pc+dc;if(rr>=0&&rr<MH&&cc>=0&&cc<MW&&M[rr][cc]===t)return true;}return false;};
     const here=M[pr]&&M[pr][pc];
-    if(Math.hypot(19.5*TS-(P.px+TS/2),10.5*TS-(P.py+TS/2))<TS*1.8) label='🎙 <b>焚き火ラジオ</b> — 調べる（準備中）';
+    if(Math.hypot(21.5*TS-(P.px+TS/2),11.5*TS-(P.py+TS/2))<TS*1.8) label='🎙 <b>焚き火ラジオ</b> — 調べる（準備中）';
     else if(pc>=15&&pc<=22&&pr>=6&&pr<=11) label='🎶 <b>自由の広場</b> — ワイワイ';
     else if(here===12||here===13||around(12)||around(13)) label='🍓 <b>いちご畑</b> — 調べて収穫';
     else if(here===14||here===15||around(14)||around(15)) label='🍇 <b>ぶどう畑</b>（ワイン用）— 調べて収穫';
