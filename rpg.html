@@ -1138,6 +1138,7 @@ function openMapPanel(){
   leg+='</div>';
   openPanel('🗺 あわい村 — 全体マップ',
     '<style>'
+    +'.mpad{position:relative;width:100%;box-sizing:border-box;padding:12px 30px;overflow:visible}'  /* 端ラベル用の余白 */
     +'.mwrap{position:relative;width:100%;line-height:0}'
     +'.mwrap canvas{width:100%;display:block;border:2px solid #4a4030;background:#1a1712}'
     +'.mlab{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;'
@@ -1150,8 +1151,9 @@ function openMapPanel(){
     +'.mlegend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:10px}'
     +'.mli{display:flex;align-items:center;gap:5px;font-size:11px;color:#c9c0aa}'
     +'.mli i{width:11px;height:11px;border-radius:2px;display:inline-block;border:1px solid #00000040}'
+    +'@media(max-width:560px){.mpad{padding:14px 18px}.marea{font-size:8px}.mspot{font-size:8px}.mhere{width:9px;height:9px}}'  /* スマホ：余白とラベルを調整して切れを防ぐ */
     +'</style>'
-    +'<div class="mwrap"><canvas id="mapcv" width="'+w+'" height="'+h+'"></canvas>'+lab+'</div>'
+    +'<div class="mpad"><div class="mwrap"><canvas id="mapcv" width="'+w+'" height="'+h+'"></canvas>'+lab+'</div></div>'
     +'<div style="margin-top:8px;font-size:12px;line-height:1.7;color:#b7ad97">'
     +'🔴 いまの現在地。季節や天候で畑や森の様子も移ろう。歩きまわって村を探そう。</div>'
     +leg);
@@ -1215,6 +1217,7 @@ function openCrossPanel(){
   let leg='<div class="mlegend">'; for(const[col,n] of legend) leg+='<span class="mli"><i style="background:'+col+'"></i>'+n+'</span>'; leg+='</div>';
   openPanel('⛰ あわい村 — 断層図（土地の成り立ち）',
     '<style>'
+    +'.mpad{position:relative;width:100%;box-sizing:border-box;padding:12px 30px;overflow:visible}'  /* 端ラベル用の余白 */
     +'.mwrap{position:relative;width:100%;line-height:0}'
     +'.mwrap canvas{width:100%;display:block;border:2px solid #4a4030;background:#0e1410}'
     +'.mlab{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;text-shadow:0 1px 2px #000,0 0 3px #000;line-height:1}'
@@ -1226,8 +1229,9 @@ function openCrossPanel(){
     +'.mlegend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:10px}'
     +'.mli{display:flex;align-items:center;gap:5px;font-size:11px;color:#c9c0aa}'
     +'.mli i{width:11px;height:11px;border-radius:2px;display:inline-block;border:1px solid #00000040}'
+    +'@media(max-width:560px){.mpad{padding:14px 16px}.marea{font-size:9px}.mspot{font-size:9px}.mstrat{font-size:8.5px}}'  /* スマホ：余白とラベルを調整 */
     +'</style>'
-    +'<div class="mwrap"><canvas id="xcv" width="'+W+'" height="'+H+'"></canvas>'+lab+'</div>'
+    +'<div class="mpad"><div class="mwrap"><canvas id="xcv" width="'+W+'" height="'+H+'"></canvas>'+lab+'</div></div>'
     +'<div style="margin-top:8px;font-size:12px;line-height:1.7;color:#b7ad97">'
     +'🔴 いまの現在地を通る、北（八ヶ岳）→南の断面。八ヶ岳の噴火が積もり、川が削って段丘をつくった。'
     +'深部には<b>マグマだまり</b>が八ヶ岳を支える。高さは強調表示——平らに見えて、<b>意外と起伏のある土地</b>です。</div>'
