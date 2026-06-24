@@ -1490,17 +1490,87 @@ function drawFog(){
   }
   ctx.restore(); ctx.globalAlpha=1;
 }
-// 観測機の表示内容（いまは現在の気象値。将来は raspi のセンサー値を反映予定）
-function sensorPages(){
+// ── 観測機：畑のPico (AHT20) と Web Serial で連携 ───────────────
+//   Pico の main.py が 'OBS,<気温>,<湿度>' を2秒ごとにUSBシリアルへ送信。
+//   PCのChrome/Edgeで「接続」すると、その値をこの観測機に映し出す。
+const SENSOR={supported:('serial' in navigator),connected:false,connecting:false,temp:null,hum:null,ts:0,err:''};
+let _obsPort=null,_obsReader=null,_obsKeep=false;
+function refreshObs(){ const el=document.getElementById('obsBox'); if(el) el.innerHTML=obsBoxHTML(); }
+function obsBoxHTML(){
+  if(SENSOR.connected){
+    if(SENSOR.temp!=null && (Date.now()-SENSOR.ts)<8000){
+      return '📡 <b>畑のリアル観測値</b>（Pico / AHT20）<br>'
+        +'・気温：<b>'+SENSOR.temp.toFixed(1)+' ℃</b><br>'
+        +'・湿度：<b>'+SENSOR.hum.toFixed(1)+' %</b><br>'
+        +'<span style="opacity:.7;font-size:12px">🟢 接続中 — '+new Date(SENSOR.ts).toLocaleTimeString('ja-JP')+' 更新</span>';
+    }
+    return '📡 <b>Picoに接続中…</b> データ受信を待っています。';
+  }
   const w=WEATHER;
   const temp=(w.temp!=null)?(Math.round(w.temp*10)/10+'℃'):'—';
   const wind=(w.wind!=null)?(Math.round(w.wind*10)/10+' m/s'):'—';
+  let h='📡 <b>いまの観測値</b>（気象データ）<br>・気温：'+temp+'<br>・風速：'+wind+'<br>・天候：'+w.label+'<br>';
+  if(SENSOR.supported){
+    h+='<a href="#" class="more" onclick="connectSensor();return false;">'
+      +(SENSOR.connecting?'接続中…':'📡 畑のPicoに接続する')+'</a>';
+  }else{
+    h+='<span style="opacity:.75;font-size:12px">※ライブ観測はPCのChrome／Edgeで開くと、畑のPicoに繋がります。</span>';
+  }
+  if(SENSOR.err) h+='<br><span style="color:#f09c9c;font-size:12px">'+SENSOR.err+'</span>';
+  return h;
+}
+function parseSensorLine(line){
+  const m=line.match(/OBS,(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+  if(m){ SENSOR.temp=parseFloat(m[1]); SENSOR.hum=parseFloat(m[2]); SENSOR.ts=Date.now(); refreshObs(); }
+}
+async function _obsRead(){
+  const dec=new TextDecoder(); let buf='';
+  while(_obsKeep && _obsPort && _obsPort.readable){
+    _obsReader=_obsPort.readable.getReader();
+    try{
+      while(true){ const {value,done}=await _obsReader.read(); if(done) break;
+        buf+=dec.decode(value,{stream:true});
+        let nl; while((nl=buf.indexOf('\n'))>=0){ parseSensorLine(buf.slice(0,nl)); buf=buf.slice(nl+1); }
+        if(buf.length>4096) buf=buf.slice(-256);
+      }
+    }catch(e){}
+    finally{ try{_obsReader.releaseLock();}catch(_){} }
+  }
+  SENSOR.connected=false; refreshObs();
+}
+async function _obsOpen(port){
+  await port.open({baudRate:115200});
+  _obsPort=port; _obsKeep=true;
+  SENSOR.connected=true; SENSOR.connecting=false; SENSOR.err=''; refreshObs();
+  _obsRead();
+}
+async function connectSensor(){
+  if(!SENSOR.supported){ SENSOR.err='このブラウザはWeb Serial非対応です（PCのChrome／Edgeで開いてください）'; refreshObs(); return; }
+  if(SENSOR.connected||SENSOR.connecting) return;
+  SENSOR.connecting=true; SENSOR.err=''; refreshObs();
+  try{
+    const port=await navigator.serial.requestPort({filters:[{usbVendorId:0x2E8A}]});
+    await _obsOpen(port);
+  }catch(e){ SENSOR.connecting=false; SENSOR.err='接続できませんでした（'+(e.message||e)+'）'; refreshObs(); }
+}
+async function _obsAutoConnect(){
+  if(!SENSOR.supported) return;
+  try{
+    const ports=await navigator.serial.getPorts();
+    const port=ports.find(p=>{ const i=p.getInfo&&p.getInfo(); return i&&i.usbVendorId===0x2E8A; })||ports[0];
+    if(port){ SENSOR.connecting=true; refreshObs(); await _obsOpen(port); }
+  }catch(e){ SENSOR.connecting=false; }
+}
+if(SENSOR.supported){
+  navigator.serial.addEventListener('disconnect',e=>{ if(e.target===_obsPort){ _obsKeep=false; SENSOR.connected=false; refreshObs(); } });
+  _obsAutoConnect();
+}
+function sensorPages(){
   return [
-    '（畑のかたわらで、小さな観測機がランプを点滅させている）',
-    '📡 <b>いまの観測値</b><br>・気温：'+temp+'<br>・風速：'+wind+'<br>・天候：'+w.label,
-    'この観測機は、やがて畑に置かれた<b>ラズベリーパイ</b>のセンサーとつながり、',
-    '土の湿りや気温・日射などの<b>リアルの観測データ</b>を、ここに映し出す予定だ。',
-    '（いまは準備中。データ連携をお楽しみに）'
+    '（畑のかたわらで、小さな観測機がランプを点滅させている）<br><br><div id="obsBox">'+obsBoxHTML()+'</div>',
+    'この観測機は、畑に置かれた<b>ラズベリーパイ（Pico）</b>のセンサーと、USB経由でつながる。',
+    '気温や湿度などの<b>リアルの観測データ</b>を、ここに映し出すのだ。',
+    '（PCのChrome／Edgeで開き、「📡 畑のPicoに接続する」を押してみよう）'
   ];
 }
 // 水神の祠（東の池のほとり）
