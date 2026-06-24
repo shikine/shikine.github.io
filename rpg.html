@@ -1054,7 +1054,8 @@ function openPanel(title,html){
   document.getElementById('panelBody').innerHTML=html;
   panel.classList.add('show'); panelOpen=true;
 }
-function closePanel(){panel.classList.remove('show');panelOpen=false;}
+function closePanel(){panel.classList.remove('show');panelOpen=false;
+  if(KITCHEN.open){ KITCHEN.open=false; kitchenClear(); } }   // 台所を閉じたら演奏を止める
 panel.addEventListener('click',e=>{if(e.target===panel)closePanel();});
 
 /* ── 全体マップ（メニューから表示） ── */
@@ -1708,9 +1709,9 @@ function interact(){
   // 焚き火ラジオ（ポッドキャスト）
   for(const o of OBJS){ if(o.type==='radio' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
     openPodcastPanel(); return; } }
-  // アトリエの屋外台所
+  // アトリエの屋外台所（おさらの音楽：食材をのせるとアンビエントが生まれる）
   for(const o of OBJS){ if(o.type==='kitchen' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
-    openDialog('台所','🍳 屋外キッチン', kitchenPages()); return; } }
+    openKitchenPanel(); return; } }
   // 水神の祠（東の池のほとり）
   if(btc>=SHRINE.x-1&&btc<=SHRINE.x+SHRINE.w&&btr>=SHRINE.y-1&&btr<=SHRINE.y+SHRINE.h){
     openDialog('水神の祠','⛩ 水神の祠', shrinePages()); return; }
@@ -1860,7 +1861,8 @@ function update(){
     const pc=((P.px+TS/2)/TS)|0, pr=((P.py+TS-2)/TS)|0;
     const around=t=>{for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){const rr=pr+dr,cc=pc+dc;if(rr>=0&&rr<MH&&cc>=0&&cc<MW&&M[rr][cc]===t)return true;}return false;};
     const here=M[pr]&&M[pr][pc];
-    if(Math.hypot(21.5*TS-(P.px+TS/2),11.5*TS-(P.py+TS/2))<TS*1.8) label='🎙 <b>焚き火ラジオ</b> — 調べる（準備中）';
+    if(Math.hypot(17*TS-(P.px+TS/2),37.5*TS-(P.py+TS/2))<TS*2.2) label='🍳 <b>台所</b> — おさらに食材をのせると音楽が生まれる';
+    else if(Math.hypot(21.5*TS-(P.px+TS/2),11.5*TS-(P.py+TS/2))<TS*1.8) label='🎙 <b>焚き火ラジオ</b> — 調べる（準備中）';
     else if(pc>=15&&pc<=22&&pr>=6&&pr<=11) label='🎶 <b>自由の広場</b> — ワイワイ';
     else if(here===12||here===13||around(12)||around(13)) label='🍓 <b>いちご畑</b> — 調べて収穫';
     else if(here===14||here===15||around(14)||around(15)) label='🍇 <b>ぶどう畑</b>（ワイン用）— 調べて収穫';
@@ -2627,6 +2629,7 @@ const BGM_PALETTES={
 };
 let bgmMode='auto';                 // 'auto' | 'plateau' | 'dusk' | 'starry'
 let curPad=null;                    // 現在鳴っているパッド {gain, palette, stop()}
+let bgmDuck=1;                      // 台所の演奏中はBGMをこの割合まで下げる
 function autoBgmKey(){ const m=curMode(); return (m==='evening')?'dusk':(m==='night')?'starry':'plateau'; }
 function targetBgmKey(){ return bgmMode==='auto'?autoBgmKey():bgmMode; }
 function activePalette(){ return BGM_PALETTES[curPad?curPad.palette:targetBgmKey()]; }
@@ -2653,7 +2656,7 @@ function crossfadeTo(key, fade){
   if(curPad&&curPad.palette===key) return;
   fade=fade||5;
   const t=audioCtx.currentTime, next=buildPad(key);
-  next.gain.gain.setValueAtTime(0,t); next.gain.gain.linearRampToValueAtTime(1,t+fade);
+  next.gain.gain.setValueAtTime(0,t); next.gain.gain.linearRampToValueAtTime(bgmDuck,t+fade);
   if(curPad){ const old=curPad; old.gain.gain.cancelScheduledValues(t);
     old.gain.gain.setValueAtTime(old.gain.gain.value,t); old.gain.gain.linearRampToValueAtTime(0,t+fade);
     setTimeout(()=>old.stop(), (fade+0.5)*1000); }
@@ -2676,7 +2679,7 @@ function startAudio(){
 function scheduleNote(){
   if(!audioStarted||!audioCtx) return;
   const nt=activePalette().note;
-  if(audioOn && audioCtx.state==='running'){
+  if(audioOn && audioCtx.state==='running' && bgmDuck>0.5){   // 台所の演奏中はBGMの旋律を休む
     const pal=activePalette(); const sc=pal.scale;
     let f=sc[(Math.random()*sc.length)|0];
     const rr=Math.random(); if(rr<nt.octUp)f*=2; else if(rr>1-nt.octDown)f*=0.5;
@@ -2697,6 +2700,106 @@ volEl.addEventListener('input',applyVol);
 function updateBgmBtn(){ document.querySelectorAll('#bgmSeg button').forEach(b=>b.classList.toggle('on',b.dataset.b===bgmMode)); }
 document.querySelectorAll('#bgmSeg button').forEach(b=>b.addEventListener('click',()=>{ bgmMode=b.dataset.b; updateBgmBtn(); syncBgm(); }));
 updateBgmBtn();
+
+/* ══ おさらの音楽（アンビエント・キッチン）：食材をのせると音のレイヤーが重なる ══ */
+const KITCHEN={ layers:{}, open:false };
+let kitchenBus=null;
+// すべて A マイナー・ペンタトニックで揃え、どの組み合わせでも調和する
+const KSCALE_HI=[440,523.25,587.33,659.25,783.99];     // いちごのベル
+const KSCALE_TW=[880,1046.5,1174.66,1318.5,1567.98];   // 花のきらめき
+const KSPEC={
+  grapes:{emoji:'🍇',name:'ぶどう',hint:'低いドローン', build(g,layer){
+    [55,110].forEach((f,i)=>{ const o=audioCtx.createOscillator(); o.type='sine'; o.frequency.value=f; o.detune.value=i*5-2;
+      const og=audioCtx.createGain(); og.gain.value=i?0.13:0.20; o.connect(og); og.connect(g); o.start(); layer.nodes.push(o); }); }},
+  mushroom:{emoji:'🍄',name:'きのこ',hint:'土の低音', build(g,layer){
+    const lp=audioCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=300; lp.Q.value=2; lp.connect(g);
+    [-5,7].forEach(d=>{ const o=audioCtx.createOscillator(); o.type='sawtooth'; o.frequency.value=82.41; o.detune.value=d;
+      const og=audioCtx.createGain(); og.gain.value=0.06; o.connect(og); og.connect(lp); o.start(); layer.nodes.push(o); });
+    const lfo=audioCtx.createOscillator(); lfo.frequency.value=0.07; const lg=audioCtx.createGain(); lg.gain.value=120; lfo.connect(lg); lg.connect(lp.frequency); lfo.start(); layer.nodes.push(lfo); }},
+  tomato:{emoji:'🍅',name:'トマト',hint:'温かいパルス', build(g,layer){
+    const o=audioCtx.createOscillator(); o.type='triangle'; o.frequency.value=164.81;
+    const og=audioCtx.createGain(); og.gain.value=0.10; o.connect(og); og.connect(g); o.start(); layer.nodes.push(o);
+    const lfo=audioCtx.createOscillator(); lfo.frequency.value=0.8; const lg=audioCtx.createGain(); lg.gain.value=0.08; lfo.connect(lg); lg.connect(og.gain); lfo.start(); layer.nodes.push(lfo); }},
+  lettuce:{emoji:'🥬',name:'レタス',hint:'風のパッド', build(g,layer){
+    const lp=audioCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=900; lp.Q.value=1; lp.connect(g);
+    [246.94,329.63].forEach(f=>{ const o=audioCtx.createOscillator(); o.type='sine'; o.frequency.value=f;
+      const og=audioCtx.createGain(); og.gain.value=0.06; o.connect(og); og.connect(lp); o.start(); layer.nodes.push(o); });
+    const lfo=audioCtx.createOscillator(); lfo.frequency.value=0.05; const lg=audioCtx.createGain(); lg.gain.value=500; lfo.connect(lg); lg.connect(lp.frequency); lfo.start(); layer.nodes.push(lfo); }},
+  berries:{emoji:'🍓',name:'いちご',hint:'甘いベル', build(g,layer){
+    const bell=()=>{ if(!layer.alive)return;
+      const f=KSCALE_HI[(Math.random()*KSCALE_HI.length)|0], o=audioCtx.createOscillator(); o.type='sine'; o.frequency.value=f;
+      const og=audioCtx.createGain(); og.gain.value=0; o.connect(og); og.connect(g);
+      const t=audioCtx.currentTime; og.gain.setValueAtTime(0,t); og.gain.linearRampToValueAtTime(0.12,t+0.02); og.gain.exponentialRampToValueAtTime(0.0001,t+1.6);
+      o.start(t); o.stop(t+1.7); layer.timer=setTimeout(bell, 1100+Math.random()*1700); };
+    bell(); }},
+  flowers:{emoji:'🌼',name:'はな',hint:'きらめき', build(g,layer){
+    const tw=()=>{ if(!layer.alive)return;
+      const f=KSCALE_TW[(Math.random()*KSCALE_TW.length)|0], o=audioCtx.createOscillator(); o.type='sine'; o.frequency.value=f;
+      const og=audioCtx.createGain(); og.gain.value=0; o.connect(og);
+      const pan=audioCtx.createStereoPanner?audioCtx.createStereoPanner():null;
+      if(pan){ pan.pan.value=Math.random()*2-1; og.connect(pan); pan.connect(g); } else og.connect(g);
+      const t=audioCtx.currentTime; og.gain.setValueAtTime(0,t); og.gain.linearRampToValueAtTime(0.07,t+0.01); og.gain.exponentialRampToValueAtTime(0.0001,t+1.1);
+      o.start(t); o.stop(t+1.2); layer.timer=setTimeout(tw, 1800+Math.random()*2600); };
+    tw(); }},
+};
+function ensureKitchenBus(){ if(!audioStarted) startAudio(); else if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume();
+  if(audioCtx && !kitchenBus){ kitchenBus=audioCtx.createGain(); kitchenBus.gain.value=1; kitchenBus.connect(masterGain); } }
+function kitchenDuck(){ if(!audioCtx||!curPad) { bgmDuck=Object.keys(KITCHEN.layers).length?0.18:1; return; }
+  bgmDuck=Object.keys(KITCHEN.layers).length?0.18:1; const t=audioCtx.currentTime;
+  curPad.gain.gain.cancelScheduledValues(t); curPad.gain.gain.setValueAtTime(curPad.gain.gain.value,t); curPad.gain.gain.linearRampToValueAtTime(bgmDuck,t+1.0); }
+function kitchenStart(key){ try{ ensureKitchenBus(); if(!audioCtx||KITCHEN.layers[key]) return;
+    const g=audioCtx.createGain(); g.gain.value=0; g.connect(kitchenBus);
+    const layer={ g, nodes:[], timer:null, alive:true };
+    const t=audioCtx.currentTime; g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(1,t+1.2);
+    KSPEC[key].build(g, layer); KITCHEN.layers[key]=layer; kitchenDuck();
+  }catch(e){ console.warn('kitchen layer failed',e); } }
+function kitchenStop(key){ const layer=KITCHEN.layers[key]; if(!layer) return;
+  layer.alive=false; if(layer.timer) clearTimeout(layer.timer);
+  const t=audioCtx.currentTime; layer.g.gain.cancelScheduledValues(t); layer.g.gain.setValueAtTime(layer.g.gain.value,t); layer.g.gain.linearRampToValueAtTime(0,t+0.9);
+  const ns=layer.nodes, gg=layer.g; setTimeout(()=>{ ns.forEach(n=>{try{n.stop();}catch(e){}}); try{gg.disconnect();}catch(e){} }, 2200);
+  delete KITCHEN.layers[key]; kitchenDuck(); }
+function kitchenToggle(key){ if(KITCHEN.layers[key]) kitchenStop(key); else kitchenStart(key); }
+function kitchenClear(){ Object.keys(KITCHEN.layers).forEach(kitchenStop); }
+const KCSS='<style>'
+  +'.kintro{font-size:13px;line-height:1.85;margin-bottom:10px}'
+  +'.kplate{min-height:92px;display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;'
+  +'border-radius:50%/34%;background:radial-gradient(ellipse at 50% 38%,#fbf7ee,#e6dcc6);border:3px solid #cdbfa0;'
+  +'box-shadow:inset 0 5px 14px rgba(0,0,0,.16);margin:0 auto 14px;width:min(360px,90%);padding:16px}'
+  +'.kpi{font-size:30px;animation:kbob 2.2s ease-in-out infinite}'
+  +'@keyframes kbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}'
+  +'.kempty{color:#a59c88;font-size:13px}'
+  +'.kpalette{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}'
+  +'.kbtn{background:rgba(231,200,120,.08);border:2px solid #4a4030;color:var(--paper);font-family:inherit;'
+  +'padding:8px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;border-radius:4px}'
+  +'.kbtn .ke{font-size:22px}.kbtn .kc{font-size:10px;color:#b7ad97}.kbtn .kh{font-size:9px;color:#8a8378}'
+  +'.kbtn.on{background:var(--gold);color:#221d16;border-color:var(--gold)}.kbtn.on .kc,.kbtn.on .kh{color:#5a4a20}'
+  +'.kbtn:disabled{opacity:.4;cursor:default}'
+  +'.kfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;flex-wrap:wrap}'
+  +'.kclear{background:rgba(231,200,120,.1);border:2px solid #4a4030;color:var(--paper);font-family:inherit;font-size:13px;padding:9px 14px;cursor:pointer}'
+  +'.knote{font-size:11px;color:#8a8378}</style>';
+function renderPlate(){ const el=document.getElementById('kplate'); if(!el)return;
+  const ks=Object.keys(KITCHEN.layers);
+  el.innerHTML = ks.length ? ks.map((k,i)=>'<span class="kpi" style="animation-delay:'+(i*0.18).toFixed(2)+'s">'+KSPEC[k].emoji+'</span>').join('')
+    : '<span class="kempty">（おさらは からっぽ）</span>'; }
+function openKitchenPanel(){
+  ensureKitchenBus(); KITCHEN.open=true;
+  let pal='';
+  for(const k of Object.keys(KSPEC)){ const sp=KSPEC[k], have=(P[k]||0)>0, on=!!KITCHEN.layers[k];
+    pal+='<button class="kbtn'+(on?' on':'')+'" data-k="'+k+'"'+(have?'':' disabled')+'>'
+      +'<span class="ke">'+sp.emoji+'</span>'+sp.name+'<span class="kc">'+(have?('×'+P[k]):'未収穫')+'</span><span class="kh">'+sp.hint+'</span></button>'; }
+  openPanel('🍽 おさらの音楽 — Ambient Kitchen',
+    KCSS
+    +'<p class="kintro">畑で採れた食材を<b>おさら</b>にのせると、その音が重なって<b>アンビエント</b>が生まれる。<br>いくつでも重ねて、自分だけの一皿を。（食材は減りません）</p>'
+    +'<div class="kplate" id="kplate"></div>'
+    +'<div class="kpalette">'+pal+'</div>'
+    +'<div class="kfoot"><button class="kclear" id="kclear">🍽 さげる（全部とる）</button>'
+    +'<span class="knote">♪ その場で鳴ります（音量は☰メニューのBGM）</span></div>');
+  document.querySelectorAll('#panel .kbtn').forEach(b=>b.addEventListener('click',()=>{ if(b.hasAttribute('disabled'))return;
+    kitchenToggle(b.dataset.k); b.classList.toggle('on',!!KITCHEN.layers[b.dataset.k]); renderPlate(); }));
+  document.getElementById('kclear').addEventListener('click',()=>{ kitchenClear();
+    document.querySelectorAll('#panel .kbtn').forEach(b=>b.classList.remove('on')); renderPlate(); });
+  renderPlate();
+}
 /* どの入口（通常 / ?to=larry 自動開始）でも、最初のユーザー操作でBGMを開始・再開する */
 function unlockAudio(){ if(!audioStarted) startAudio(); else if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume(); }
 ['pointerdown','keydown','touchstart'].forEach(ev=>window.addEventListener(ev,unlockAudio));
