@@ -1490,31 +1490,57 @@ function drawFog(){
   }
   ctx.restore(); ctx.globalAlpha=1;
 }
-// ── 観測機：畑のPico (AHT20) と Web Serial で連携 ───────────────
-//   Pico の main.py が 'OBS,<気温>,<湿度>' を2秒ごとにUSBシリアルへ送信。
-//   PCのChrome/Edgeで「接続」すると、その値をこの観測機に映し出す。
+// ── 観測機：畑のPico 2 W（AHT20）と連携 ───────────────────────────
+//   Pico の main.py が WiFi 経由で温湿度を 10分ごとにスプレッドシート(GAS)へ記録。
+//   ・スマホ含む誰でも：クラウド(GAS)から最新値を取得して表示（JSONPでCORS回避）
+//   ・PC直結時のみ：Web Serial で即時のライブ値も表示できる
+const GAS_OBS_URL='https://script.google.com/macros/s/AKfycbzJ-dB8q2oNWJ3bbORkV634H9Ndk0iYjZsP5e3GVwUa56c52AJpI-SJORq-FkIOisko/exec';
+const CLOUD={ok:false,loading:false,t:null,h:null,ts:0};
 const SENSOR={supported:('serial' in navigator),connected:false,connecting:false,temp:null,hum:null,ts:0,err:''};
 let _obsPort=null,_obsReader=null,_obsKeep=false;
 function refreshObs(){ const el=document.getElementById('obsBox'); if(el) el.innerHTML=obsBoxHTML(); }
+function _ago(ms){ const a=Date.now()-ms; if(a<90000)return 'たった今'; if(a<3600000)return Math.round(a/60000)+'分前'; if(a<86400000)return Math.round(a/3600000)+'時間前'; return Math.round(a/86400000)+'日前'; }
+// クラウド(GAS)から最新の観測値を取得（JSONP）
+function fetchCloudObs(){
+  if(CLOUD.loading) return;
+  CLOUD.loading=true; refreshObs();
+  const cb='_obscb'+Date.now(); const s=document.createElement('script'); let done=false;
+  const cleanup=()=>{ try{delete window[cb];}catch(e){window[cb]=undefined;} if(s.parentNode)s.parentNode.removeChild(s); };
+  window[cb]=function(d){ done=true; CLOUD.loading=false;
+    if(d&&d.t!=null){ CLOUD.ok=true; CLOUD.t=d.t; CLOUD.h=d.h; CLOUD.ts=d.ts?Date.parse(d.ts):Date.now(); }
+    cleanup(); refreshObs(); };
+  s.onerror=function(){ if(!done){ CLOUD.loading=false; cleanup(); refreshObs(); } };
+  s.src=GAS_OBS_URL+'?callback='+cb+'&_='+Date.now();
+  document.head.appendChild(s);
+  setTimeout(()=>{ if(!done){ CLOUD.loading=false; cleanup(); refreshObs(); } },9000);
+}
 function obsBoxHTML(){
-  if(SENSOR.connected){
-    if(SENSOR.temp!=null && (Date.now()-SENSOR.ts)<8000){
-      return '📡 <b>畑のリアル観測値</b>（Pico / AHT20）<br>'
-        +'・気温：<b>'+SENSOR.temp.toFixed(1)+' ℃</b><br>'
-        +'・湿度：<b>'+SENSOR.hum.toFixed(1)+' %</b><br>'
-        +'<span style="opacity:.7;font-size:12px">🟢 接続中 — '+new Date(SENSOR.ts).toLocaleTimeString('ja-JP')+' 更新</span>';
-    }
-    return '📡 <b>Picoに接続中…</b> データ受信を待っています。';
+  // ① PC直結（Web Serial）が新鮮なら最優先
+  if(SENSOR.connected && SENSOR.temp!=null && (Date.now()-SENSOR.ts)<8000){
+    return '📡 <b>畑のリアル観測値</b>（Pico直結・AHT20）<br>'
+      +'・気温：<b>'+SENSOR.temp.toFixed(1)+' ℃</b><br>'
+      +'・湿度：<b>'+SENSOR.hum.toFixed(1)+' %</b><br>'
+      +'<span style="opacity:.7;font-size:12px">🟢 USB接続中 — '+new Date(SENSOR.ts).toLocaleTimeString('ja-JP')+' 更新</span>';
   }
-  const w=WEATHER;
-  const temp=(w.temp!=null)?(Math.round(w.temp*10)/10+'℃'):'—';
-  const wind=(w.wind!=null)?(Math.round(w.wind*10)/10+' m/s'):'—';
-  let h='📡 <b>いまの観測値</b>（気象データ）<br>・気温：'+temp+'<br>・風速：'+wind+'<br>・天候：'+w.label+'<br>';
-  if(SENSOR.supported){
-    h+='<a href="#" class="more" onclick="connectSensor();return false;">'
-      +(SENSOR.connecting?'接続中…':'📡 畑のPicoに接続する')+'</a>';
-  }else{
-    h+='<span style="opacity:.75;font-size:12px">※ライブ観測はPCのChrome／Edgeで開くと、畑のPicoに繋がります。</span>';
+  if(SENSOR.connected) return '📡 <b>Picoに接続中…</b> データ受信を待っています。';
+  let h;
+  if(CLOUD.ok && CLOUD.t!=null){            // ② クラウド記録の最新値（スマホ含め誰でも）
+    h='📡 <b>畑のリアル観測値</b>（Pico → クラウド記録）<br>'
+      +'・気温：<b>'+(Math.round(CLOUD.t*10)/10)+' ℃</b><br>'
+      +'・湿度：<b>'+(Math.round(CLOUD.h*10)/10)+' %</b><br>'
+      +'<span style="opacity:.7;font-size:12px">🛰 '+_ago(CLOUD.ts)+'の記録・10分ごとに更新'+(CLOUD.loading?'（更新中…）':'')+'</span>';
+  }else if(CLOUD.loading){                  // ③ 取得中
+    h='📡 <b>観測値を取得中…</b>';
+  }else{                                    // ④ フォールバック（気象API）
+    const w=WEATHER;
+    const temp=(w.temp!=null)?(Math.round(w.temp*10)/10+'℃'):'—';
+    const wind=(w.wind!=null)?(Math.round(w.wind*10)/10+' m/s'):'—';
+    h='📡 <b>いまの気象</b>（参考・気象データ）<br>・気温：'+temp+'<br>・風速：'+wind+'<br>・天候：'+w.label+'<br>'
+      +'<a href="#" class="more" onclick="fetchCloudObs();return false;">🔄 畑の観測値を取得</a>';
+  }
+  if(SENSOR.supported && !SENSOR.connected){   // PC直結のWeb Serial（任意）
+    h+='<br><a href="#" class="more" style="font-size:12px" onclick="connectSensor();return false;">'
+      +(SENSOR.connecting?'接続中…':'📟 PCならUSB直結でライブ表示')+'</a>';
   }
   if(SENSOR.err) h+='<br><span style="color:#f09c9c;font-size:12px">'+SENSOR.err+'</span>';
   return h;
@@ -1565,12 +1591,13 @@ if(SENSOR.supported){
   navigator.serial.addEventListener('disconnect',e=>{ if(e.target===_obsPort){ _obsKeep=false; SENSOR.connected=false; refreshObs(); } });
   _obsAutoConnect();
 }
+fetchCloudObs();   // 起動時に一度、畑の最新観測値を取得しておく
 function sensorPages(){
   return [
     '（畑のかたわらで、小さな観測機がランプを点滅させている）<br><br><div id="obsBox">'+obsBoxHTML()+'</div>',
-    'この観測機は、畑に置かれた<b>ラズベリーパイ（Pico）</b>のセンサーと、USB経由でつながる。',
-    '気温や湿度などの<b>リアルの観測データ</b>を、ここに映し出すのだ。',
-    '（PCのChrome／Edgeで開き、「📡 畑のPicoに接続する」を押してみよう）'
+    'この観測機は、畑に置かれた<b>ラズベリーパイ Pico 2 W</b>のAHT20センサーとつながっている。',
+    '気温と湿度は<b>10分ごとにクラウド（スプレッドシート）へ記録</b>され、ここに最新値が映し出される。',
+    '（スマホでもPCでも見られる。記録はずっと残るので、畑の空気の移ろいを後から辿れるのだ）'
   ];
 }
 // 水神の祠（東の池のほとり）
@@ -1772,7 +1799,7 @@ function interact(){
   const btc=(fx/TS)|0, btr=(fy/TS)|0;
   // 観測機? (トマト畑のセンサー：将来 raspi の観測データを反映)
   for(const o of OBJS){ if(o.type==='sensor' && btc>=o.x&&btc<o.x+o.w&&btr>=o.y&&btr<o.y+o.h){
-    openDialog('観測機','📡 畑の観測データ', sensorPages()); return; } }
+    fetchCloudObs(); openDialog('観測機','📡 畑の観測データ', sensorPages()); return; } }
   // 縄文の環状列石（井戸尻遺跡の名残）
   for(const o of OBJS){ if(o.type==='jomon' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
     openDialog('縄文の遺跡','🗿 環状列石', jomonPages()); return; } }
