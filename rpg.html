@@ -1716,7 +1716,12 @@ function interact(){
   const stc=(fx/TS)|0, str=(fy/TS)|0, here=M[str]&&M[str][stc];
   // 花を摘む（tile 4）— 摘むと手に持つ。20秒ほどで咲きなおす
   if(here===4){ M[str][stc]=0; PICKED.push({c:stc,r:str,at:Date.now()+20000,ripe:4});
-    P.flowers++; updateCropHud(); showToast('🌼 花を摘んだ！  🌼 ×'+P.flowers); return; }
+    P.flowers++; updateCropHud();
+    let msg='🌼 花を摘んだ！  🌼 ×'+P.flowers;
+    if(P.flowers===4) msg='💐 両手で抱えるほどに！';
+    else if(P.flowers===10) msg='🌸 頭まで花でいっぱい！';
+    else if(P.flowers===15) msg='💐 ぜんぶ花束になっちゃった！';
+    showToast(msg); return; }
   const crop=CROP[here];
   if(crop){ M[str][stc]=crop.picked; PICKED.push({c:stc,r:str,at:Date.now()+20000,ripe:here});
     P[crop.key]++; P.lastCrop=crop.key; updateCropHud();
@@ -2376,24 +2381,40 @@ function drawBather(x,y){
   if((Date.now()%2600)<900){ const a=0.5*(1-((Date.now()%2600)/900));
     ctx.fillStyle='rgba(236,246,245,'+a.toFixed(2)+')'; ctx.fillRect(sx+11,sy-2+bob-((Date.now()%2600)/120),2,2); }
 }
-/* ── 摘んだ花を持つ（1〜3輪は片手に、4輪以上は両手で抱える） ── */
+/* ── 摘んだ花を持つ（1〜3:片手 / 4〜:両手で抱える / 10〜:頭が花束 / 15〜:全身が花束） ── */
 function drawHeldFlowers(sx,sy,n,bob){
-  const COL=['#f4a6c0','#ffd24f','#ffffff','#e88ad0','#7fc6ff'], y=sy+bob;
+  const COL=['#f4a6c0','#ffd24f','#ffffff','#e88ad0','#7fc6ff','#ff8f6a','#b69cff'], y=sy+bob;
+  const fb=(bx,by,ci)=>{ px(sx+bx,y+by,3,3,COL[ci%COL.length]); px(sx+bx+1,y+by+1,1,1,'#fff8'); };  // 花ひとつ
+  if(n>=15){                                                    // 体ぜんぶが花束（脚だけ出る）
+    px(sx+6,y+12,4,2,'#3a7d45');                                // 根元の茎束
+    const S=[[2,1],[5,0],[8,1],[11,1],[3,4],[6,3],[9,4],[12,4],[2,7],[5,6],[8,7],[11,7],[4,9],[7,9],[10,9]];
+    S.forEach((s,i)=>fb(s[0],s[1],i));
+    px(sx+1,y+8,2,2,'#2f6b3a'); px(sx+13,y+7,2,2,'#2f6b3a');    // はみ出す葉
+    return;
+  }
+  if(n>=10){                                                    // 頭が花束＋胸に抱える花束
+    px(sx+2,y+9,2,3,'#e8c39a'); px(sx+12,y+9,2,3,'#e8c39a');    // 両手
+    px(sx+4,y+10,8,2,'#3a7d45');                                // 茎束
+    fb(3,8,0); fb(6,8,1); fb(9,8,2);                            // 胸の花
+    const H=[[3,0],[6,-1],[9,0],[4,3],[7,2],[10,3],[5,5]];      // 頭をおおう花
+    H.forEach((s,i)=>fb(s[0],s[1],i+1));
+    px(sx+2,y+2,1,1,'#2f6b3a'); px(sx+12,y+1,1,1,'#2f6b3a');    // 葉
+    return;
+  }
   if(n>=4){                                                     // 両手で抱える花束
     px(sx+2,y+9,2,3,'#e8c39a'); px(sx+12,y+9,2,3,'#e8c39a');    // 両手
-    px(sx+4,y+10,8,2,'#3a7d45');                                 // 茎束
-    px(sx+3,y+6,3,3,COL[0]); px(sx+6,y+5,3,3,COL[1]); px(sx+9,y+6,3,3,COL[2]);   // 花（上段）
-    px(sx+5,y+8,2,2,COL[3]); px(sx+9,y+8,2,2,COL[4]);           // 花（下段）
-    px(sx+4,y+7,1,1,'#fff8'); px(sx+7,y+6,1,1,'#fff8'); px(sx+10,y+7,1,1,'#fff8'); // ハイライト
+    px(sx+4,y+10,8,2,'#3a7d45');                                // 茎束
+    fb(3,6,0); fb(6,5,1); fb(9,6,2); fb(5,8,3); fb(9,8,4);      // 花
     px(sx+3,y+9,1,1,'#2f6b3a'); px(sx+11,y+9,1,1,'#2f6b3a');    // 葉
-  } else {                                                      // 片手に一輪〜小さな花束
-    px(sx+10,y+9,3,3,'#e8c39a');                                // 手
-    px(sx+11,y+6,1,5,'#3a7d45');                                // 茎
-    px(sx+10,y+4,3,3,COL[0]); px(sx+11,y+5,1,1,'#fff8');        // 1輪目
-    if(n>=2){ px(sx+7,y+7,1,4,'#3a7d45'); px(sx+6,y+5,3,3,COL[1]); px(sx+7,y+6,1,1,'#fff8'); } // 2輪目
-    if(n>=3){ px(sx+9,y+7,2,2,COL[2]); }                        // 3輪目
-    px(sx+9,y+9,1,1,'#2f6b3a');                                 // 葉
+    return;
   }
+  // 1〜3：片手に一輪〜小さな花束
+  px(sx+10,y+9,3,3,'#e8c39a');                                  // 手
+  px(sx+11,y+6,1,5,'#3a7d45');                                  // 茎
+  fb(10,4,0);                                                   // 1輪目
+  if(n>=2){ px(sx+7,y+7,1,4,'#3a7d45'); fb(6,5,1); }            // 2輪目
+  if(n>=3){ px(sx+9,y+7,2,2,COL[2]); }                          // 3輪目
+  px(sx+9,y+9,1,1,'#2f6b3a');                                   // 葉
 }
 function drawAnimal(x,y,dir,frame,moving,type){
   const sx=Math.round(x),sy=Math.round(y),bob=moving?(Math.floor(frame)%2):0;
