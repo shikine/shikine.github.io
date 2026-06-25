@@ -1495,8 +1495,8 @@ function drawFog(){
 //   ・スマホ含む誰でも：クラウド(GAS)から最新値を取得して表示（JSONPでCORS回避）
 //   ・PC直結時のみ：Web Serial で即時のライブ値も表示できる
 const GAS_OBS_URL='https://script.google.com/macros/s/AKfycbzJ-dB8q2oNWJ3bbORkV634H9Ndk0iYjZsP5e3GVwUa56c52AJpI-SJORq-FkIOisko/exec';
-const CLOUD={ok:false,loading:false,t:null,h:null,ts:0};
-const SENSOR={supported:('serial' in navigator),connected:false,connecting:false,temp:null,hum:null,ts:0,err:''};
+const CLOUD={ok:false,loading:false,t:null,h:null,s:null,ts:0};
+const SENSOR={supported:('serial' in navigator),connected:false,connecting:false,temp:null,hum:null,soil:null,ts:0,err:''};
 let _obsPort=null,_obsReader=null,_obsKeep=false;
 function refreshObs(){ const el=document.getElementById('obsBox'); if(el) el.innerHTML=obsBoxHTML(); }
 function _ago(ms){ const a=Date.now()-ms; if(a<90000)return 'たった今'; if(a<3600000)return Math.round(a/60000)+'分前'; if(a<86400000)return Math.round(a/3600000)+'時間前'; return Math.round(a/86400000)+'日前'; }
@@ -1514,7 +1514,7 @@ function fetchCloudObs(){
   const cb='_obscb'+Date.now(); const s=document.createElement('script'); let done=false;
   const cleanup=()=>{ try{delete window[cb];}catch(e){window[cb]=undefined;} if(s.parentNode)s.parentNode.removeChild(s); };
   window[cb]=function(d){ done=true; CLOUD.loading=false;
-    if(d&&d.t!=null){ CLOUD.ok=true; CLOUD.t=d.t; CLOUD.h=d.h; CLOUD.ts=d.ts?Date.parse(d.ts):Date.now(); }
+    if(d&&d.t!=null){ CLOUD.ok=true; CLOUD.t=d.t; CLOUD.h=d.h; CLOUD.s=(d.s!=null?d.s:null); CLOUD.ts=d.ts?Date.parse(d.ts):Date.now(); }
     cleanup(); refreshObs(); };
   s.onerror=function(){ if(!done){ CLOUD.loading=false; cleanup(); refreshObs(); } };
   s.src=GAS_OBS_URL+'?callback='+cb+'&_='+Date.now();
@@ -1524,9 +1524,10 @@ function fetchCloudObs(){
 function obsBoxHTML(){
   // ① PC直結（Web Serial）が新鮮なら最優先
   if(SENSOR.connected && SENSOR.temp!=null && (Date.now()-SENSOR.ts)<8000){
-    return '📡 <b>畑のリアル観測値</b>（Pico直結・AHT20）<br>'
+    return '📡 <b>畑のリアル観測値</b>（Pico直結）<br>'
       +'・気温：<b>'+SENSOR.temp.toFixed(1)+' ℃</b><br>'
       +'・湿度：<b>'+SENSOR.hum.toFixed(1)+' %</b><br>'
+      +(SENSOR.soil!=null?'・土壌：<b>'+SENSOR.soil.toFixed(0)+' %</b><br>':'')
       +'<span style="opacity:.7;font-size:12px">🟢 USB接続中 — '+new Date(SENSOR.ts).toLocaleTimeString('ja-JP')+' 更新</span>';
   }
   if(SENSOR.connected) return '📡 <b>Picoに接続中…</b> データ受信を待っています。';
@@ -1535,6 +1536,7 @@ function obsBoxHTML(){
     h='📡 <b>畑のリアル観測値</b>（Pico → クラウド記録）<br>'
       +'・気温：<b>'+(Math.round(CLOUD.t*10)/10)+' ℃</b><br>'
       +'・湿度：<b>'+(Math.round(CLOUD.h*10)/10)+' %</b><br>'
+      +(CLOUD.s!=null?'・土壌：<b>'+Math.round(CLOUD.s)+' %</b><br>':'')
       +'<span style="opacity:.7;font-size:12px">🛰 '+_ago(CLOUD.ts)+'・15秒ごとに更新（記録は10分ごと）'+(CLOUD.loading?' 🔄':'')+'</span>';
   }else if(CLOUD.loading){                  // ③ 取得中
     h='📡 <b>観測値を取得中…</b>';
@@ -1553,8 +1555,8 @@ function obsBoxHTML(){
   return h;
 }
 function parseSensorLine(line){
-  const m=line.match(/OBS,(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
-  if(m){ SENSOR.temp=parseFloat(m[1]); SENSOR.hum=parseFloat(m[2]); SENSOR.ts=Date.now(); refreshObs(); }
+  const m=line.match(/OBS,(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)(?:,(-?\d+(?:\.\d+)?))?/);
+  if(m){ SENSOR.temp=parseFloat(m[1]); SENSOR.hum=parseFloat(m[2]); if(m[3]!=null) SENSOR.soil=parseFloat(m[3]); SENSOR.ts=Date.now(); refreshObs(); }
 }
 async function _obsRead(){
   const dec=new TextDecoder(); let buf='';
@@ -1663,17 +1665,22 @@ function drawObsChart(){
   g.fillText(fmt(tmin),x0,y1+5); g.fillText(fmt(tmax),x1,y1+5);
   g.lineWidth=2;
   g.strokeStyle='#70a0d0';g.beginPath();pts.forEach((p,i)=>{const X=xOf(p[0]),Y=yH(p[2]);i?g.lineTo(X,Y):g.moveTo(X,Y);});g.stroke();
+  // 土壌（0〜100%・欠損は線を切る）
+  g.strokeStyle='#7cba6a';{let pen=false;g.beginPath();pts.forEach(p=>{const v=p[3];
+    if(v==null||isNaN(v)){pen=false;return;} const X=xOf(p[0]),Y=yH(v);
+    if(pen)g.lineTo(X,Y);else{g.moveTo(X,Y);pen=true;}});g.stroke();}
   g.strokeStyle='#e0a060';g.beginPath();pts.forEach((p,i)=>{const X=xOf(p[0]),Y=yT(p[1]);i?g.lineTo(X,Y):g.moveTo(X,Y);});g.stroke();
   g.textAlign='left';g.textBaseline='middle';g.font='12px sans-serif';
   g.fillStyle='#e0a060';g.fillText('● 気温',x0+6,y0+6);
   g.fillStyle='#70a0d0';g.fillText('● 湿度',x0+64,y0+6);
-  if(msg) msg.textContent=pts.length+'点 ・ '+fmt(tmin)+' 〜 '+fmt(tmax)+'（気温＝自動目盛／湿度＝0〜100%）';
+  g.fillStyle='#7cba6a';g.fillText('● 土壌',x0+122,y0+6);
+  if(msg) msg.textContent=pts.length+'点 ・ '+fmt(tmin)+' 〜 '+fmt(tmax)+'（気温＝自動目盛／湿度・土壌＝0〜100%）';
 }
 function sensorPages(){
   return [
     '（畑のかたわらで、小さな観測機がランプを点滅させている）<br><br><div id="obsBox">'+obsBoxHTML()+'</div>'
       +'<a href="#" class="more" onclick="closeDlg();openObsGraph();return false;">📈 グラフで見る（1日／1週／1月／1年）</a>',
-    'この観測機は、畑に置かれた<b>ラズベリーパイ Pico 2 W</b>のAHT20センサーとつながっている。',
+    'この観測機は、畑に置かれた<b>ラズベリーパイ Pico 2 W</b>の気温・湿度・土壌湿度センサーとつながっている。',
     '気温と湿度は<b>10分ごとにクラウド（スプレッドシート）へ記録</b>され、ここに最新値が映し出される。',
     '（スマホでもPCでも見られる。記録はずっと残るので、畑の空気の移ろいを後から辿れるのだ）'
   ];
