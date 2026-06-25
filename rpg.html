@@ -206,7 +206,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div id="hud">
   <div class="tag" id="loc">📍 <b>あわい村</b></div>
   <div class="tag" id="weather">🌤 <b>天気…</b></div>
-  <div class="tag" id="obshud" style="display:none">🌡 <b>—</b></div>
   <div class="tag" id="crops">🍓 <b>×0</b>&ensp;🍇 <b>×0</b>&ensp;🥬 <b>×0</b></div>
   <div class="tag" id="treas">💎 <b>0/8</b></div>
 </div>
@@ -1509,7 +1508,7 @@ function fetchCloudObs(){
   const cleanup=()=>{ try{delete window[cb];}catch(e){window[cb]=undefined;} if(s.parentNode)s.parentNode.removeChild(s); };
   window[cb]=function(d){ done=true; CLOUD.loading=false;
     if(d&&d.t!=null){ CLOUD.ok=true; CLOUD.t=d.t; CLOUD.h=d.h; CLOUD.ts=d.ts?Date.parse(d.ts):Date.now(); }
-    cleanup(); refreshObs(); updateObsHud(); };
+    cleanup(); refreshObs(); };
   s.onerror=function(){ if(!done){ CLOUD.loading=false; cleanup(); refreshObs(); } };
   s.src=GAS_OBS_URL+'?callback='+cb+'&_='+Date.now();
   document.head.appendChild(s);
@@ -1529,7 +1528,7 @@ function obsBoxHTML(){
     h='📡 <b>畑のリアル観測値</b>（Pico → クラウド記録）<br>'
       +'・気温：<b>'+(Math.round(CLOUD.t*10)/10)+' ℃</b><br>'
       +'・湿度：<b>'+(Math.round(CLOUD.h*10)/10)+' %</b><br>'
-      +'<span style="opacity:.7;font-size:12px">🛰 '+_ago(CLOUD.ts)+'・15秒ごとに更新（記録は10分ごと）'+(CLOUD.loading?' 🔄':'')+'</span>';
+      +'<span style="opacity:.7;font-size:12px">🛰 '+_ago(CLOUD.ts)+'の観測（10分ごとに記録）'+(CLOUD.loading?' 🔄':'')+'</span>';
   }else if(CLOUD.loading){                  // ③ 取得中
     h='📡 <b>観測値を取得中…</b>';
   }else{                                    // ④ フォールバック（気象API）
@@ -1592,13 +1591,7 @@ if(SENSOR.supported){
   navigator.serial.addEventListener('disconnect',e=>{ if(e.target===_obsPort){ _obsKeep=false; SENSOR.connected=false; refreshObs(); } });
   _obsAutoConnect();
 }
-function updateObsHud(){
-  const e=document.getElementById('obshud'); if(!e)return;
-  if(CLOUD.ok && CLOUD.t!=null){ e.style.display='';
-    e.innerHTML='🌡 <b>'+(Math.round(CLOUD.t*10)/10)+'°</b>&ensp;💧 <b>'+(Math.round(CLOUD.h*10)/10)+'%</b>'; }
-}
 fetchCloudObs();   // 起動時に一度、畑の最新観測値を取得しておく
-setInterval(()=>{ if(!document.hidden) fetchCloudObs(); }, 15000);   // 15秒ごとに表示用の最新値を更新（記録はGAS側で10分ごと）
 // ── 観測グラフ（1日/1週間/1か月/1年）— GASの ?range= から系列を取得して描画 ──
 const OBS_RANGES=[['day','1日'],['week','1週間'],['month','1か月'],['year','1年']];
 let _obsChart={range:'day',points:null,err:''};
