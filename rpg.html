@@ -1042,7 +1042,7 @@ function advance(){ const cur=curPages[curIdx];
   if(cur&&typeof cur==='object'&&cur.choices) return;    // 選択待ち：スペース/クリックでは進めない
   if(curIdx<curPages.length-1){curIdx++;renderPage();}
   else { const cb=dlgConfirm; dlgConfirm=null; closeDlg(); if(cb)cb(); } }
-function closeDlg(){dlg.classList.remove('show');dlgOpen=false;dlgConfirm=null;}
+function closeDlg(){dlg.classList.remove('show');dlgOpen=false;dlgConfirm=null;stopObsLive();}
 function openConfirm(title,pages,onYes){ openDialog('',title,pages); dlgConfirm=onYes; }
 dlg.addEventListener('click',e=>{if(e.target.closest('a,.close,.dlgchoice'))return;advance();});
 
@@ -1500,6 +1500,13 @@ const SENSOR={supported:('serial' in navigator),connected:false,connecting:false
 let _obsPort=null,_obsReader=null,_obsKeep=false;
 function refreshObs(){ const el=document.getElementById('obsBox'); if(el) el.innerHTML=obsBoxHTML(); }
 function _ago(ms){ const a=Date.now()-ms; if(a<90000)return 'たった今'; if(a<3600000)return Math.round(a/60000)+'分前'; if(a<86400000)return Math.round(a/3600000)+'時間前'; return Math.round(a/86400000)+'日前'; }
+// 観測機ダイアログを開いている間だけ、15秒ごとに最新値を取り直す
+let _obsTimer=null;
+function startObsLive(){ stopObsLive(); _obsTimer=setInterval(()=>{
+  if(!dlgOpen || !document.getElementById('obsBox')){ stopObsLive(); return; }
+  fetchCloudObs();
+}, 15000); }
+function stopObsLive(){ if(_obsTimer){ clearInterval(_obsTimer); _obsTimer=null; } }
 // クラウド(GAS)から最新の観測値を取得（JSONP）
 function fetchCloudObs(){
   if(CLOUD.loading) return;
@@ -1528,7 +1535,7 @@ function obsBoxHTML(){
     h='📡 <b>畑のリアル観測値</b>（Pico → クラウド記録）<br>'
       +'・気温：<b>'+(Math.round(CLOUD.t*10)/10)+' ℃</b><br>'
       +'・湿度：<b>'+(Math.round(CLOUD.h*10)/10)+' %</b><br>'
-      +'<span style="opacity:.7;font-size:12px">🛰 '+_ago(CLOUD.ts)+'の観測（10分ごとに記録）'+(CLOUD.loading?' 🔄':'')+'</span>';
+      +'<span style="opacity:.7;font-size:12px">🛰 '+_ago(CLOUD.ts)+'・15秒ごとに更新（記録は10分ごと）'+(CLOUD.loading?' 🔄':'')+'</span>';
   }else if(CLOUD.loading){                  // ③ 取得中
     h='📡 <b>観測値を取得中…</b>';
   }else{                                    // ④ フォールバック（気象API）
@@ -1870,7 +1877,7 @@ function interact(){
   const btc=(fx/TS)|0, btr=(fy/TS)|0;
   // 観測機? (トマト畑のセンサー：将来 raspi の観測データを反映)
   for(const o of OBJS){ if(o.type==='sensor' && btc>=o.x&&btc<o.x+o.w&&btr>=o.y&&btr<o.y+o.h){
-    fetchCloudObs(); openDialog('観測機','📡 畑の観測データ', sensorPages()); return; } }
+    fetchCloudObs(); openDialog('観測機','📡 畑の観測データ', sensorPages()); startObsLive(); return; } }
   // 縄文の環状列石（井戸尻遺跡の名残）
   for(const o of OBJS){ if(o.type==='jomon' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
     openDialog('縄文の遺跡','🗿 環状列石', jomonPages()); return; } }
