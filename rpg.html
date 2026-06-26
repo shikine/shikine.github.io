@@ -402,6 +402,8 @@ const OBJS=[
  {x:3, y:11,w:2,h:2,type:'pit'},
  // 竪穴住居のそば：縄文の環状列石（井戸尻遺跡の名残・調べられる）
  {x:3, y:8, w:2,h:2,type:'jomon'},
+ // 葡萄畑の南：井戸（将来 水温・pH を観測するシステム）
+ {x:38,y:13,w:2,h:2,type:'well'},
  // トマト畑のそばの観測機（将来 raspi の観測データを反映予定）
  {x:27,y:21,w:1,h:1,type:'sensor'},
 ];
@@ -1125,7 +1127,7 @@ function openMapPanel(){
     {t:'⛰ 八ヶ岳',x:32,y:2},{t:'💧 西の池',x:9,y:9},{t:'💧 東の池',x:55,y:23},
     {t:'🎶 自由の広場',x:19,y:8},{t:'🎙 焚き火ラジオ',x:21.5,y:12.5},{t:'🍄 きのこの森',x:11,y:16.5},{t:'🌊 川',x:6,y:27},
     {t:'🗿 縄文の遺跡',x:6,y:9.5},{t:'⛩ 水神の祠',x:60,y:21.5},{t:'🐴 南の牧場',x:35.5,y:35.5},
-    {t:'🍓 いちご畑',x:22,y:31},{t:'🍇 ぶどう畑',x:39,y:10},{t:'🥬 レタス畑',x:39,y:22},
+    {t:'🍓 いちご畑',x:22,y:31},{t:'🍇 ぶどう畑',x:39,y:10},{t:'⛲ 井戸',x:38.5,y:13.5},{t:'🥬 レタス畑',x:39,y:22},
     {t:'🍅 トマト畑',x:30,y:22},{t:'🌾 田んぼ',x:24,y:21.5},{t:'🏜 砂漠',x:8,y:39},
     {t:'🍳 台所',x:17,y:37},
     {t:'🌋 溶岩地帯',x:52,y:42},{t:'♨ 温泉',x:52,y:39},
@@ -1495,7 +1497,7 @@ function drawFog(){
 //   ・スマホ含む誰でも：クラウド(GAS)から最新値を取得して表示（JSONPでCORS回避）
 //   ・PC直結時のみ：Web Serial で即時のライブ値も表示できる
 const GAS_OBS_URL='https://script.google.com/macros/s/AKfycbzJ-dB8q2oNWJ3bbORkV634H9Ndk0iYjZsP5e3GVwUa56c52AJpI-SJORq-FkIOisko/exec';
-const CLOUD={ok:false,loading:false,t:null,h:null,s:null,ts:0};
+const CLOUD={ok:false,loading:false,t:null,h:null,s:null,wt:null,ph:null,ts:0};
 const SENSOR={supported:('serial' in navigator),connected:false,connecting:false,temp:null,hum:null,soil:null,ts:0,err:''};
 let _obsPort=null,_obsReader=null,_obsKeep=false;
 function refreshObs(){ const el=document.getElementById('obsBox'); if(el) el.innerHTML=obsBoxHTML(); }
@@ -1503,7 +1505,7 @@ function _ago(ms){ const a=Date.now()-ms; if(a<90000)return 'たった今'; if(a
 // 観測機ダイアログを開いている間だけ、15秒ごとに最新値を取り直す
 let _obsTimer=null;
 function startObsLive(){ stopObsLive(); _obsTimer=setInterval(()=>{
-  if(!dlgOpen || !document.getElementById('obsBox')){ stopObsLive(); return; }
+  if(!dlgOpen || (!document.getElementById('obsBox') && !document.getElementById('wellBox'))){ stopObsLive(); return; }
   fetchCloudObs();
 }, 15000); }
 function stopObsLive(){ if(_obsTimer){ clearInterval(_obsTimer); _obsTimer=null; } }
@@ -1514,8 +1516,9 @@ function fetchCloudObs(){
   const cb='_obscb'+Date.now(); const s=document.createElement('script'); let done=false;
   const cleanup=()=>{ try{delete window[cb];}catch(e){window[cb]=undefined;} if(s.parentNode)s.parentNode.removeChild(s); };
   window[cb]=function(d){ done=true; CLOUD.loading=false;
-    if(d&&d.t!=null){ CLOUD.ok=true; CLOUD.t=d.t; CLOUD.h=d.h; CLOUD.s=(d.s!=null?d.s:null); CLOUD.ts=d.ts?Date.parse(d.ts):Date.now(); }
-    cleanup(); refreshObs(); };
+    if(d&&d.t!=null){ CLOUD.ok=true; CLOUD.t=d.t; CLOUD.h=d.h; CLOUD.s=(d.s!=null?d.s:null);
+      CLOUD.wt=(d.wt!=null?d.wt:null); CLOUD.ph=(d.ph!=null?d.ph:null); CLOUD.ts=d.ts?Date.parse(d.ts):Date.now(); }
+    cleanup(); refreshObs(); refreshWell(); };
   s.onerror=function(){ if(!done){ CLOUD.loading=false; cleanup(); refreshObs(); } };
   s.src=GAS_OBS_URL+'?callback='+cb+'&_='+Date.now();
   document.head.appendChild(s);
@@ -1683,6 +1686,25 @@ function sensorPages(){
     'この観測機は、畑に置かれた<b>ラズベリーパイ Pico 2 W</b>の気温・湿度・土壌湿度センサーとつながっている。',
     '気温と湿度は<b>10分ごとにクラウド（スプレッドシート）へ記録</b>され、ここに最新値が映し出される。',
     '（スマホでもPCでも見られる。記録はずっと残るので、畑の空気の移ろいを後から辿れるのだ）'
+  ];
+}
+// ── 井戸（葡萄畑の南）：将来 水温・pH を表示。今は準備中 ──
+function refreshWell(){ const el=document.getElementById('wellBox'); if(el) el.innerHTML=wellBoxHTML(); }
+function wellBoxHTML(){
+  const ready=(CLOUD.wt!=null||CLOUD.ph!=null);
+  const wt=(CLOUD.wt!=null)?(Math.round(CLOUD.wt*10)/10+' ℃'):'—（準備中）';
+  const ph=(CLOUD.ph!=null)?(Math.round(CLOUD.ph*100)/100):'—（準備中）';
+  let h='⛲ <b>井戸の水質</b><br>・水温：<b>'+wt+'</b><br>・pH：<b>'+ph+'</b><br>';
+  if(ready) h+='<span style="opacity:.7;font-size:12px">🛰 '+_ago(CLOUD.ts)+'・15秒ごとに更新</span>';
+  else h+='<span style="opacity:.75;font-size:12px">※ 水温計・pH計は準備中。センサーがつながると、井戸水の温度とpHがここに映ります。</span>';
+  return h;
+}
+function wellPages(){
+  return [
+    '（葡萄畑の南のへりに、古い石積みの井戸がある。のぞくと、底にひんやりした水の気配。）<br><br><div id="wellBox">'+wellBoxHTML()+'</div>',
+    'この井戸は、やがて<b>水温計</b>と<b>pH計</b>につながる予定だ。',
+    'ワイン用の葡萄を育てる水の<b>温度と酸性度（pH）</b>を、ここで見守れるようになる。',
+    '（水を知ることは、葡萄を知ること。実りは、水からはじまる。）'
   ];
 }
 // 水神の祠（東の池のほとり）
@@ -1885,6 +1907,8 @@ function interact(){
   // 観測機? (トマト畑のセンサー：将来 raspi の観測データを反映)
   for(const o of OBJS){ if(o.type==='sensor' && btc>=o.x&&btc<o.x+o.w&&btr>=o.y&&btr<o.y+o.h){
     fetchCloudObs(); openDialog('観測機','📡 畑の観測データ', sensorPages()); startObsLive(); return; } }
+  for(const o of OBJS){ if(o.type==='well' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
+    fetchCloudObs(); openDialog('井戸','⛲ 葡萄畑の井戸', wellPages()); startObsLive(); return; } }
   // 縄文の環状列石（井戸尻遺跡の名残）
   for(const o of OBJS){ if(o.type==='jomon' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
     openDialog('縄文の遺跡','🗿 環状列石', jomonPages()); return; } }
@@ -2413,6 +2437,19 @@ function drawObj(o){
     // 風杯（くるくる回る）
     const a=t/240, dx=Math.round(Math.cos(a)*2), dy=Math.round(Math.sin(a)*2);
     px(sx+8+dx,sy+1+dy,1,1,'#e8e8e8'); px(sx+8-dx,sy+1-dy,1,1,'#e8e8e8'); }
+  else if(o.type==='well'){      // 葡萄畑の南の井戸（将来 水温・pH 観測）
+    const t=Date.now();
+    px(sx+4,sy+6,24,2,'#5c2a20'); px(sx+6,sy+4,20,2,'#7a3b2a');     // 屋根
+    px(sx+10,sy+2,12,2,'#8a4632'); px(sx+14,sy+1,4,1,'#9a5038');
+    px(sx+7,sy+7,2,16,'#6b4f2e'); px(sx+23,sy+7,2,16,'#6b4f2e');    // 柱
+    px(sx+8,sy+8,16,1,'#5a4326'); px(sx+15,sy+8,2,2,'#888');        // 梁＋滑車
+    px(sx+15,sy+9,1,5,'#b9a07a');                                   // ロープ
+    px(sx+13,sy+13,5,4,'#9a7b4a'); px(sx+13,sy+13,5,1,'#b99a6a');   // 桶
+    px(sx+5,sy+19,22,10,'#8a8276'); px(sx+5,sy+19,22,2,'#a59c8e');  // 石積み
+    px(sx+10,sy+21,1,8,'#6e675c'); px(sx+16,sy+21,1,8,'#6e675c'); px(sx+22,sy+21,1,8,'#6e675c');
+    px(sx+8,sy+21,16,5,'#1e3a4a');                                  // 水面
+    const gl=(Math.sin(t/500)>0)?'#4a7a8a':'#356576';
+    px(sx+11,sy+22,4,1,gl); px(sx+17,sy+23,2,1,gl); }
   else if(o.type==='jomon'){     // 縄文の環状列石（ストーンサークル）
     const cx=sx+W/2, cy=sy+H/2+2, rx=W*0.4, ry=H*0.26;
     px(sx+2,sy+H-7,W-4,6,'#6f5a3c'); px(sx+2,sy+H-7,W-4,1,'#7e6a48');   // 踏み均された土
