@@ -1497,7 +1497,7 @@ function drawFog(){
 //   ・スマホ含む誰でも：クラウド(GAS)から最新値を取得して表示（JSONPでCORS回避）
 //   ・PC直結時のみ：Web Serial で即時のライブ値も表示できる
 const GAS_OBS_URL='https://script.google.com/macros/s/AKfycbzJ-dB8q2oNWJ3bbORkV634H9Ndk0iYjZsP5e3GVwUa56c52AJpI-SJORq-FkIOisko/exec';
-const CLOUD={ok:false,loading:false,t:null,h:null,s:null,wt:null,ph:null,ts:0};
+const CLOUD={ok:false,loading:false,t:null,h:null,s:null,wt:null,ph:null,wd:null,ts:0};
 const SENSOR={supported:('serial' in navigator),connected:false,connecting:false,temp:null,hum:null,soil:null,ts:0,err:''};
 let _obsPort=null,_obsReader=null,_obsKeep=false;
 function refreshObs(){ const el=document.getElementById('obsBox'); if(el) el.innerHTML=obsBoxHTML(); }
@@ -1517,7 +1517,7 @@ function fetchCloudObs(){
   const cleanup=()=>{ try{delete window[cb];}catch(e){window[cb]=undefined;} if(s.parentNode)s.parentNode.removeChild(s); };
   window[cb]=function(d){ done=true; CLOUD.loading=false;
     if(d&&d.t!=null){ CLOUD.ok=true; CLOUD.t=d.t; CLOUD.h=d.h; CLOUD.s=(d.s!=null?d.s:null);
-      CLOUD.wt=(d.wt!=null?d.wt:null); CLOUD.ph=(d.ph!=null?d.ph:null); CLOUD.ts=d.ts?Date.parse(d.ts):Date.now(); }
+      CLOUD.wt=(d.wt!=null?d.wt:null); CLOUD.ph=(d.ph!=null?d.ph:null); CLOUD.wd=(d.wd!=null?d.wd:null); CLOUD.ts=d.ts?Date.parse(d.ts):Date.now(); }
     cleanup(); refreshObs(); refreshWell(); };
   s.onerror=function(){ if(!done){ CLOUD.loading=false; cleanup(); refreshObs(); } };
   s.src=GAS_OBS_URL+'?callback='+cb+'&_='+Date.now();
@@ -1691,19 +1691,20 @@ function sensorPages(){
 // ── 井戸（葡萄畑の南）：将来 水温・pH を表示。今は準備中 ──
 function refreshWell(){ const el=document.getElementById('wellBox'); if(el) el.innerHTML=wellBoxHTML(); }
 function wellBoxHTML(){
-  const ready=(CLOUD.wt!=null||CLOUD.ph!=null);
+  const ready=(CLOUD.wt!=null||CLOUD.ph!=null||CLOUD.wd!=null);
   const wt=(CLOUD.wt!=null)?(Math.round(CLOUD.wt*10)/10+' ℃'):'—（準備中）';
   const ph=(CLOUD.ph!=null)?(Math.round(CLOUD.ph*100)/100):'—（準備中）';
-  let h='⛲ <b>井戸の水質</b><br>・水温：<b>'+wt+'</b><br>・pH：<b>'+ph+'</b><br>';
+  const wd=(CLOUD.wd!=null)?(Math.round(CLOUD.wd*10)/10+' cm'):'—（準備中）';
+  let h='⛲ <b>井戸の水質</b><br>・水温：<b>'+wt+'</b><br>・pH：<b>'+ph+'</b><br>・水深：<b>'+wd+'</b><br>';
   if(ready) h+='<span style="opacity:.7;font-size:12px">🛰 '+_ago(CLOUD.ts)+'・15秒ごとに更新</span>';
-  else h+='<span style="opacity:.75;font-size:12px">※ 水温計・pH計は準備中。センサーがつながると、井戸水の温度とpHがここに映ります。</span>';
+  else h+='<span style="opacity:.75;font-size:12px">※ 水温計・pH計・水深計（距離センサー）は準備中。つながると、井戸の温度・pH・水深がここに映ります。</span>';
   return h;
 }
 function wellPages(){
   return [
     '（葡萄畑の南のへりに、古い石積みの井戸がある。のぞくと、底にひんやりした水の気配。）<br><br><div id="wellBox">'+wellBoxHTML()+'</div>',
-    'この井戸は、やがて<b>水温計</b>と<b>pH計</b>につながる予定だ。',
-    'ワイン用の葡萄を育てる水の<b>温度と酸性度（pH）</b>を、ここで見守れるようになる。',
+    'この井戸は、やがて<b>水温計</b>・<b>pH計</b>・<b>水深計（距離センサー）</b>につながる予定だ。',
+    'ワイン用の葡萄を育てる水の<b>温度・酸性度（pH）・水位</b>を、ここで見守れるようになる。',
     '（水を知ることは、葡萄を知ること。実りは、水からはじまる。）'
   ];
 }
