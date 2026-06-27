@@ -407,8 +407,8 @@ const OBJS=[
  {x:34,y:13,w:1,h:1,type:'well'},
  // 井戸のそば：ワイン貯蔵の室（土のかまくら・山をくりぬいた風）
  {x:36,y:13,w:1,h:1,type:'cellar'},
- // 工房の隣：FAB LABO の掲示板（小さい看板・ギャラリーを開く）
- {x:54,y:14,w:1,h:1,type:'board'},
+ // 工房の南・一本道(row18)沿い：FAB LABO の掲示板（小さい看板・ギャラリーを開く）
+ {x:52,y:17,w:1,h:1,type:'board'},
  // トマト畑のそばの観測機（将来 raspi の観測データを反映予定）
  {x:27,y:21,w:1,h:1,type:'sensor'},
 ];
@@ -1141,7 +1141,7 @@ function openMapPanel(){
   for(const a of areas) lab+='<div class="mlab marea" style="left:'+pc(a.x/MW*100)+'%;top:'+pc(a.y/MH*100)+'%">'+a.t+'</div>';
   for(const s of SPOTS) lab+='<div class="mlab mspot" style="left:'+pc((s.x+s.w/2)/MW*100)+'%;top:'+pc((s.y+s.h/2)/MH*100)+'%">'+s.icon+' '+s.label+'</div>';
   lab+='<div class="mlab mspot" style="left:'+pc((WARP.x+WARP.w/2)/MW*100)+'%;top:'+pc((WARP.y+WARP.h/2)/MH*100)+'%">✨ ワープ</div>';
-  lab+='<div class="mlab mspot" style="left:'+pc(54.5/MW*100)+'%;top:'+pc(14.5/MH*100)+'%">🖼 FAB LABO</div>';
+  lab+='<div class="mlab mspot" style="left:'+pc(52.5/MW*100)+'%;top:'+pc(17.5/MH*100)+'%">🖼 FAB LABO</div>';
   lab+='<div class="mhere" style="left:'+pc((P.px/TS+0.5)/MW*100)+'%;top:'+pc((P.py/TS+0.5)/MH*100)+'%"></div>';
   // 凡例
   const legend=[['#4f86ab','水・川'],['#2f6b3a','森・木'],['#5a9356','草地'],['#cbb079','道'],
