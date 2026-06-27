@@ -311,6 +311,8 @@ for(let r=5;r<MH-3;r++)for(let c=3;c<MW-3;c++){
   const v=rnd();
   if(v>.93)M[r][c]=3; else if(v>.88)M[r][c]=6; else if(v>.80)M[r][c]=4;
 }
+// 裏山の森（右上・八ヶ岳のふもとに濃い木立をつくる）
+for(let r=5;r<12;r++)for(let c=47;c<MW-2;c++){ if(rnd()>.42) set(c,r,3); }
 // pond (north-west, below the mountains)
 for(let r=6;r<13;r++)for(let c=5;c<14;c++)
   if((r-9)*(r-9)/9+(c-9)*(c-9)/16<1.1)set(c,r,2);
@@ -363,10 +365,9 @@ for(let r=13;r<34;r++){ const cc=6+Math.round(Math.sin((r-13)*0.55)); for(let c=
 const SPOTS=[
  {x:24,y:7, w:5,h:4, roof:'#b0503e', wall:'#d8b486', icon:'🏛', label:'美術館',  key:'works'},
  {x:9, y:30,w:4,h:3, roof:'#6b8cb0', wall:'#d8b486', icon:'🏠', label:'アトリエ',key:'profile'},
- {x:50,y:9, w:4,h:3, roof:'#7a9c52', wall:'#cdaa70', icon:'🔧', label:'工房',    key:'apps'},
+ {x:50,y:13,w:4,h:3, roof:'#7a9c52', wall:'#cdaa70', icon:'🔧', label:'工房',    key:'apps'},
  {x:30,y:24,w:4,h:3, roof:'#c08a4c', wall:'#d8b486', icon:'📮', label:'郵便屋',  key:'contact'},
  {x:46,y:26,w:4,h:3, roof:'#9c6cb0', wall:'#d8b486', icon:'📜', label:'メルマガ',  key:'news'},
- {x:54,y:6, w:4,h:3, roof:'#5a8a6a', wall:'#d8b486', icon:'🖼', label:'FAB LABO',   key:'gallery'},
 ];
 /* decorative houses (non-interactive, village atmosphere) */
 const DECO=[
@@ -406,6 +407,8 @@ const OBJS=[
  {x:34,y:13,w:1,h:1,type:'well'},
  // 井戸のそば：ワイン貯蔵の室（土のかまくら・山をくりぬいた風）
  {x:36,y:13,w:1,h:1,type:'cellar'},
+ // 工房の隣：FAB LABO の掲示板（小さい看板・ギャラリーを開く）
+ {x:54,y:14,w:1,h:1,type:'board'},
  // トマト畑のそばの観測機（将来 raspi の観測データを反映予定）
  {x:27,y:21,w:1,h:1,type:'sensor'},
 ];
@@ -1138,6 +1141,7 @@ function openMapPanel(){
   for(const a of areas) lab+='<div class="mlab marea" style="left:'+pc(a.x/MW*100)+'%;top:'+pc(a.y/MH*100)+'%">'+a.t+'</div>';
   for(const s of SPOTS) lab+='<div class="mlab mspot" style="left:'+pc((s.x+s.w/2)/MW*100)+'%;top:'+pc((s.y+s.h/2)/MH*100)+'%">'+s.icon+' '+s.label+'</div>';
   lab+='<div class="mlab mspot" style="left:'+pc((WARP.x+WARP.w/2)/MW*100)+'%;top:'+pc((WARP.y+WARP.h/2)/MH*100)+'%">✨ ワープ</div>';
+  lab+='<div class="mlab mspot" style="left:'+pc(54.5/MW*100)+'%;top:'+pc(14.5/MH*100)+'%">🖼 FAB LABO</div>';
   lab+='<div class="mhere" style="left:'+pc((P.px/TS+0.5)/MW*100)+'%;top:'+pc((P.py/TS+0.5)/MH*100)+'%"></div>';
   // 凡例
   const legend=[['#4f86ab','水・川'],['#2f6b3a','森・木'],['#5a9356','草地'],['#cbb079','道'],
@@ -1923,6 +1927,8 @@ function interact(){
     fetchCloudObs(); openDialog('井戸','⛲ 葡萄畑の井戸', wellPages()); startObsLive(); return; } }
   for(const o of OBJS){ if(o.type==='cellar' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
     openDialog('室','🍷 ワインの室', cellarPages()); return; } }
+  for(const o of OBJS){ if(o.type==='board' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
+    openGalleryPanel(); return; } }
   // 縄文の環状列石（井戸尻遺跡の名残）
   for(const o of OBJS){ if(o.type==='jomon' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
     openDialog('縄文の遺跡','🗿 環状列石', jomonPages()); return; } }
@@ -2094,6 +2100,7 @@ function update(){
     else if(pc>=PASTURE.x&&pc<=PASTURE.x+PASTURE.w&&pr>=PASTURE.y&&pr<=PASTURE.y+PASTURE.h) label='🐴 <b>南の牧場</b> — ウマが放牧されている';
     else if(Math.hypot((SHRINE.x+1)*TS-P.px,(SHRINE.y+1)*TS-P.py)<TS*2.5) label='⛩ <b>水神の祠</b> のほとり — 調べてみよう';
     else if(here===2||around(2)) label='💧 <b>池のほとり</b>';
+    else if(pr>=5&&pr<=11&&pc>=47) label='🌲 <b>裏山の森</b>';
     else if(pr<7||around(11)) label='⛰ <b>八ヶ岳</b> のふもと';
     else label='📍 <b>あわい村</b> を探索中';
   }
@@ -2473,6 +2480,12 @@ function drawObj(o){
     px(sx+6,sy+8,4,7,'#241a12'); px(sx+6,sy+8,4,1,'#3a2a1c');      // 入口（暗いアーチ）
     px(sx+5,sy+9,1,6,'#4a3522'); px(sx+10,sy+9,1,6,'#4a3522');     // 扉枠
     px(sx+7,sy+12,2,2,'#5a2e2a'); px(sx+7,sy+12,2,1,'#6e3a34'); }  // 奥のワイン樽
+  else if(o.type==='board'){     // FAB LABO の掲示板（工房の隣・ギャラリーを開く）
+    px(sx+5,sy+13,6,3,'rgba(0,0,0,.28)');                          // 影
+    px(sx+7,sy+6,2,9,'#6b4a2c');                                   // 柱
+    px(sx+1,sy,14,8,'#caa46a'); px(sx+1,sy,14,1,'#d8b884'); px(sx+1,sy+7,14,1,'#9c7a4a'); // 板
+    px(sx+3,sy+2,4,4,'#5a8a6a'); px(sx+4,sy+3,1,1,'#cfe3d4');      // ミニ絵（🖼）
+    px(sx+9,sy+2,4,1,'#5a3d24'); px(sx+9,sy+4,3,1,'#5a3d24'); }    // 文字マーク
   else if(o.type==='jomon'){     // 縄文の環状列石（ストーンサークル）
     const cx=sx+W/2, cy=sy+H/2+2, rx=W*0.4, ry=H*0.26;
     px(sx+2,sy+H-7,W-4,6,'#6f5a3c'); px(sx+2,sy+H-7,W-4,1,'#7e6a48');   // 踏み均された土
