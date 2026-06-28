@@ -1503,7 +1503,7 @@ function drawFog(){
 //   ・スマホ含む誰でも：クラウド(GAS)から最新値を取得して表示（JSONPでCORS回避）
 //   ・PC直結時のみ：Web Serial で即時のライブ値も表示できる
 const GAS_OBS_URL='https://script.google.com/macros/s/AKfycbzJ-dB8q2oNWJ3bbORkV634H9Ndk0iYjZsP5e3GVwUa56c52AJpI-SJORq-FkIOisko/exec';
-const CLOUD={ok:false,loading:false,t:null,h:null,s:null,wt:null,ph:null,wd:null,ts:0};
+const CLOUD={ok:false,loading:false,t:null,h:null,s:null,wt:null,ph:null,wd:null,ct:null,ch:null,vib:null,ts:0};
 const SENSOR={supported:('serial' in navigator),connected:false,connecting:false,temp:null,hum:null,soil:null,ts:0,err:''};
 let _obsPort=null,_obsReader=null,_obsKeep=false;
 function refreshObs(){ const el=document.getElementById('obsBox'); if(el) el.innerHTML=obsBoxHTML(); }
@@ -1511,7 +1511,7 @@ function _ago(ms){ const a=Date.now()-ms; if(a<90000)return 'たった今'; if(a
 // 観測機ダイアログを開いている間だけ、15秒ごとに最新値を取り直す
 let _obsTimer=null;
 function startObsLive(){ stopObsLive(); _obsTimer=setInterval(()=>{
-  if(!dlgOpen || (!document.getElementById('obsBox') && !document.getElementById('wellBox'))){ stopObsLive(); return; }
+  if(!dlgOpen || (!document.getElementById('obsBox') && !document.getElementById('wellBox') && !document.getElementById('cellarBox'))){ stopObsLive(); return; }
   fetchCloudObs();
 }, 15000); }
 function stopObsLive(){ if(_obsTimer){ clearInterval(_obsTimer); _obsTimer=null; } }
@@ -1523,8 +1523,9 @@ function fetchCloudObs(){
   const cleanup=()=>{ try{delete window[cb];}catch(e){window[cb]=undefined;} if(s.parentNode)s.parentNode.removeChild(s); };
   window[cb]=function(d){ done=true; CLOUD.loading=false;
     if(d&&d.t!=null){ CLOUD.ok=true; CLOUD.t=d.t; CLOUD.h=d.h; CLOUD.s=(d.s!=null?d.s:null);
-      CLOUD.wt=(d.wt!=null?d.wt:null); CLOUD.ph=(d.ph!=null?d.ph:null); CLOUD.wd=(d.wd!=null?d.wd:null); CLOUD.ts=d.ts?Date.parse(d.ts):Date.now(); }
-    cleanup(); refreshObs(); refreshWell(); };
+      CLOUD.wt=(d.wt!=null?d.wt:null); CLOUD.ph=(d.ph!=null?d.ph:null); CLOUD.wd=(d.wd!=null?d.wd:null);
+      CLOUD.ct=(d.ct!=null?d.ct:null); CLOUD.ch=(d.ch!=null?d.ch:null); CLOUD.vib=(d.vib!=null?d.vib:null); CLOUD.ts=d.ts?Date.parse(d.ts):Date.now(); }
+    cleanup(); refreshObs(); refreshWell(); refreshCellar(); };
   s.onerror=function(){ if(!done){ CLOUD.loading=false; cleanup(); refreshObs(); } };
   s.src=GAS_OBS_URL+'?callback='+cb+'&_='+Date.now();
   document.head.appendChild(s);
@@ -1786,11 +1787,22 @@ function drawWellChart(){
   g.fillStyle='#6fb0c0';g.fillText('● 水深(cm)',x0+56,y0+6);
   if(msg) msg.textContent=pts.length+'点 ・ '+fmt(tmin)+' 〜 '+fmt(tmax)+'（pH=左0〜14／水深=右cm自動）';
 }
+function refreshCellar(){ const el=document.getElementById('cellarBox'); if(el) el.innerHTML=cellarBoxHTML(); }
+function cellarBoxHTML(){
+  const ready=(CLOUD.ct!=null||CLOUD.ch!=null||CLOUD.vib!=null);
+  const ct=(CLOUD.ct!=null)?(Math.round(CLOUD.ct*10)/10+' ℃'):'—（準備中）';
+  const ch=(CLOUD.ch!=null)?(Math.round(CLOUD.ch*10)/10+' %'):'—（準備中）';
+  const vib=(CLOUD.vib!=null)?(Math.round(CLOUD.vib)+' 回/分'):'—（準備中）';
+  let h='🛖 <b>室の貯蔵環境</b><br>・室温：<b>'+ct+'</b><br>・湿度：<b>'+ch+'</b><br>・振動：<b>'+vib+'</b><br>';
+  if(ready) h+='<span style="opacity:.7;font-size:12px">🛰 '+_ago(CLOUD.ts)+'・15秒ごとに更新</span>';
+  else h+='<span style="opacity:.75;font-size:12px">※ 室の温湿度計・振動センサーは準備中（新しいPicoで実装予定）。つながると、ここに貯蔵環境が映ります。</span>';
+  return h;
+}
 function cellarPages(){
   return [
-    '（葡萄畑の南西、山すそをくりぬいた土の室（むろ）がある。入口から、ひんやりと土の匂いが流れてくる。）',
-    'ここは<b>ワインを貯蔵する室</b>。',
-    '土と山がつくる、年じゅう一定の涼しさ。電気もいらず、ワインはここで静かに時を重ねる。',
+    '（葡萄畑の南西、山すそをくりぬいた土の室（むろ）がある。入口から、ひんやりと土の匂いが流れてくる。）<br><br><div id="cellarBox">'+cellarBoxHTML()+'</div>',
+    'ここは<b>ワインを貯蔵する室</b>。土と山がつくる、年じゅう一定の涼しさ。',
+    'やがて<b>室温・湿度・振動</b>を見張るセンサーがつき、ワインが静かに眠る環境を、ここに映す。',
     'この村のいちごやトマトと同じ。葡萄もまた、人の手と自然のあわいで実りになる。',
     '（暗がりに、樽がいくつか、じっと並んでいる。）'
   ];
@@ -1998,7 +2010,7 @@ function interact(){
   for(const o of OBJS){ if(o.type==='well' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
     fetchCloudObs(); openDialog('井戸','⛲ 葡萄畑の井戸', wellPages()); startObsLive(); return; } }
   for(const o of OBJS){ if(o.type==='cellar' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
-    openDialog('室','🍷 ワインの室', cellarPages()); return; } }
+    fetchCloudObs(); openDialog('室','🍷 ワインの室', cellarPages()); startObsLive(); return; } }
   for(const o of OBJS){ if(o.type==='board' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
     openGalleryPanel(); return; } }
   // 縄文の環状列石（井戸尻遺跡の名残）
