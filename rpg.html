@@ -1708,11 +1708,83 @@ function wellBoxHTML(){
 }
 function wellPages(){
   return [
-    '（葡萄畑の南のへりに、古い石積みの井戸がある。のぞくと、底にひんやりした水の気配。）<br><br><div id="wellBox">'+wellBoxHTML()+'</div>',
-    'この井戸は、やがて<b>水温計</b>・<b>pH計</b>・<b>水深計（距離センサー）</b>につながる予定だ。',
-    'ワイン用の葡萄を育てる水の<b>温度・酸性度（pH）・水位</b>を、ここで見守れるようになる。',
+    '（葡萄畑の南のへりに、古い石積みの井戸がある。のぞくと、底にひんやりした水の気配。）<br><br><div id="wellBox">'+wellBoxHTML()+'</div>'
+      +'<a href="#" class="more" onclick="closeDlg();openWellGraph();return false;">📈 グラフで見る（pH・水深）</a>',
+    'この井戸は<b>pH計</b>と<b>水深計</b>につながっている。',
+    'ワイン用の葡萄を育てる水の<b>酸性度（pH）と水位</b>を、ここで見守れる。',
     '（水を知ることは、葡萄を知ること。実りは、水からはじまる。）'
   ];
+}
+// ── 井戸の水質グラフ（pH・水深）── GASの ?range= 系列（7列）から ph=p[5] / wd=p[6] を描画
+let _wellChart={range:'day',points:null,err:''};
+function _wellSegHTML(active){
+  return OBS_RANGES.map(r=>{ const on=r[0]===active;
+    const st='flex:1;min-width:56px;font-family:inherit;font-size:13px;padding:8px 6px;cursor:pointer;border:2px solid '
+      +(on?'var(--gold)':'#4a4030')+';background:'+(on?'var(--gold)':'rgba(231,200,120,.10)')+';color:'+(on?'#221d16':'var(--paper)')+';'+(on?'font-weight:bold;':'');
+    return '<button style="'+st+'" onclick="wellGraph(\''+r[0]+'\')">'+r[1]+'</button>'; }).join('');
+}
+function openWellGraph(){
+  const h='<div id="wellRangeSeg" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+_wellSegHTML(_wellChart.range)+'</div>'
+    +'<canvas id="wellChart" width="640" height="320" style="width:100%;height:auto;background:#15120d;border:2px solid #4a4030;display:block"></canvas>'
+    +'<div id="wellChartMsg" style="font-size:12px;color:#b7ad97;margin-top:8px;line-height:1.7"></div>';
+  openPanel('📈 井戸の水質グラフ', h);
+  wellGraph(_wellChart.range||'day');
+}
+function wellGraph(range){
+  _wellChart.range=range; _wellChart.err='';
+  const seg=document.getElementById('wellRangeSeg'); if(seg) seg.innerHTML=_wellSegHTML(range);
+  const msg=document.getElementById('wellChartMsg'); if(msg) msg.textContent='読み込み中…';
+  const cb='_wg'+Date.now(); const s=document.createElement('script'); let done=false;
+  const cleanup=()=>{ try{delete window[cb];}catch(e){window[cb]=undefined;} if(s.parentNode)s.parentNode.removeChild(s); };
+  window[cb]=function(d){ done=true;
+    if(d && d.points){ _wellChart.points=d.points; _wellChart.err=''; }
+    else { _wellChart.points=[]; _wellChart.err='グラフ用データが取得できません。GASを最新コードで再デプロイしてください。'; }
+    cleanup(); drawWellChart(); };
+  s.onerror=function(){ if(!done){ _wellChart.err='取得に失敗しました'; cleanup(); drawWellChart(); } };
+  s.src=GAS_OBS_URL+'?range='+range+'&callback='+cb+'&_='+Date.now();
+  document.head.appendChild(s);
+  setTimeout(()=>{ if(!done){ _wellChart.err='タイムアウト'; cleanup(); drawWellChart(); } },12000);
+}
+function drawWellChart(){
+  const cvs=document.getElementById('wellChart'); if(!cvs) return;
+  const g=cvs.getContext('2d'), W=cvs.width, H=cvs.height;
+  g.fillStyle='#15120d'; g.fillRect(0,0,W,H);
+  const msg=document.getElementById('wellChartMsg');
+  if(_wellChart.err){ if(msg) msg.textContent='⚠ '+_wellChart.err;
+    g.fillStyle='#6a6356'; g.font='14px sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('—',W/2,H/2); return; }
+  const all=_wellChart.points||[];
+  const pts=all.filter(p=>p[5]!=null||p[6]!=null);   // pHか水深がある点だけ
+  if(!pts.length){ if(msg) msg.textContent=(all.length?'まだ井戸の記録がありません（pH/水深は10分ごとに増えます。GAS未更新なら再デプロイを）':'まだこの期間の記録がありません');
+    g.fillStyle='#6a6356'; g.font='14px sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('データなし',W/2,H/2); return; }
+  const padL=44,padR=46,padT=16,padB=28, x0=padL,x1=W-padR,y0=padT,y1=H-padB;
+  const ts=pts.map(p=>p[0]); const tmin=Math.min(...ts),tmax=Math.max(...ts);
+  const wds=pts.map(p=>p[6]).filter(v=>v!=null);
+  let Dmn=wds.length?Math.min(...wds):0, Dmx=wds.length?Math.max(...wds):100;
+  if(Dmx-Dmn<5){const m=(Dmx+Dmn)/2;Dmn=m-3;Dmx=m+3;} Dmn=Math.floor(Dmn-2);Dmx=Math.ceil(Dmx+2); if(Dmn<0)Dmn=0;
+  const xOf=t=>(tmax===tmin)?(x0+x1)/2:x0+(t-tmin)/(tmax-tmin)*(x1-x0);
+  const yPH=v=>y1-v/14*(y1-y0);
+  const yD=v=>y1-(v-Dmn)/(Dmx-Dmn)*(y1-y0);
+  g.strokeStyle='#3a352b';g.lineWidth=1;g.font='10px sans-serif';g.textBaseline='middle';
+  for(let i=0;i<=4;i++){ const yy=y0+(y1-y0)*i/4;
+    g.beginPath();g.moveTo(x0,yy);g.lineTo(x1,yy);g.stroke();
+    g.fillStyle='#c89cd8';g.textAlign='right';g.fillText('pH'+(14-14*i/4).toFixed(0),x0-4,yy);
+    g.fillStyle='#6fb0c0';g.textAlign='left';g.fillText((Dmx-(Dmx-Dmn)*i/4).toFixed(0),x1+4,yy);
+  }
+  const fmt=(ms)=>{const d=new Date(ms),r=_wellChart.range,p2=n=>('0'+n).slice(-2);
+    if(r==='day')return p2(d.getHours())+':'+p2(d.getMinutes());
+    if(r==='week'||r==='month')return (d.getMonth()+1)+'/'+d.getDate();
+    return (''+d.getFullYear()).slice(2)+'/'+(d.getMonth()+1);};
+  g.fillStyle='#8a8378';g.textAlign='center';g.textBaseline='top';
+  g.fillText(fmt(tmin),x0,y1+5); g.fillText(fmt(tmax),x1,y1+5);
+  g.lineWidth=2;
+  g.strokeStyle='#6fb0c0';{let pen=false;g.beginPath();pts.forEach(p=>{const v=p[6];
+    if(v==null){pen=false;return;} const X=xOf(p[0]),Y=yD(v); if(pen)g.lineTo(X,Y);else{g.moveTo(X,Y);pen=true;}});g.stroke();}
+  g.strokeStyle='#c89cd8';{let pen=false;g.beginPath();pts.forEach(p=>{const v=p[5];
+    if(v==null){pen=false;return;} const X=xOf(p[0]),Y=yPH(v); if(pen)g.lineTo(X,Y);else{g.moveTo(X,Y);pen=true;}});g.stroke();}
+  g.textAlign='left';g.textBaseline='middle';g.font='12px sans-serif';
+  g.fillStyle='#c89cd8';g.fillText('● pH',x0+6,y0+6);
+  g.fillStyle='#6fb0c0';g.fillText('● 水深(cm)',x0+56,y0+6);
+  if(msg) msg.textContent=pts.length+'点 ・ '+fmt(tmin)+' 〜 '+fmt(tmax)+'（pH=左0〜14／水深=右cm自動）';
 }
 function cellarPages(){
   return [
