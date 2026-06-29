@@ -411,6 +411,8 @@ const OBJS=[
  {x:53,y:17,w:1,h:1,type:'board'},
  // トマト畑のそばの観測機（将来 raspi の観測データを反映予定）
  {x:27,y:21,w:1,h:1,type:'sensor'},
+ // 裏山の森（右上）：山録の音響装置（フィールド録音を聴ける・準備中）
+ {x:56,y:7,w:1,h:1,type:'forestspk'},
 ];
 /* ── 宝さがし：8つの宝（箱／隠し場所／村人がくれる） ── */
 const TREASURES=[
@@ -1132,6 +1134,7 @@ function openMapPanel(){
     {t:'⛰ 八ヶ岳',x:32,y:2},{t:'💧 西の池',x:9,y:9},{t:'💧 東の池',x:55,y:23},
     {t:'🎶 自由の広場',x:19,y:8},{t:'🎙 焚き火ラジオ',x:21.5,y:12.5},{t:'🍄 きのこの森',x:11,y:16.5},{t:'🌊 川',x:6,y:27},
     {t:'🗿 縄文の遺跡',x:6,y:9.5},{t:'⛩ 水神の祠',x:60,y:21.5},{t:'🐴 南の牧場',x:35.5,y:35.5},
+    {t:'🔊 裏山の音',x:57,y:6},
     {t:'🍓 いちご畑',x:22,y:31},{t:'🍇 ぶどう畑',x:39,y:10},{t:'⛲ 井戸',x:34.5,y:13.5},{t:'🍷 ワインの室',x:36.5,y:13.5},{t:'🥬 レタス畑',x:39,y:22},
     {t:'🍅 トマト畑',x:30,y:22},{t:'🌾 田んぼ',x:24,y:21.5},{t:'🏜 砂漠',x:8,y:39},
     {t:'🍳 台所',x:17,y:37},
@@ -1930,6 +1933,37 @@ function openPodcastPanel(){
        <a class="more" href="mailto:watanabeshikine@gmail.com?subject=%E7%84%9A%E3%81%8D%E7%81%AB%E3%83%A9%E3%82%B8%E3%82%AA%E3%81%AE%E9%85%8D%E4%BF%A1%E9%80%9A%E7%9F%A5%E5%B8%8C%E6%9C%9B">配信のお知らせを受け取る →</a>
      </div>`);
 }
+// ── 裏山の森の音響装置：山録（フィールド録音）──
+// 音源を公開できるようになったら MOUNTAIN_TRACKS に { title, src, place, tag } を足すだけで鳴る。
+// src は audio/ に置いたファイル（例 'audio/forest-rain.webm'）か、公開URL。
+const MOUNTAIN_TRACKS=[
+  // 例: {title:'雨の森', src:'audio/forest-rain.webm', place:'裏山', tag:'雨'},
+];
+const MFR_URL='https://mountain-field-recorder.vercel.app/';
+function openForestSpeakerPanel(){
+  let body=`<div style="font-size:14px;line-height:1.95">
+    <p>森のなかに、古いスピーカーと小さな録音機。<br>耳をすますと、この土地で録った音が、ぽつりと流れてくる。</p>`;
+  if(MOUNTAIN_TRACKS.length){
+    body+='<div style="margin:14px 0;display:flex;flex-direction:column;gap:12px">';
+    for(const t of MOUNTAIN_TRACKS){
+      body+='<div style="border:2px solid #4a4030;padding:10px 12px">'
+        +'<div style="color:var(--gold);font-size:13px;margin-bottom:6px">🎧 '+t.title
+        +(t.tag?' <span style="opacity:.7;font-size:11px">#'+t.tag+'</span>':'')
+        +(t.place?' <span style="opacity:.6;font-size:11px">＠'+t.place+'</span>':'')+'</div>'
+        +'<audio controls preload="none" style="width:100%" src="'+t.src+'"></audio></div>';
+    }
+    body+='</div>';
+  } else {
+    body+=`<div style="margin:14px 0;padding:16px 14px;border:2px dashed var(--gold);text-align:center;color:var(--gold)">
+        🎙 ただいま <b>音源を準備中</b>…<br>
+        <span style="font-size:12px;color:#d8d2c4">山で録った音が、まもなくここに灯ります</span>
+      </div>`;
+  }
+  body+=`<p style="font-size:12px;color:#b7ad97">この音は「<b>山録</b>」というフィールド録音の道具で集めています。<br>録音した端末では、地図の上で録った場所ごとに聴けます。</p>
+    <a class="more" href="`+MFR_URL+`" target="_blank" rel="noopener">🗺 山録をひらく（録音した端末で）→</a>
+  </div>`;
+  openPanel('🔊 裏山の音 — Field Recording', body);
+}
 function openNewsPanel(){
   openPanel('📜 メルマガ — Newsletter',
     `<form id="nlForm" class="nlform">
@@ -2019,6 +2053,9 @@ function interact(){
   // 焚き火ラジオ（ポッドキャスト）
   for(const o of OBJS){ if(o.type==='radio' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
     openPodcastPanel(); return; } }
+  // 裏山の森の音響装置（山録 — フィールド録音）
+  for(const o of OBJS){ if(o.type==='forestspk' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
+    openForestSpeakerPanel(); return; } }
   // アトリエの屋外台所（おさらの音楽：食材をのせるとアンビエントが生まれる）
   for(const o of OBJS){ if(o.type==='kitchen' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
     openKitchenPanel(); return; } }
@@ -2598,6 +2635,17 @@ function drawObj(o){
     px(sx+13,sy+6,1,8,'#6a6e74'); px(sx+11,sy+13,5,1,'#5a5e64');      // マイクのスタンド＋台座
     px(sx+12,sy+2,3,5,'#2c2f36'); px(sx+12,sy+2,3,1,'#4a505a');       // マイクの頭
     px(sx+13,sy+3,1,3,'#727880'); }                                  // マイクの網
+  else if(o.type==='forestspk'){ // 裏山の森：山録の音響装置（スピーカー＋録音機）
+    px(sx+7,sy+9,2,7,'#6a4a2e'); px(sx+6,sy+15,4,1,'#4a3420');        // 木の支柱＋根もと
+    px(sx+3,sy+1,10,9,'#34302a'); px(sx+3,sy+1,10,1,'#544c40');       // スピーカーの箱
+    px(sx+3,sy+9,10,1,'#1f1c17');                                     // 箱の底の影
+    px(sx+5,sy+2,6,3,'#1c1814'); px(sx+5,sy+5,6,3,'#1c1814');         // 上下ふたつのコーン
+    px(sx+6,sy+3,1,1,'#4a4038'); px(sx+9,sy+3,1,1,'#4a4038');         // コーンの芯
+    px(sx+6,sy+6,1,1,'#4a4038'); px(sx+9,sy+6,1,1,'#4a4038');
+    const on=(Math.sin(Date.now()/520)>0);
+    px(sx+11,sy+8,1,1,on?'#7ad07a':'#2a4a2a');                        // 通電ランプ（緑・点滅）
+    if(on){ ctx.fillStyle='rgba(180,210,170,.5)';                     // かすかな音波（右へ）
+      ctx.fillRect(sx+14,sy+3,1,4); ctx.fillRect(sx+15,sy+2,1,6); } }
   else if(o.type==='kitchen'){   // 屋外の台所（棚＋カウンター＋コンロ＋鍋）
     px(sx+2,sy-4,W-4,4,'#8a6a44'); px(sx+2,sy-4,W-4,1,'#a07c50');     // 上の棚板
     px(sx+5,sy-3,1,3,'#b8b8b8'); px(sx+4,sy-1,2,1,'#b8b8b8');         // つるしたおたま
