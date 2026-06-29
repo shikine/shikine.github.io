@@ -814,17 +814,32 @@ for(let i=0;i<16;i++){ const r=14+Math.random()*18; const cc=6+Math.sin((r-13)*0
   FIREFLIES.push({ ax:(cc+(Math.random()*4-2))*TS, ay:r*TS, ph:Math.random()*6.28, dr:Math.random()*6.28 }); }
 // 実際の日付が6月のあいだだけ出現する
 function fireflySeason(){ return new Date().getMonth()===5; }
+// 話しかけたあと、点滅を一時的に速くする「あいさつ」用
+let _ffBoostUntil=0, _ffClock=0, _ffLast=0;
+function fireflyPages(){
+  const sets=[
+    ['（小さな光が、すっと近づいてきた）','ホタル「ぼくらの光は、たった数日のためにある。」','「短い、と笑うかい？ いや——短いからこそ、これは"いま"だけの光なんだ。」','「闇があるから、光はやさしくなれる。きみも、そうだろう。」'],
+    ['（ふわり、と明滅しながら）','ホタル「光るとは、誰かに見つけてもらうこと。でも、見られるために光るんじゃない。」','「ただ生きていると、こうして光ってしまうだけ。」','「きみの"生きている"は、どんなふうに光ってる？」'],
+    ['ホタル「川は流れ、ぼくらは点り、また消える。」','「同じ夜は二度とない。だからこの一明滅を、おろそかにしない。」','「さよならは言わないよ。また、暗がりで会おう。」'],
+    ['（光が、瞬きの速さでなにかを伝えようとしている）','ホタル「暗いほど、ちいさな光ほど、よく見える。」','「世界が明るすぎると、人は星も蛍も忘れてしまう。」','「だからぼくは、夜のために光るんだ。」']
+  ];
+  return sets[(Math.random()*sets.length)|0];
+}
 function drawFireflies(){
   if(!fireflySeason()) return;
   const m=curMode(); if(m!=='night') return;   // 蛍は夜だけ出る
-  const boost = 1;
-  const t=Date.now();
+  const now=Date.now();
+  const dt=_ffLast?Math.min(80,now-_ffLast):16; _ffLast=now;
+  const fast = now<_ffBoostUntil;               // あいさつ中は明滅が速く・少し明るく
+  _ffClock += dt*(fast?3.2:1.0);
+  const boost = fast?1.3:1;
+  const t=now;
   for(const f of FIREFLIES){
     const wx=f.ax + Math.sin(t/1700+f.dr)*10 + Math.cos(t/2300+f.ph)*6;
     const wy=f.ay + Math.cos(t/1900+f.dr)*8  + Math.sin(t/2600+f.ph)*5;
     const sx=wx-cam.x, sy=wy-cam.y;
     if(sx<-8||sx>cv.width+8||sy<-8||sy>cv.height+8) continue;
-    const a=(0.2+0.8*(0.5+0.5*Math.sin(t/330+f.ph*3)))*boost;
+    const a=(0.2+0.8*(0.5+0.5*Math.sin(_ffClock/330+f.ph*3)))*boost;
     const g=ctx.createRadialGradient(sx,sy,0, sx,sy,6);
     g.addColorStop(0,'rgba(214,255,150,'+(0.55*a)+')'); g.addColorStop(1,'rgba(190,255,120,0)');
     ctx.fillStyle=g; ctx.fillRect(sx-6,sy-6,12,12);
@@ -2053,6 +2068,14 @@ function interact(){
     fetchCloudObs(); openDialog('室','🍷 ワインの室', cellarPages()); startObsLive(); return; } }
   for(const o of OBJS){ if(o.type==='board' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
     openGalleryPanel(); return; } }
+  // ホタル（夜・6月）に話しかける — 近くにいれば。話し終わると点滅が一時的に速くなる
+  if(fireflySeason() && curMode()==='night'){
+    const pcx=P.px+TS/2, pcy=P.py+TS/2;
+    for(const f of FIREFLIES){ if(Math.hypot(f.ax-pcx,f.ay-pcy)<TS*2.4){
+      openDialog('ホタル','', fireflyPages());
+      dlgConfirm=()=>{ _ffBoostUntil=Date.now()+2600; };
+      return; } }
+  }
   // 縄文の環状列石（井戸尻遺跡の名残）
   for(const o of OBJS){ if(o.type==='jomon' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
     openDialog('縄文の遺跡','🗿 環状列石', jomonPages()); return; } }
