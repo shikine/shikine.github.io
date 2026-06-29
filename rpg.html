@@ -812,8 +812,8 @@ const PROPS=[{x:18,y:9,type:'fire'}];
 const FIREFLIES=[];
 for(let i=0;i<16;i++){ const r=14+Math.random()*18; const cc=6+Math.sin((r-13)*0.55);
   FIREFLIES.push({ ax:(cc+(Math.random()*4-2))*TS, ay:r*TS, ph:Math.random()*6.28, dr:Math.random()*6.28 }); }
-// 実際の日付が6月のあいだだけ出現する
-function fireflySeason(){ return new Date().getMonth()===5; }
+// 実際の日付が夏（6〜8月）のあいだだけ出現する
+function fireflySeason(){ const mo=new Date().getMonth(); return mo>=5 && mo<=7; }
 // 話しかけたあと、点滅を一時的に速くする「あいさつ」用
 let _ffBoostUntil=0, _ffClock=0, _ffLast=0;
 function fireflyPages(){
