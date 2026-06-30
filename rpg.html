@@ -313,6 +313,12 @@ for(let r=5;r<MH-3;r++)for(let c=3;c<MW-3;c++){
 }
 // 裏山の森（右上・八ヶ岳のふもとに濃い木立をつくる）
 for(let r=5;r<12;r++)for(let c=47;c<MW-2;c++){ if(rnd()>.42) set(c,r,3); }
+// 野イチゴ（裏山の森の林床に自生）— 赤(29)・黄(30)が木立のあいだに点々と。収穫後は葉だけ(31)
+const WILDBERRY=[
+  [48,6,29],[51,6,30],[54,6,29],[58,6,30],[60,6,29],
+  [49,8,30],[52,9,29],[55,8,30],[59,9,29],[61,7,30],
+  [48,10,29],[51,11,30],[54,10,29],[57,11,30],[60,10,29] ];
+for(const [c,r,v] of WILDBERRY){ if(!(c===56&&r===7)) set(c,r,v); }   // 音響装置(56,7)は避ける
 // pond (north-west, below the mountains)
 for(let r=6;r<13;r++)for(let c=5;c<14;c++)
   if((r-9)*(r-9)/9+(c-9)*(c-9)/16<1.1)set(c,r,2);
@@ -958,7 +964,7 @@ const PHEASANT_TALK={
 /* ── player ── */
 const P={px:HUB[0]*TS, py:HUB[1]*TS+TS, dir:'down', speed:1.5, frame:0, moving:false,
          swim:false, berries:0, grapes:0, lettuce:0, tomato:0, mushroom:0, flowers:0, lastCrop:'', boostUntil:0, slowUntil:0, blinkOff:1700};
-const SOLID=new Set([2,3,6,8,9,10,11,12,13,14,15,16,17,19,20,21,22,23,24,25,26]);
+const SOLID=new Set([2,3,6,8,9,10,11,12,13,14,15,16,17,19,20,21,22,23,24,25,26,29,30,31]);
 const PICKED=[]; // {c,r,at,ripe} for crop regrow
 /* harvestable crops: ripe tile -> info */
 const CROP={
@@ -967,8 +973,10 @@ const CROP={
  16:{name:'レタス',icon:'🥬',picked:17,key:'lettuce'},
  19:{name:'トマト',icon:'🍅',picked:20,key:'tomato'},
  25:{name:'きのこ',icon:'🍄',picked:26,key:'mushroom'},
+ 29:{name:'野イチゴ',icon:'🍓',picked:31,key:'berries'},   // 赤い野イチゴ
+ 30:{name:'野イチゴ',icon:'🍓',picked:31,key:'berries'},   // 黄色い野イチゴ
 };
-const PICKEDTILE=new Set([13,15,17,20,21,22,23,24,26]);
+const PICKEDTILE=new Set([13,15,17,20,21,22,23,24,26,31]);
 // 生えている収穫物（実った／未熟・収穫後の全段階）。プレイヤーは木・茂みと同じく通り抜けでき、少しゆっくりになる
 const CROPTILE=new Set([...Object.keys(CROP).map(Number), ...PICKEDTILE]);
 // 植物たちの声（しらべると語りかけてくる。実った作物は収穫が優先される）
@@ -985,6 +993,7 @@ const PLANTVOICE={
  24:{who:'🍅 実りの後のトマト',pages:['（葉を黄ばませ、静かに立っている）','トマト「役目は果たした。あとは、土へ還るだけ。」','「枯れることも、次の春のための仕事さ。」']},
  21:{who:'🍂 枯れた株',pages:['（枯れた茎が、風にきしんだ）','枯れ株「わたしは土になる。来年の苗の、ゆりかごに。」','「終わりは、はじまりへ続いている。」']},
  26:{who:'🍄 きのこ（菌糸）',pages:['（土の下で、菌糸がひそかに広がっている）','きのこ「わたしは森の分解者。終わりを、はじまりに変える。」','「また雨の頃、ひょいと顔を出すよ。」']},
+ 31:{who:'🍓 野イチゴの株',pages:['（小さな白い花を、林床にひっそりと咲かせている）','野イチゴ「だれに見せるでもなく、ここで実るの。」','「森のすみっこの甘さも、また実るから——待っていてね。」']},
 };
 const inB=(c,r)=>{for(const s of SPOTS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
   for(const s of DECO)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
@@ -1136,6 +1145,9 @@ function drawMapTile(mx,t,x,y,sc,c,r){
     case 25: case 26: // きのこの森
       F(0,0,sc,sc,'#3f6e42'); F(0,sc*0.62,sc,sc*0.38,'#5a4a38');
       if(t===25){ F(sc*0.28,sc*0.42,sc*0.2,sc*0.16,'#d23b32'); dot(sc*0.66,sc*0.56,sc*0.1,'#9a6a3a'); } break;
+    case 29: case 30: case 31: // 野イチゴ（林床）
+      F(0,0,sc,sc,'#3f6e42'); dot(sc*0.5,sc*0.5,sc*0.22,'#2f6b3a');
+      if(t!==31) dot(sc*0.54,sc*0.6,sc*0.13,t===29?'#e23b4a':'#f2c12e'); break;
     case 27: // 温泉
       F(0,0,sc,sc,'#5fb4b0'); F(0,0,sc,Math.max(1,sc*0.2),'#7fcfc8'); dot(sc*0.5,sc*0.5,sc*0.16,'#c7eeea'); break;
     case 28: // 湯への石畳
@@ -1156,6 +1168,7 @@ function openMapPanel(){
     {t:'🎶 自由の広場',x:19,y:8},{t:'🎙 焚き火ラジオ',x:21.5,y:12.5},{t:'🍄 きのこの森',x:11,y:16.5},{t:'🌊 川',x:6,y:27},
     {t:'🗿 縄文の遺跡',x:6,y:9.5},{t:'⛩ 水神の祠',x:60,y:21.5},{t:'🐴 南の牧場',x:35.5,y:35.5},
     {t:'🔊 裏山の音',x:57,y:6},
+    {t:'🍓 野イチゴ',x:53,y:9.5},
     {t:'🍓 いちご畑',x:22,y:31},{t:'🍇 ぶどう畑',x:39,y:10},{t:'⛲ 井戸',x:34.5,y:13.5},{t:'🍷 ワインの室',x:36.5,y:13.5},{t:'🥬 レタス畑',x:39,y:22},
     {t:'🍅 トマト畑',x:30,y:22},{t:'🌾 田んぼ',x:24,y:21.5},{t:'🏜 砂漠',x:8,y:39},
     {t:'🍳 台所',x:17,y:37},
@@ -1414,15 +1427,22 @@ function applyTomatoSeason(se){ const seq=TOMATO_STAGE[se]||[19]; let i=0;
   for(const cell of TOMATO_CELLS){ const stage=seq[i++%seq.length];
     if(PICKED.some(p=>p.c===cell.c&&p.r===cell.r)) continue;   // 収穫直後で再生待ちのマスは上書きしない
     M[cell.r][cell.c]=stage; } }
-// きのこの森：梅雨〜秋（夏・秋）に点々と生え、春はさらにまばら、冬は出ない（草地に戻る）
-const MUSHROOM_STAGE={ spring:[25,0], summer:[25], autumn:[25], winter:[0] };
+// きのこの森：夏のあいだだけ点々と生える（春・秋・冬は出ない＝草地に戻る）
+const MUSHROOM_STAGE={ spring:[0], summer:[25], autumn:[0], winter:[0] };
 function applyMushroomSeason(se){ const seq=MUSHROOM_STAGE[se]||[25]; let i=0;
   for(const cell of MUSHROOM_CELLS){ const stage=seq[i++%seq.length];
     if(PICKED.some(p=>p.c===cell.c&&p.r===cell.r)) continue;   // 収穫直後で再生待ちのマスは上書きしない
     M[cell.r][cell.c]=stage; } }
+// 野イチゴ：夏のあいだだけ実る（春・秋・冬は出ない＝草地に戻る）。各マスは元の色(赤29/黄30)を保持
+const WILDBERRY_STAGE={ spring:0, summer:1, autumn:0, winter:0 };
+function applyWildberrySeason(se){ const on=WILDBERRY_STAGE[se]!==0;
+  for(const [c,r,v] of WILDBERRY){ if(c===56&&r===7) continue;   // 音響装置のマスは触らない
+    if(PICKED.some(p=>p.c===c&&p.r===r)) continue;              // 収穫直後で再生待ちのマスは上書きしない
+    if(M[r][c]===31) continue;                                  // 収穫後の株はそのまま（PICKEDで戻る）
+    M[r][c]=on?v:0; } }
 let _lastSeason=null;
 function refreshSeasonPal(){ const se=curSeason(); VEG=VEGPAL[se];
-  if(se!==_lastSeason){ _lastSeason=se; applyTomatoSeason(se); applyMushroomSeason(se); } }   // 季節が変わったら畑・森を更新
+  if(se!==_lastSeason){ _lastSeason=se; applyTomatoSeason(se); applyMushroomSeason(se); applyWildberrySeason(se); } }   // 季節が変わったら畑・森を更新
 
 /* ── 富士見町のリアルタイム天候（Open-Meteo・APIキー不要／晴・曇・雨・雪・霧・強風） ── */
 const WEATHER={cond:'sunny', windy:false, wind:0, temp:null, icon:'🌤', label:'取得中…'};
@@ -2251,6 +2271,7 @@ function update(){
     else if(here===16||here===17||around(16)||around(17)) label='🥬 <b>レタス畑</b> — 調べて収穫';
     else if([19,20,21,22,23,24].includes(here)||[19,20,21,22,23,24].some(t=>around(t))) label='🍅 <b>トマト畑</b> — 成長6段階・観測機もある';
     else if(here===25||here===26||around(25)||around(26)) label='🍄 <b>きのこの森</b> — いろんなきのこ（調べて収穫）';
+    else if([29,30,31].includes(here)||[29,30,31].some(t=>around(t))) label='🍓 <b>野イチゴ</b> — 森の林床に赤と黄（調べて収穫）';
     else if(here===7||around(10)) label='🏜 <b>砂漠</b> を歩いている';
     else if(around(8))       label='🌋 <b>溶岩地帯</b> — 熱い！';
     else if(pc>=PASTURE.x&&pc<=PASTURE.x+PASTURE.w&&pr>=PASTURE.y&&pr<=PASTURE.y+PASTURE.h) label='🐴 <b>南の牧場</b> — ウマが放牧されている';
@@ -2412,6 +2433,22 @@ function drawTile(c,r,sx,sy){
     px(sx+1,sy+1,6,6,'#8c837b'); px(sx+9,sy+1,6,6,'#847b73');       // 石スラブ
     px(sx+1,sy+9,6,6,'#827971'); px(sx+9,sy+9,6,6,'#8c837b');
     px(sx+1,sy+1,6,1,'#a39a90'); px(sx+9,sy+9,6,1,'#a39a90'); }     // 角のハイライト
+  else if(t===29||t===30){ // 野イチゴ（林床に自生・赤/黄）
+    grassBase();
+    px(sx+1,sy+11,14,4,'#4a3a26'); px(sx+1,sy+11,14,1,'#5a4632');   // 木陰の落ち葉の地面
+    px(sx+3,sy+5,4,4,'#2f6b3a'); px(sx+9,sy+5,4,4,'#2f6b3a');       // 三つ葉
+    px(sx+6,sy+4,4,4,'#3a7d45'); px(sx+5,sy+6,1,1,'#4f9a57'); px(sx+10,sy+6,1,1,'#4f9a57');
+    const berry=(t===29)?'#e23b4a':'#f2c12e';                       // 赤 or 黄
+    const hl   =(t===29)?'#ff7a82':'#ffe89a';
+    px(sx+4,sy+10,2,3,berry); px(sx+9,sy+9,3,3,berry);              // 実ふたつ
+    px(sx+4,sy+10,1,1,hl); px(sx+9,sy+9,1,1,hl);                    // つや
+    px(sx+5,sy+11,1,1,'#fff'); px(sx+10,sy+10,1,1,'#fff'); }        // 種のつぶ
+  else if(t===31){ // 野イチゴ（収穫後・葉と白い花だけ）
+    grassBase();
+    px(sx+1,sy+11,14,4,'#4a3a26'); px(sx+1,sy+11,14,1,'#5a4632');   // 木陰の地面
+    px(sx+3,sy+6,4,4,'#2f6b3a'); px(sx+9,sy+6,4,4,'#2f6b3a');       // 三つ葉
+    px(sx+6,sy+5,4,4,'#3a7d45');
+    px(sx+7,sy+9,2,2,'#fff'); px(sx+7,sy+9,1,1,'#ffe'); }           // 小さな白い花
 }
 function drawBuilding(s){
   const x=s.x*TS-cam.x, y=s.y*TS-cam.y, w=s.w*TS, h=s.h*TS;
