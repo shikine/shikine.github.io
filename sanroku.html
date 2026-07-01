@@ -276,15 +276,30 @@ function stopTimer(){ if(timer){ clearInterval(timer); timer=null; } }
 /* ========== GPS ========== */
 function getLocation(){
   showErr("");
-  if(!navigator.geolocation){ $("dGps").textContent="非対応"; return; }
-  $("dGps").textContent="取得中…";
-  navigator.geolocation.getCurrentPosition(function(p){
+  if(!window.isSecureContext){ $("dGps").textContent="HTTPSでない"; showErr("位置情報はHTTPSでしか使えません。https://shikine.github.io/sanroku.html で開いてください（アプリ内ブラウザ不可）。"); return; }
+  if(!navigator.geolocation){ $("dGps").textContent="非対応"; showErr("この端末/ブラウザは位置情報に対応していません。"); return; }
+  $("dGps").textContent="取得中…"; $("gpsVal").textContent="取得中…";
+  function ok(p){
     state.location={ lat:p.coords.latitude, lng:p.coords.longitude, accuracy:p.coords.accuracy, timestamp:new Date(p.timestamp) };
     $("gpsVal").textContent=state.location.lat.toFixed(4)+", "+state.location.lng.toFixed(4);
     $("accVal").textContent=state.location.accuracy?Math.round(state.location.accuracy)+"m":"-";
-    $("dGps").textContent="取得済み";
-  }, function(){ $("dGps").textContent="取得失敗"; showErr("位置情報の取得に失敗しました。ブラウザの位置情報許可を確認してください。"); },
-  { enableHighAccuracy:true, timeout:10000, maximumAge:30000 });
+    $("dGps").textContent="取得済み"; showErr("");
+  }
+  function fail(err){
+    var msg;
+    if(err && err.code===1) msg="位置情報が「許可」されていません。ブラウザ／端末の設定で、このサイトの位置情報を許可してください。";
+    else if(err && err.code===2) msg="現在地を特定できませんでした。空が見える場所で、端末の位置情報(GPS)をONにして再取得してください。";
+    else if(err && err.code===3) msg="時間切れです。もう一度「📍GPS」を押してみてください。";
+    else msg="位置情報の取得に失敗しました。";
+    $("dGps").textContent="取得失敗 (code "+((err&&err.code)||"?")+")";
+    showErr(msg + (err&&err.message?"（"+err.message+"）":""));
+  }
+  // まず高精度で。時間切れ(code3)なら通常精度で再挑戦。
+  navigator.geolocation.getCurrentPosition(ok, function(err){
+    if(err && err.code===3){
+      navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy:false, timeout:30000, maximumAge:60000 });
+    } else { fail(err); }
+  }, { enableHighAccuracy:true, timeout:20000, maximumAge:60000 });
 }
 
 /* ========== 録音 ========== */
