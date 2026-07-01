@@ -413,6 +413,8 @@ const OBJS=[
  {x:34,y:13,w:1,h:1,type:'well'},
  // 井戸のそば：ワイン貯蔵の室（土のかまくら・山をくりぬいた風）
  {x:36,y:13,w:1,h:1,type:'cellar'},
+ // 葡萄畑とレタス畑の間の空き地：蒸留所（銅の単式蒸留器／将来 ボイラー温度・冷却水温・アルコール度数を観測）
+ {x:36,y:16,w:2,h:2,type:'still'},
  // 工房の南・一本道(row18)沿い：FAB LABO の掲示板（道を塞がぬよう右へ1マス）
  {x:53,y:17,w:1,h:1,type:'board'},
  // トマト畑のそばの観測機（将来 raspi の観測データを反映予定）
@@ -1171,7 +1173,7 @@ function openMapPanel(){
     {t:'🗿 縄文の遺跡',x:6,y:9.5},{t:'⛩ 水神の祠',x:60,y:21.5},{t:'🐴 南の牧場',x:35.5,y:35.5},
     {t:'🔊 裏山の音',x:57,y:6},
     {t:'🍓 野イチゴ',x:53,y:9.5},
-    {t:'🍓 いちご畑',x:22,y:31},{t:'🍇 ぶどう畑',x:39,y:10},{t:'⛲ 井戸',x:34.5,y:13.5},{t:'🍷 ワインの室',x:36.5,y:13.5},{t:'🥬 レタス畑',x:39,y:22},
+    {t:'🍓 いちご畑',x:22,y:31},{t:'🍇 ぶどう畑',x:39,y:10},{t:'⛲ 井戸',x:34.5,y:13.5},{t:'🍷 ワインの室',x:36.5,y:13.5},{t:'🥃 蒸留所',x:37,y:17},{t:'🥬 レタス畑',x:39,y:22},
     {t:'🍅 トマト畑',x:30,y:22},{t:'🌾 田んぼ',x:24,y:21.5},{t:'🏜 砂漠',x:8,y:39},
     {t:'🍳 台所',x:17,y:37},
     {t:'🌋 溶岩地帯',x:52,y:42},{t:'♨ 温泉',x:52,y:39},
@@ -1549,7 +1551,7 @@ function drawFog(){
 //   ・スマホ含む誰でも：クラウド(GAS)から最新値を取得して表示（JSONPでCORS回避）
 //   ・PC直結時のみ：Web Serial で即時のライブ値も表示できる
 const GAS_OBS_URL='https://script.google.com/macros/s/AKfycbzJ-dB8q2oNWJ3bbORkV634H9Ndk0iYjZsP5e3GVwUa56c52AJpI-SJORq-FkIOisko/exec';
-const CLOUD={ok:false,loading:false,t:null,h:null,s:null,wt:null,ph:null,wd:null,ct:null,ch:null,vib:null,ts:0};
+const CLOUD={ok:false,loading:false,t:null,h:null,s:null,wt:null,ph:null,wd:null,ct:null,ch:null,vib:null,bt:null,cw:null,abv:null,ts:0};
 const SENSOR={supported:('serial' in navigator),connected:false,connecting:false,temp:null,hum:null,soil:null,ts:0,err:''};
 let _obsPort=null,_obsReader=null,_obsKeep=false;
 function refreshObs(){ const el=document.getElementById('obsBox'); if(el) el.innerHTML=obsBoxHTML(); }
@@ -1570,8 +1572,9 @@ function fetchCloudObs(){
   window[cb]=function(d){ done=true; CLOUD.loading=false;
     if(d&&d.t!=null){ CLOUD.ok=true; CLOUD.t=d.t; CLOUD.h=d.h; CLOUD.s=(d.s!=null?d.s:null);
       CLOUD.wt=(d.wt!=null?d.wt:null); CLOUD.ph=(d.ph!=null?d.ph:null); CLOUD.wd=(d.wd!=null?d.wd:null);
-      CLOUD.ct=(d.ct!=null?d.ct:null); CLOUD.ch=(d.ch!=null?d.ch:null); CLOUD.vib=(d.vib!=null?d.vib:null); CLOUD.ts=d.ts?Date.parse(d.ts):Date.now(); }
-    cleanup(); refreshObs(); refreshWell(); refreshCellar(); };
+      CLOUD.ct=(d.ct!=null?d.ct:null); CLOUD.ch=(d.ch!=null?d.ch:null); CLOUD.vib=(d.vib!=null?d.vib:null);
+      CLOUD.bt=(d.bt!=null?d.bt:null); CLOUD.cw=(d.cw!=null?d.cw:null); CLOUD.abv=(d.abv!=null?d.abv:null); CLOUD.ts=d.ts?Date.parse(d.ts):Date.now(); }
+    cleanup(); refreshObs(); refreshWell(); refreshCellar(); refreshStill(); };
   s.onerror=function(){ if(!done){ CLOUD.loading=false; cleanup(); refreshObs(); } };
   s.src=GAS_OBS_URL+'?callback='+cb+'&_='+Date.now();
   document.head.appendChild(s);
@@ -1857,6 +1860,27 @@ function cellarPages(){
     '（暗がりに、樽がいくつか、じっと並んでいる。）'
   ];
 }
+// ── 蒸留所（葡萄畑とレタス畑の間）：将来 ボイラー温度・冷却水温・アルコール度数を表示。今は準備中 ──
+function refreshStill(){ const el=document.getElementById('stillBox'); if(el) el.innerHTML=stillBoxHTML(); }
+function stillBoxHTML(){
+  const ready=(CLOUD.bt!=null||CLOUD.cw!=null||CLOUD.abv!=null);
+  const bt=(CLOUD.bt!=null)?(Math.round(CLOUD.bt*10)/10+' ℃'):'—（準備中）';
+  const cw=(CLOUD.cw!=null)?(Math.round(CLOUD.cw*10)/10+' ℃'):'—（準備中）';
+  const abv=(CLOUD.abv!=null)?(Math.round(CLOUD.abv*10)/10+' %'):'—（準備中）';
+  let h='🥃 <b>蒸留の要（かなめ）</b><br>・ボイラー温度：<b>'+bt+'</b><br>・冷却水温：<b>'+cw+'</b><br>・アルコール度数：<b>'+abv+'</b><br>';
+  if(ready) h+='<span style="opacity:.7;font-size:12px">🛰 '+_ago(CLOUD.ts)+'・15秒ごとに更新</span>';
+  else h+='<span style="opacity:.75;font-size:12px">※ ボイラーの温度計・冷却水の水温計・アルコール度数計は準備中（新しいPicoで実装予定）。つながると、ここに蒸留のようすが映ります。</span>';
+  return h;
+}
+function stillPages(){
+  return [
+    '（葡萄畑とレタス畑のあいだ、銅の単式蒸留器（ポットスチル）が湯気を上げている。かまどのとろ火が、玉ねぎ形の胴をそっとあたためる。）<br><br><div id="stillBox">'+stillBoxHTML()+'</div>',
+    'ここは<b>蒸留所</b>。葡萄からできた酒を静かに沸かし、立ちのぼる香りだけをすくいとる。',
+    'やがて<b>ボイラー温度・冷却水温・アルコール度数</b>を見張るセンサーがつき、蒸留のかなめを、ここに映す。',
+    '沸かしすぎず、冷やしそこねず。温度のあわいを見極めることが、澄んだ一滴になる。',
+    '（葡萄畑の水、井戸の水、室のねむり——そのすべての先に、この一滴がある。）'
+  ];
+}
 // 水神の祠（東の池のほとり）
 function shrinePages(){ return [
   '（東の池のほとりに、小さな石の祠がある。水引のように注がれた清水が、苔むした石をそっと濡らしている）',
@@ -2102,6 +2126,8 @@ function interact(){
     fetchCloudObs(); openDialog('井戸','⛲ 葡萄畑の井戸', wellPages()); startObsLive(); return; } }
   for(const o of OBJS){ if(o.type==='cellar' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
     fetchCloudObs(); openDialog('室','🍷 ワインの室', cellarPages()); startObsLive(); return; } }
+  for(const o of OBJS){ if(o.type==='still' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
+    fetchCloudObs(); openDialog('蒸留所','🥃 葡萄畑の蒸留所', stillPages()); startObsLive(); return; } }
   for(const o of OBJS){ if(o.type==='board' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
     openGalleryPanel(); return; } }
   // ホタル（夜・6月）に話しかける — 近くにいれば。話し終わると点滅が一時的に速くなる
@@ -2683,6 +2709,41 @@ function drawObj(o){
     px(sx+6,sy+8,4,7,'#241a12'); px(sx+6,sy+8,4,1,'#3a2a1c');      // 入口（暗いアーチ）
     px(sx+5,sy+9,1,6,'#4a3522'); px(sx+10,sy+9,1,6,'#4a3522');     // 扉枠
     px(sx+7,sy+12,2,2,'#5a2e2a'); px(sx+7,sy+12,2,1,'#6e3a34'); }  // 奥のワイン樽
+  else if(o.type==='still'){      // 蒸留所：銅の単式蒸留器（ポットスチル）2x2=32x32
+    const t=Date.now();
+    // かまど（れんが）＋火
+    px(sx+5,sy+23,15,7,'#6e4230'); px(sx+5,sy+23,15,1,'#824d38');   // 火床
+    for(let i=0;i<3;i++){ px(sx+6+i*5,sy+24,1,6,'#4a2c20'); }        // れんがの目地
+    px(sx+9,sy+26,7,4,'#180d08');                                    // 焚き口
+    const f=(Math.sin(t/180)>0);                                     // 炎のゆらぎ
+    px(sx+10,sy+27,5,2,f?'#ff9a3a':'#e07a2a');
+    px(sx+11,sy+25,1,3,'#ffd24a'); px(sx+13,sy+26,1,2,f?'#ffd24a':'#ff8a3a'); px(sx+9,sy+27,1,1,'#ffb040');
+    // 銅の胴（玉ねぎ形）
+    px(sx+5,sy+20,15,3,'#b5713a'); px(sx+4,sy+16,17,4,'#b5713a');    // 腹（最大幅）
+    px(sx+6,sy+13,13,3,'#b5713a'); px(sx+8,sy+11,9,2,'#a5642f');     // 肩
+    px(sx+10,sy+9,5,2,'#7a4a24');                                    // 首の付け根
+    px(sx+6,sy+16,3,6,'#d8935a'); px(sx+8,sy+13,2,3,'#d8935a');      // 左の照り
+    px(sx+18,sy+16,2,4,'#7a4a24'); px(sx+17,sy+20,3,3,'#7a4a24');    // 右の陰
+    // スワンネック（立ち上がって右へ弧を描く）
+    px(sx+11,sy+5,3,5,'#b5713a'); px(sx+11,sy+4,9,2,'#b5713a'); px(sx+19,sy+5,2,7,'#a5642f');
+    px(sx+11,sy+4,7,1,'#d8935a');                                    // ネックの照り
+    // 冷却槽（ワームタブ・木桶）＋らせん管
+    px(sx+22,sy+12,9,11,'#6e4a2c'); px(sx+22,sy+12,9,1,'#7e5a38');
+    px(sx+22,sy+14,9,1,'#4a3220'); px(sx+22,sy+19,9,1,'#4a3220');    // たが
+    px(sx+23,sy+12,7,1,'#3a6a7a');                                   // 冷却水の面
+    px(sx+24,sy+15,4,1,'#b5713a'); px(sx+25,sy+17,3,1,'#b5713a'); px(sx+24,sy+19,4,1,'#b5713a'); // らせん管
+    px(sx+24,sy+23,1,3,'#b5713a');                                   // 取り出し口
+    px(sx+22,sy+26,4,4,'#cfe0e8'); px(sx+23,sy+28,2,2,'#e8d48a');    // 受けびん（澄んだ一滴）
+    if(((t/500)|0)%2) px(sx+24,sy+26,1,1,'rgba(220,230,240,.8)');    // したたる雫
+    // センサー（気温・水温・度数を見張る／既存機器と同じ意匠）
+    px(sx+1,sy+11,4,4,'#2c2f36'); px(sx+1,sy+11,4,1,'#454a54');      // 計測ボックス
+    const blink=(Math.sin(t/400)>0)?'#5af0a0':'#1f5a3a';
+    px(sx+2,sy+12,1,1,blink);                                        // 動作ランプ
+    px(sx+2,sy+8,1,3,'#9aa0a6'); px(sx+1,sy+8,3,1,'#cfd3d8');        // アンテナ
+    px(sx+5,sy+13,2,1,'#9aa0a6');                                    // 胴へ伸びるプローブ
+    // 立ちのぼる湯気
+    px(sx+13+((t/400|0)%2),sy+2,1,1,'rgba(255,255,255,.5)');
+    px(sx+16+((t/600|0)%2),sy+1,1,1,'rgba(255,255,255,.35)'); }
   else if(o.type==='board'){     // FAB LABO の掲示板（工房の隣・ギャラリーを開く）
     px(sx+5,sy+13,6,3,'rgba(0,0,0,.28)');                          // 影
     px(sx+7,sy+6,2,9,'#6b4a2c');                                   // 柱
