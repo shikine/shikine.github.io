@@ -459,6 +459,8 @@ set(11,34,7);
 set(4,18,0);
 // keep the firefly spawn tile walkable (east bank by the river fireflies)
 set(8,22,0);
+// keep the tile in front of the forest speaker walkable (small clearing to listen)
+set(56,8,0);
 // open south paddock for the grazing horse (clear trees/bushes to grass)
 for(let r=PASTURE.y;r<=PASTURE.y+PASTURE.h;r++)for(let c=PASTURE.x;c<=PASTURE.x+PASTURE.w;c++)
   if(r>=0&&r<MH&&c>=0&&c<MW&&M[r][c]!==2) set(c,r,0);
@@ -3277,7 +3279,8 @@ if(('ontouchstart' in window) || (window.matchMedia && window.matchMedia('(point
 let _autostart=false;
 (function(){ const q=new URLSearchParams(location.search);
   const SPN={larry:[48,34,'up'], momo:[11,34,'up'], gallery:[56,9,'up'], bear:[4,18,'up'], mizu:[54,26,'right'], firefly:[8,22,'left'], hotaru:[8,22,'left'],
-    berry:[54,8,'up'], ichigo:[54,8,'up'], noichigo:[54,8,'up']};
+    berry:[54,8,'up'], ichigo:[54,8,'up'], noichigo:[54,8,'up'],
+    speaker:[56,8,'up'], oto:[56,8,'up'], sanroku:[56,8,'up'], forestspk:[56,8,'up']};
   const s=q.get('to')||q.get('spawn'); if(!s)return;
   const pos = SPN[s] || (/^\d+,\d+$/.test(s)?s.split(',').map(Number):null);
   if(pos){ P.px=pos[0]*TS; P.py=pos[1]*TS; if(pos[2])P.dir=pos[2]; _autostart=true; }
