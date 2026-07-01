@@ -2,4 +2,6 @@ _notes/
 .DS_Store
 .claude/
 gas/Code.gs
+sync-audio.ps1
+*.bak
 

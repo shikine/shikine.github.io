@@ -1981,13 +1981,18 @@ function openPodcastPanel(){
 // ── 裏山の森の音響装置：山録（フィールド録音）──
 // 音源を公開できるようになったら MOUNTAIN_TRACKS に { title, src, place, tag } を足すだけで鳴る。
 // src は audio/ に置いたファイル（例 'audio/forest-rain.webm'）か、公開URL。
-const MOUNTAIN_TRACKS=[
-  // 例: {title:'雨の森', src:'audio/forest-rain.webm', place:'裏山', tag:'雨'},
-  {title:'沢の水音', src:'audio/沢・水音---沢-2026-07-01-14-35.webm', place:'裏山の沢', tag:'沢'},
-  {title:'沢の水音と鳥', src:'audio/沢・水音---沢---鳥-2026-06-25-05-44.webm', place:'裏山の沢', tag:'沢・鳥'},
-];
 const MFR_URL='https://mountain-field-recorder.vercel.app/';
-function openForestSpeakerPanel(){
+// 音源リストは audio/manifest.json から自動生成（sync-audio.ps1 が作る）。
+// audio/ に録音ファイルを置くだけで自動で並ぶ。ここを手で編集する必要はない。
+let MOUNTAIN_TRACKS=[];
+async function loadMountainTracks(){
+  try{
+    const res=await fetch('audio/manifest.json',{cache:'no-store'});
+    if(res.ok){ const d=await res.json(); if(Array.isArray(d)) MOUNTAIN_TRACKS=d; }
+  }catch(e){ console.warn('manifest load failed',e); }
+}
+async function openForestSpeakerPanel(){
+  await loadMountainTracks();
   let body=`<div style="font-size:14px;line-height:1.95">
     <p>森のなかに、古いスピーカーと小さな録音機。<br>耳をすますと、この土地で録った音が、ぽつりと流れてくる。</p>`;
   if(MOUNTAIN_TRACKS.length){
@@ -1996,7 +2001,8 @@ function openForestSpeakerPanel(){
       body+='<div style="border:2px solid #4a4030;padding:10px 12px">'
         +'<div style="color:var(--gold);font-size:13px;margin-bottom:6px">🎧 '+t.title
         +(t.tag?' <span style="opacity:.7;font-size:11px">#'+t.tag+'</span>':'')
-        +(t.place?' <span style="opacity:.6;font-size:11px">＠'+t.place+'</span>':'')+'</div>'
+        +(t.place?' <span style="opacity:.6;font-size:11px">＠'+t.place+'</span>':'')
+        +(t.date?' <span style="opacity:.5;font-size:11px">'+String(t.date).slice(0,10).replace(/-/g,'/')+'</span>':'')+'</div>'
         +'<audio controls preload="none" style="width:100%" src="'+t.src+'"></audio></div>';
     }
     body+='</div>';
