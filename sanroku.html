@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>山録 — フィールド録音</title>
+<link rel="icon" href="favicon.svg" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root{
+    --bg:#0c0a09; --panel:rgba(255,255,255,.06); --line:rgba(255,255,255,.12);
+    --ink:#f5f5f4; --sub:#a8a29e; --dim:#78716c; --accent:#34d399; --accent-ink:#052e1a;
+    --rec:#ef4444; --gold:#e6c66a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
+    -webkit-text-size-adjust:100%}
+  a{color:inherit}
+  .wrap{max-width:960px;margin:0 auto;padding:14px 14px 40px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+  .brand{display:flex;align-items:center;gap:8px;color:var(--sub);font-size:12px}
+  h1{margin:2px 0 0;font-size:22px;letter-spacing:.02em}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);
+    background:var(--panel);color:var(--ink);padding:9px 12px;border-radius:12px;font-size:14px;cursor:pointer;
+    transition:.15s;line-height:1;user-select:none}
+  .btn:hover{background:rgba(255,255,255,.14)}
+  .btn:active{transform:scale(.98)}
+  .btn:disabled{opacity:.4;pointer-events:none}
+  .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:700}
+  .btn.rec{background:var(--rec);color:#fff;border-color:transparent;font-weight:700}
+  .btn.big{height:60px;font-size:16px;border-radius:14px;width:100%}
+  .btn.sm{padding:7px 9px;font-size:12px}
+  .grid{display:grid;gap:12px}
+  @media(min-width:820px){ .cols{grid-template-columns:1fr .86fr} }
+  .card{border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+  .row{display:flex;align-items:center;gap:10px}
+  .between{justify-content:space-between}
+  .muted{color:var(--sub);font-size:12px}
+  .dim{color:var(--dim)}
+  .timer{font-variant-numeric:tabular-nums;font-size:44px;font-weight:700;line-height:1}
+  .rec-controls{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:8px}
+  .stat3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+  .stat{background:rgba(0,0,0,.35);border-radius:10px;padding:8px;font-size:12px}
+  .stat .k{color:var(--dim)}
+  .stat .v{margin-top:3px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .preview{margin-top:12px;border:1px solid rgba(52,211,153,.25);background:rgba(52,211,153,.08);border-radius:12px;padding:10px}
+  audio{width:100%;display:block}
+  label.f{display:block;margin-top:10px}
+  label.f .lab{display:block;margin-bottom:4px;font-size:12px;color:var(--sub)}
+  select,input,textarea{width:100%;background:rgba(0,0,0,.5);border:1px solid var(--line);color:#fff;
+    border-radius:10px;padding:9px 10px;font-size:14px;outline:none}
+  select:focus,input:focus,textarea:focus{border-color:var(--accent)}
+  textarea{resize:vertical;min-height:64px}
+  .tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+  .tag{border:1px solid var(--line);background:rgba(0,0,0,.5);color:var(--ink);border-radius:10px;
+    padding:8px 11px;font-size:13px;cursor:pointer;transition:.12s}
+  .tag.on{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:700}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  #map{height:300px;border-radius:12px;overflow:hidden;background:rgba(0,0,0,.5)}
+  .list .item{border:1px solid var(--line);background:rgba(0,0,0,.35);border-radius:12px;padding:12px;margin-top:10px}
+  .item h3{margin:0;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .item .meta{margin-top:3px;font-size:12px;color:var(--sub)}
+  .chip{display:inline-block;background:rgba(52,211,153,.15);color:#a7f3d0;border-radius:8px;padding:2px 7px;font-size:11px;margin:4px 4px 0 0}
+  .badge{display:inline-block;background:rgba(255,255,255,.1);border-radius:8px;padding:2px 7px;font-size:11px;color:var(--sub)}
+  .item .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .empty{border:1px dashed var(--line);border-radius:12px;padding:20px;text-align:center;color:var(--sub);font-size:14px}
+  .err{border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.12);color:#fecaca;border-radius:12px;padding:9px 12px;font-size:13px;margin-bottom:12px}
+  .ok{color:var(--accent)}
+  details{border:1px solid var(--line);background:rgba(255,255,255,.03);border-radius:12px;padding:8px 12px;margin-top:12px;font-size:12px;color:var(--sub)}
+  summary{cursor:pointer;color:var(--ink)}
+  .diag{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:8px}
+  @media(min-width:600px){.diag{grid-template-columns:repeat(4,1fr)}}
+  .up-idle{color:var(--sub)} .up-busy{color:var(--gold)} .up-done{color:var(--accent)} .up-err{color:#fca5a5}
+  /* modal */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:1000}
+  .modal.on{display:flex}
+  .modal .box{width:100%;max-width:420px;background:#1c1917;border:1px solid var(--line);border-radius:16px;padding:18px}
+  .modal h2{margin:0 0 4px;font-size:17px}
+  .rec-dot{width:10px;height:10px;border-radius:50%;background:var(--rec);display:inline-block;animation:blink 1s infinite}
+  @keyframes blink{50%{opacity:.25}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="brand">🎙 山録 — Mountain Field Recorder</div>
+      <h1>フィールド録音</h1>
+    </div>
+    <div class="row">
+      <button class="btn sm" id="gpsBtn">📍 GPS</button>
+      <button class="btn sm" id="setBtn">⚙️</button>
+    </div>
+  </header>
+
+  <div id="err" class="err" style="display:none"></div>
+
+  <section class="grid cols">
+    <!-- recorder -->
+    <div class="card">
+      <div class="row between">
+        <div>
+          <div class="muted">状態</div>
+          <div id="recState" style="margin-top:3px;font-weight:600">録音待機</div>
+        </div>
+        <div style="text-align:right">
+          <div class="timer" id="timer">00:00</div>
+          <div class="muted" id="fmtLabel">—</div>
+        </div>
+      </div>
+
+      <div class="rec-controls">
+        <button class="btn rec big" id="recBtn">● 録音</button>
+        <button class="btn big" id="pauseBtn" disabled style="width:auto;padding:0 18px">⏸</button>
+      </div>
+
+      <div class="stat3">
+        <div class="stat"><div class="k">GPS</div><div class="v" id="gpsVal">未取得</div></div>
+        <div class="stat"><div class="k">精度</div><div class="v" id="accVal">-</div></div>
+        <div class="stat"><div class="k">保存</div><div class="v" id="cntVal">0件</div></div>
+      </div>
+
+      <div class="preview" id="preview" style="display:none">
+        <audio id="previewAudio" controls></audio>
+        <button class="btn primary big" id="saveBtn" style="margin-top:10px">💾 端末に保存</button>
+      </div>
+    </div>
+
+    <!-- form -->
+    <div class="card">
+      <div class="row between">
+        <div class="row" style="gap:6px;font-weight:600">🏷 タグで記録</div>
+        <select id="target" style="width:auto;max-width:170px"></select>
+      </div>
+      <div class="tags" id="tags"></div>
+      <div class="two" style="margin-top:10px">
+        <label class="f" style="margin-top:0"><span class="lab">天気</span><select id="weather"></select></label>
+        <label class="f" style="margin-top:0"><span class="lab">場所メモ</span><input id="place" placeholder="尾根 / 沢沿い" /></label>
+      </div>
+      <label class="f"><span class="lab">タイトル（空なら自動）</span><input id="title" placeholder="沢の水音" /></label>
+      <label class="f"><span class="lab">補助メモ</span><textarea id="memo" placeholder="風向き、距離感、使い道など"></textarea></label>
+    </div>
+  </section>
+
+  <!-- map -->
+  <section class="card" style="margin-top:12px">
+    <div class="row between" style="margin-bottom:10px">
+      <div class="row" style="gap:6px;font-weight:600">🗺 地図 <span class="badge" id="pinCnt">0 pins</span></div>
+    </div>
+    <div id="map"></div>
+  </section>
+
+  <!-- list -->
+  <section class="card list" style="margin-top:12px">
+    <div class="row between" style="margin-bottom:6px">
+      <div class="row" style="gap:6px;font-weight:600">🎵 録音一覧</div>
+      <button class="btn sm" id="clearBtn" disabled>🗑 全消去</button>
+    </div>
+    <div id="list"></div>
+  </section>
+
+  <details>
+    <summary>診断 / 設定状態</summary>
+    <div class="diag">
+      <div>HTTPS: <span id="dSecure" style="color:#fff">-</span></div>
+      <div>マイク: <span id="dMic" style="color:#fff">-</span></div>
+      <div>録音API: <span id="dRec" style="color:#fff">-</span></div>
+      <div>形式: <span id="dFmt" style="color:#fff">-</span></div>
+    </div>
+    <div style="margin-top:8px">GPS: <span id="dGps" style="color:#fff">未取得</span> / 送信先: <span id="dEndpoint" style="color:#fff">未設定</span></div>
+  </details>
+</div>
+
+<!-- settings modal -->
+<div class="modal" id="setModal">
+  <div class="box">
+    <h2>⚙️ Drive送信の設定</h2>
+    <p class="muted" style="margin:0 0 12px">録音を Drive に送るための接続先です。GASのウェブアプリURLと合言葉を入れてください（この端末にだけ保存されます）。</p>
+    <label class="f" style="margin-top:0"><span class="lab">GAS ウェブアプリ URL（/exec）</span><input id="setEndpoint" placeholder="https://script.google.com/macros/s/…/exec" /></label>
+    <label class="f"><span class="lab">合言葉（GASの UPLOAD_SECRET と同じ）</span><input id="setSecret" placeholder="例: yamaroku2026" /></label>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:16px">
+      <button class="btn" id="setCancel">閉じる</button>
+      <button class="btn primary" id="setSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+"use strict";
+
+/* ========== 定数 ========== */
+var FIELD_TAGS = ["沢","鳥","風","虫","森","雨","夜","人工音あり","使える素材","要確認"];
+var WEATHER_OPTIONS = ["未設定","晴れ","くもり","雨","霧","雪","強風"];
+var TARGET_OPTIONS = ["沢・水音","鳥","虫","風","雨","森の環境音","足音","会話","その他"];
+var MIME_CANDIDATES = ["audio/webm;codecs=opus","audio/webm","audio/mp4","audio/aac","audio/mpeg"];
+
+var DB_NAME="sanroku-db", DB_VERSION=1, STORE="recordings";
+
+/* ========== 小道具 ========== */
+function $(id){ return document.getElementById(id); }
+function pad(n){ return String(n).padStart(2,"0"); }
+function fmtTime(s){ var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=s%60;
+  return (h?pad(h)+":":"")+pad(m)+":"+pad(x); }
+function fmtStamp(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"-"+pad(d.getHours())+"-"+pad(d.getMinutes()); }
+function fmtDT(d){ return d.getFullYear()+"/"+pad(d.getMonth()+1)+"/"+pad(d.getDate())+" "+pad(d.getHours())+":"+pad(d.getMinutes()); }
+function showErr(msg){ var e=$("err"); if(!msg){e.style.display="none";return;} e.textContent=msg; e.style.display="block"; }
+function supportedMime(){ if(!window.MediaRecorder||!MediaRecorder.isTypeSupported) return "";
+  for(var i=0;i<MIME_CANDIDATES.length;i++){ if(MediaRecorder.isTypeSupported(MIME_CANDIDATES[i])) return MIME_CANDIDATES[i]; } return ""; }
+function extFromMime(m){ if(!m)return"webm"; if(m.indexOf("mp4")>=0)return"m4a"; if(m.indexOf("aac")>=0)return"aac"; if(m.indexOf("mpeg")>=0)return"mp3"; if(m.indexOf("ogg")>=0)return"ogg"; return"webm"; }
+function sanitize(s){ return String(s||"").replace(/---+/g,"-").replace(/[\/:*?"<>|]/g,"-").replace(/\s+/g," ").trim(); }
+
+/* Drive用ファイル名: タイトル---タグ---タグ-YYYY-MM-DD-HH-MM.ext （manifest解析と互換） */
+function driveName(item){
+  var ext=extFromMime(item.mimeType);
+  var title=sanitize(item.title || item.target || "録音") || "録音";
+  var tags=(item.tags||[]).map(sanitize).filter(Boolean);
+  var base=tags.length ? title+"---"+tags.join("---") : title;
+  return base+"-"+fmtStamp(new Date(item.createdAt))+"."+ext;
+}
+
+/* ========== 設定(localStorage) ========== */
+function getCfg(){ return { endpoint:localStorage.getItem("sanroku_endpoint")||"", secret:localStorage.getItem("sanroku_secret")||"" }; }
+function setCfg(ep,sec){ localStorage.setItem("sanroku_endpoint",ep||""); localStorage.setItem("sanroku_secret",sec||""); refreshEndpointLabel(); }
+function refreshEndpointLabel(){ var c=getCfg(); $("dEndpoint").textContent=c.endpoint?"設定済み":"未設定"; }
+
+/* ========== IndexedDB ========== */
+function openDb(){ return new Promise(function(res,rej){
+  var rq=indexedDB.open(DB_NAME,DB_VERSION);
+  rq.onupgradeneeded=function(){ var db=rq.result; if(!db.objectStoreNames.contains(STORE)){ var st=db.createObjectStore(STORE,{keyPath:"id"}); st.createIndex("createdAt","createdAt",{unique:false}); } };
+  rq.onsuccess=function(){ res(rq.result); }; rq.onerror=function(){ rej(rq.error); };
+}); }
+function idbAll(){ return openDb().then(function(db){ return new Promise(function(res,rej){
+  var rq=db.transaction(STORE,"readonly").objectStore(STORE).getAll();
+  rq.onsuccess=function(){ db.close(); res(rq.result||[]); }; rq.onerror=function(){ db.close(); rej(rq.error); }; }); }); }
+function idbPut(it){ return openDb().then(function(db){ return new Promise(function(res,rej){
+  var rq=db.transaction(STORE,"readwrite").objectStore(STORE).put(it);
+  rq.onsuccess=function(){ db.close(); res(); }; rq.onerror=function(){ db.close(); rej(rq.error); }; }); }); }
+function idbDel(id){ return openDb().then(function(db){ return new Promise(function(res,rej){
+  var rq=db.transaction(STORE,"readwrite").objectStore(STORE).delete(id);
+  rq.onsuccess=function(){ db.close(); res(); }; rq.onerror=function(){ db.close(); rej(rq.error); }; }); }); }
+function idbClear(){ return openDb().then(function(db){ return new Promise(function(res,rej){
+  var rq=db.transaction(STORE,"readwrite").objectStore(STORE).clear();
+  rq.onsuccess=function(){ db.close(); res(); }; rq.onerror=function(){ db.close(); rej(rq.error); }; }); }); }
+
+/* ========== 状態 ========== */
+var state={ recording:false, paused:false, seconds:0, location:null, recordings:[],
+  audioBlob:null, audioUrl:null, form:{target:TARGET_OPTIONS[0], weather:WEATHER_OPTIONS[0], place:"", title:"", memo:"", tags:["沢"]} };
+var mediaRecorder=null, chunks=[], timer=null, map=null, markers=[];
+
+/* ========== UI初期化 ========== */
+function initSelects(){
+  var t=$("target"); TARGET_OPTIONS.forEach(function(o){ var e=document.createElement("option"); e.textContent=o; t.appendChild(e); });
+  var w=$("weather"); WEATHER_OPTIONS.forEach(function(o){ var e=document.createElement("option"); e.textContent=o; w.appendChild(e); });
+  t.value=state.form.target; w.value=state.form.weather;
+  t.onchange=function(){ state.form.target=t.value; };
+  w.onchange=function(){ state.form.weather=w.value; };
+  $("place").oninput=function(){ state.form.place=this.value; };
+  $("title").oninput=function(){ state.form.title=this.value; };
+  $("memo").oninput=function(){ state.form.memo=this.value; };
+}
+function renderTags(){
+  var box=$("tags"); box.innerHTML="";
+  FIELD_TAGS.forEach(function(lbl){
+    var b=document.createElement("div"); b.className="tag"+(state.form.tags.indexOf(lbl)>=0?" on":""); b.textContent=lbl;
+    b.onclick=function(){ var i=state.form.tags.indexOf(lbl); if(i>=0) state.form.tags.splice(i,1); else state.form.tags.push(lbl); renderTags(); };
+    box.appendChild(b);
+  });
+}
+
+/* ========== タイマー ========== */
+function startTimer(){ stopTimer(); timer=setInterval(function(){ state.seconds++; $("timer").textContent=fmtTime(state.seconds); },1000); }
+function stopTimer(){ if(timer){ clearInterval(timer); timer=null; } }
+
+/* ========== GPS ========== */
+function getLocation(){
+  showErr("");
+  if(!navigator.geolocation){ $("dGps").textContent="非対応"; return; }
+  $("dGps").textContent="取得中…";
+  navigator.geolocation.getCurrentPosition(function(p){
+    state.location={ lat:p.coords.latitude, lng:p.coords.longitude, accuracy:p.coords.accuracy, timestamp:new Date(p.timestamp) };
+    $("gpsVal").textContent=state.location.lat.toFixed(4)+", "+state.location.lng.toFixed(4);
+    $("accVal").textContent=state.location.accuracy?Math.round(state.location.accuracy)+"m":"-";
+    $("dGps").textContent="取得済み";
+  }, function(){ $("dGps").textContent="取得失敗"; showErr("位置情報の取得に失敗しました。ブラウザの位置情報許可を確認してください。"); },
+  { enableHighAccuracy:true, timeout:10000, maximumAge:30000 });
+}
+
+/* ========== 録音 ========== */
+function startRecording(){
+  showErr(""); state.audioBlob=null; state.audioUrl=null; state.seconds=0; $("timer").textContent="00:00"; $("preview").style.display="none";
+  if(!window.isSecureContext){ showErr("HTTPSでないためマイクが使えません。https://shikine.github.io/sanroku.html のように公開URLで開いてください。"); return; }
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ showErr("このブラウザはマイク取得に対応していません。iPhoneはSafari最新、AndroidはChrome最新をお試しください。"); return; }
+  if(!window.MediaRecorder){ showErr("このブラウザはMediaRecorderに対応していません。"); return; }
+  if(!state.location) getLocation();
+  navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false } }).then(function(stream){
+    var mime=supportedMime();
+    var rec=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream);
+    chunks=[];
+    rec.ondataavailable=function(ev){ if(ev.data&&ev.data.size>0) chunks.push(ev.data); };
+    rec.onstop=function(){
+      var blob=new Blob(chunks,{type:rec.mimeType||"audio/webm"});
+      state.audioBlob=blob; state.audioUrl=URL.createObjectURL(blob);
+      $("previewAudio").src=state.audioUrl; $("preview").style.display="block";
+      stream.getTracks().forEach(function(t){ t.stop(); });
+    };
+    mediaRecorder=rec; rec.start(1000);
+    state.recording=true; state.paused=false; startTimer(); syncRecUI();
+  }).catch(function(err){
+    var n=(err&&err.name)||"Error";
+    showErr("録音を開始できませんでした（"+n+"）。マイク許可・他アプリの使用状況を確認してください。");
+  });
+}
+function pauseRecording(){
+  if(!mediaRecorder) return;
+  if(mediaRecorder.state==="recording"){ mediaRecorder.pause(); state.paused=true; stopTimer(); }
+  else if(mediaRecorder.state==="paused"){ mediaRecorder.resume(); state.paused=false; startTimer(); }
+  syncRecUI();
+}
+function stopRecording(){
+  if(!mediaRecorder) return;
+  if(mediaRecorder.state!=="inactive") mediaRecorder.stop();
+  state.recording=false; state.paused=false; stopTimer(); syncRecUI();
+}
+function syncRecUI(){
+  var st=$("recState"), rb=$("recBtn"), pb=$("pauseBtn");
+  if(state.recording){
+    st.innerHTML=state.paused?"一時停止中":'<span class="rec-dot"></span> 録音中';
+    rb.textContent="■ 停止"; rb.classList.remove("rec"); rb.onclick=stopRecording;
+    pb.disabled=false; pb.textContent=state.paused?"▶":"⏸";
+  } else {
+    st.textContent=state.audioBlob?"録音完了":"録音待機";
+    rb.textContent="● 録音"; rb.classList.add("rec"); rb.onclick=startRecording;
+    pb.disabled=true; pb.textContent="⏸";
+  }
+}
+
+/* ========== 保存 ========== */
+function saveRecording(){
+  if(!state.audioBlob){ showErr("保存できる録音がありません。"); return; }
+  var createdAt=new Date();
+  var title=(state.form.title||"").trim() || ([state.form.target].concat(state.form.tags).filter(Boolean).join(" / ")+" "+fmtDT(createdAt));
+  var item={ id:(crypto&&crypto.randomUUID?crypto.randomUUID():String(Date.now())),
+    title:title, place:(state.form.place||"").trim(), target:state.form.target, weather:state.form.weather,
+    memo:(state.form.memo||"").trim(), tags:state.form.tags.slice(), duration:state.seconds,
+    createdAt:createdAt.toISOString(), location:state.location, blob:state.audioBlob,
+    mimeType:state.audioBlob.type||supportedMime()||"audio/webm", uploaded:false, driveNameSaved:"" };
+  idbPut(item).then(function(){
+    item.url=URL.createObjectURL(item.blob);
+    state.recordings.unshift(item);
+    state.audioBlob=null; state.audioUrl=null; state.seconds=0; $("timer").textContent="00:00"; $("preview").style.display="none";
+    state.form.title=""; state.form.place=""; state.form.memo=""; $("title").value=""; $("place").value=""; $("memo").value="";
+    syncRecUI(); renderList(); renderMap();
+  }).catch(function(){ showErr("端末内保存に失敗しました。容量不足の可能性があります。"); });
+}
+
+/* ========== 一覧 ========== */
+function renderList(){
+  var box=$("list"); box.innerHTML="";
+  $("cntVal").textContent=state.recordings.length+"件";
+  $("clearBtn").disabled=state.recordings.length===0;
+  if(state.recordings.length===0){ box.innerHTML='<div class="empty">まだ録音がありません。</div>'; return; }
+  state.recordings.forEach(function(item){
+    var el=document.createElement("div"); el.className="item";
+    var tags=(item.tags||[]).map(function(t){ return '<span class="chip">#'+t+'</span>'; }).join("");
+    var up=item.uploaded ? '<span class="up-done">✓ Drive済み</span>' : '';
+    el.innerHTML=
+      '<div class="row between" style="align-items:flex-start">'+
+        '<div style="min-width:0;flex:1">'+
+          '<h3>'+escapeHtml(item.title)+' <span class="badge">'+fmtTime(item.duration||0)+'</span></h3>'+
+          '<div class="meta">'+fmtDT(new Date(item.createdAt))+' / '+escapeHtml(item.target||"")+' / '+escapeHtml(item.weather||"")+(item.place?" / "+escapeHtml(item.place):"")+'</div>'+
+          (item.memo?'<div class="meta" style="color:#d6d3d1;margin-top:4px">'+escapeHtml(item.memo)+'</div>':"")+
+          '<div>'+tags+'</div>'+
+          '<div class="muted" id="ups-'+item.id+'" style="margin-top:6px">'+up+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<audio controls preload="none" src="'+item.url+'" style="margin-top:8px"></audio>'+
+      '<div class="acts">'+
+        '<button class="btn sm primary" data-act="drive" data-id="'+item.id+'">☁️ Driveに送る</button>'+
+        '<button class="btn sm" data-act="dl" data-id="'+item.id+'">⬇️ 保存</button>'+
+        '<button class="btn sm" data-act="del" data-id="'+item.id+'">🗑</button>'+
+      '</div>';
+    box.appendChild(el);
+  });
+  Array.prototype.forEach.call(box.querySelectorAll("button[data-act]"), function(b){
+    b.onclick=function(){ var id=b.getAttribute("data-id"), act=b.getAttribute("data-act");
+      if(act==="drive") uploadToDrive(id);
+      else if(act==="dl") downloadItem(id);
+      else if(act==="del") deleteItem(id);
+    };
+  });
+}
+function escapeHtml(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function findItem(id){ for(var i=0;i<state.recordings.length;i++){ if(state.recordings[i].id===id) return state.recordings[i]; } return null; }
+
+function downloadItem(id){ var it=findItem(id); if(!it) return;
+  var a=document.createElement("a"); a.href=it.url; a.download=driveName(it); document.body.appendChild(a); a.click(); a.remove(); }
+
+function deleteItem(id){ var it=findItem(id); if(!it) return;
+  if(!window.confirm("この録音を削除しますか？端末内の保存からも消えます。")) return;
+  idbDel(id).then(function(){ if(it.url) URL.revokeObjectURL(it.url);
+    state.recordings=state.recordings.filter(function(x){ return x.id!==id; }); renderList(); renderMap(); });
+}
+function clearAll(){ if(state.recordings.length===0) return;
+  if(!window.confirm("すべての録音を端末内から削除しますか？元に戻せません。")) return;
+  idbClear().then(function(){ state.recordings.forEach(function(x){ if(x.url) URL.revokeObjectURL(x.url); }); state.recordings=[]; renderList(); renderMap(); });
+}
+
+/* ========== Drive送信 ========== */
+function blobToBase64(blob){ return new Promise(function(res,rej){
+  var r=new FileReader(); r.onload=function(){ var s=String(r.result); res(s.slice(s.indexOf(",")+1)); }; r.onerror=function(){ rej(r.error); }; r.readAsDataURL(blob); }); }
+
+function uploadToDrive(id){
+  var it=findItem(id); if(!it) return;
+  var cfg=getCfg();
+  if(!cfg.endpoint){ openSettings(); return; }
+  var status=$("ups-"+id);
+  status.innerHTML='<span class="up-busy">☁️ 送信中…</span>';
+  blobToBase64(it.blob).then(function(b64){
+    var payload={ filename:driveName(it), mimeType:it.mimeType||"audio/webm", dataBase64:b64, secret:cfg.secret||"" };
+    // text/plain の単純リクエストにして preflight(CORS) を避ける
+    return fetch(cfg.endpoint,{ method:"POST", body:JSON.stringify(payload) });
+  }).then(function(r){ return r.json(); }).then(function(out){
+    if(!out||!out.ok) throw new Error((out&&out.error)||"送信失敗");
+    it.uploaded=true; it.driveNameSaved=out.name||"";
+    var persist=Object.assign({},it); delete persist.url; idbPut(persist);
+    status.innerHTML='<span class="up-done">✓ Drive送信完了'+(out.synced?'（サイト反映済み）':'')+'</span>';
+  }).catch(function(e){
+    status.innerHTML='<span class="up-err">送信エラー: '+escapeHtml(e.message||e)+'</span>';
+  });
+}
+
+/* ========== 地図 ========== */
+function initMap(){
+  try{
+    map=L.map("map",{ zoomControl:true }).setView([35.9,138.25],11); // 八ヶ岳あたり
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{ maxZoom:19, attribution:"&copy; OpenStreetMap contributors" }).addTo(map);
+  }catch(e){ /* CDN未読込などは無視 */ }
+}
+function renderMap(){
+  if(!map) return;
+  markers.forEach(function(m){ m.remove(); }); markers=[];
+  var pts=state.recordings.filter(function(it){ return it.location&&isFinite(it.location.lat)&&isFinite(it.location.lng); });
+  $("pinCnt").textContent=pts.length+" pins";
+  if(pts.length===0){ return; }
+  var latlngs=[];
+  pts.forEach(function(it){
+    var mk=L.marker([it.location.lat,it.location.lng]).addTo(map);
+    mk.bindPopup("<b>"+escapeHtml(it.title)+"</b><br>"+it.location.lat.toFixed(5)+", "+it.location.lng.toFixed(5)+
+      (it.url?'<br><audio controls preload="none" src="'+it.url+'" style="width:220px;margin-top:6px"></audio>':""));
+    markers.push(mk); latlngs.push([it.location.lat,it.location.lng]);
+  });
+  if(pts.length===1) map.setView(latlngs[0],14); else map.fitBounds(L.latLngBounds(latlngs),{padding:[36,36]});
+  setTimeout(function(){ map.invalidateSize(); },0);
+}
+
+/* ========== 設定モーダル ========== */
+function openSettings(){ var c=getCfg(); $("setEndpoint").value=c.endpoint; $("setSecret").value=c.secret; $("setModal").classList.add("on"); }
+function closeSettings(){ $("setModal").classList.remove("on"); }
+
+/* ========== 診断 ========== */
+function initDiag(){
+  $("dSecure").textContent=window.isSecureContext?"OK":"NG";
+  $("dMic").textContent=(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)?"OK":"NG";
+  $("dRec").textContent=window.MediaRecorder?"OK":"NG";
+  $("dFmt").textContent=supportedMime()||"ブラウザ自動判定";
+  $("fmtLabel").textContent=(extFromMime(supportedMime())||"webm").toUpperCase();
+  refreshEndpointLabel();
+}
+
+/* ========== 起動 ========== */
+function boot(){
+  initSelects(); renderTags(); syncRecUI(); initDiag(); initMap();
+  $("gpsBtn").onclick=getLocation;
+  $("setBtn").onclick=openSettings;
+  $("saveBtn").onclick=saveRecording;
+  $("pauseBtn").onclick=pauseRecording;
+  $("clearBtn").onclick=clearAll;
+  $("setCancel").onclick=closeSettings;
+  $("setSave").onclick=function(){ setCfg($("setEndpoint").value.trim(), $("setSecret").value.trim()); closeSettings(); };
+  idbAll().then(function(saved){
+    state.recordings=saved.map(function(it){ it.url=URL.createObjectURL(it.blob); return it; })
+      .sort(function(a,b){ return new Date(b.createdAt)-new Date(a.createdAt); });
+    renderList(); renderMap();
+  }).catch(function(){ showErr("端末内保存の読み込みに失敗しました。"); renderList(); });
+}
+document.addEventListener("DOMContentLoaded", boot);
+</script>
+</body>
+</html>
