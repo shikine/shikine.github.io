@@ -182,6 +182,7 @@ function drawOnsenSteam(){
 HERON.px=HERON.x*TS; HERON.py=HERON.y*TS;
 
 BEAR.px=BEAR.x*TS; BEAR.py=BEAR.y*TS; BEAR.hx=BEAR.px; BEAR.hy=BEAR.py;
+CUB.ox=TS*0.5; CUB.oy=TS*1.5; CUB.px=BEAR.px+CUB.ox; CUB.py=BEAR.py+CUB.oy;   // 親熊の足もとに寄り添う
 
 /* ── 雉の親子（雄雉が先導し、子6羽と母雉が一列でついて歩く） ── */
 const PHEASANTS=(()=>{
@@ -1329,6 +1330,10 @@ function interact(){
         const ang=Math.atan2(PHEASANTS.lead.py-P.py, PHEASANTS.lead.px-P.px);
         PHEASANTS.fvx=Math.cos(ang)*1.7; PHEASANTS.fvy=Math.sin(ang)*1.7; };
       return; } }
+  // 子熊? (親熊の隣。話しても消えない)
+  if(Math.abs(fx-(CUB.px+TS/2))<TS && Math.abs(fy-(CUB.py+TS/2))<TS){
+    CUB.dir={up:'down',down:'up',left:'right',right:'left'}[P.dir];
+    openDialog('子熊','',CUB.pages); return; }
   // 熊? (人の2倍・話しても消えない)
   if(fx>BEAR.px-6 && fx<BEAR.px+2*TS+6 && fy>BEAR.py-6 && fy<BEAR.py+2*TS+6){
     BEAR.dir={up:'down',down:'up',left:'right',right:'left'}[P.dir]; BEAR.talked=true;
@@ -1493,6 +1498,13 @@ function update(){
     if(BEAR.mdir){ const d={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]}[BEAR.mdir];
       if(Math.hypot(BEAR.px-BEAR.hx,BEAR.py-BEAR.hy)<TS*3){dx=d[0];dy=d[1];}else{BEAR.mdir=null;BEAR.t=60;} }
     moveEnt(BEAR,dx,dy,0.35);
+    // 子熊は親のそば（ox,oy）へゆるやかに寄っていく（当たり判定なし＝川べり・木立でも詰まらない。親は陸を歩くので子も陸に留まる）
+    const tx=BEAR.px+CUB.ox, ty=BEAR.py+CUB.oy, gx=tx-CUB.px, gy=ty-CUB.py, gd=Math.hypot(gx,gy);
+    CUB.moving = gd>1.2;
+    if(CUB.moving){ CUB.px+=gx*0.09; CUB.py+=gy*0.09;
+      CUB.dir = Math.abs(gx)>Math.abs(gy) ? (gx<0?'left':'right') : (gy<0?'up':'down');
+      CUB.frame+=0.18; }
+    else CUB.frame=0;
   }
   if(!dlgOpen&&!panelOpen) updatePheasants();   // 雉の親子が一列で歩く
   updateMole();                                 // モグラの出入り（潜る動きは会話中も続く）
@@ -2057,6 +2069,19 @@ function drawBear(){
   px(sx+12,sy+8+bob,2,2,'#2a1d12'); px(sx+18,sy+8+bob,2,2,'#2a1d12'); // eyes
   px(sx+12,sy+8+bob,1,1,'#fff'); px(sx+18,sy+8+bob,1,1,'#fff');        // timid catchlight
 }
+function drawCub(){
+  const sx=Math.round(CUB.px-cam.x), sy=Math.round(CUB.py-cam.y), bob=CUB.moving?(Math.floor(CUB.frame)%2):0;
+  const R=CUB.dir!=='left';
+  px(sx+3,sy+14,10,2,'rgba(0,0,0,.24)');                              // shadow
+  px(sx+4,sy+11+bob,3,4,'#5a3d28'); px(sx+9,sy+11+bob,3,4,'#5a3d28'); // legs
+  px(sx+3,sy+6+bob,10,7,'#6b4a32'); px(sx+3,sy+6+bob,10,1,'#7a5638'); px(sx+3,sy+12+bob,10,1,'#4f3522'); // body
+  const hx=R?sx+6:sx+2;
+  px(hx,sy+bob,3,3,'#5a3d28'); px(hx+5,sy+bob,3,3,'#5a3d28');         // ears
+  px(hx,sy+2+bob,8,7,'#6b4a32'); px(hx,sy+2+bob,8,1,'#7a5638');       // head
+  px(hx+2,sy+6+bob,4,3,'#c8a884'); px(hx+3,sy+7+bob,2,1,'#2a1d12');   // snout + nose
+  px(hx+1,sy+4+bob,1,1,'#2a1d12'); px(hx+5,sy+4+bob,1,1,'#2a1d12');   // eyes
+  px(hx+1,sy+4+bob,1,1,'#fff');                                       // catchlight
+}
 function drawHeron(){
   const sx=Math.round(HERON.px-cam.x), sy=Math.round(HERON.py-cam.y);
   if(!HERON.flying){
@@ -2359,6 +2384,7 @@ function render(){
     drawAnimal(a.px-cam.x,a.py-cam.y,a.dir,a.frame,a.moving,a.type); ctx.globalAlpha=1; }}); });
   if(!HERON.gone) ents.push({y:HERON.py+TS,fn:drawHeron});
   ents.push({y:BEAR.py+2*TS,fn:drawBear});
+  ents.push({y:CUB.py+TS,fn:drawCub});
   if(!PHEASANTS.gone){ const L=PHEASANTS.lead, al=PHEASANTS.fleeing?Math.max(0,1-PHEASANTS.fleeT/90):1;
     ents.push({y:L.py+TS,fn:()=>{ if(al<1)ctx.globalAlpha=al; drawPheasant(L.px-cam.x,L.py-cam.y,L.dir,L.frame,L.moving,'male'); ctx.globalAlpha=1; }});
     PHEASANTS.followers.forEach(f=>ents.push({y:f.py+TS,fn:()=>{ if(al<1)ctx.globalAlpha=al; drawPheasant(f.px-cam.x,f.py-cam.y,f.dir,f.frame,f.moving,f.kind); ctx.globalAlpha=1; }})); }
