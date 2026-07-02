@@ -216,6 +216,24 @@ function updatePheasants(){
     f.px=h.px; f.py=h.py; f.dir=h.dir; f.moving=h.moving; f.frame+=f.moving?0.16:0; } });
 }
 
+/* ── モグラ：どれかの塚から顔を出し、しばらくすると潜って別の塚へ ── */
+const MOLE={ i:(rnd()*MOLE_SPOTS.length)|0, up:false, t:120, rise:0, relocate:false };
+function updateMole(){
+  MOLE.rise += MOLE.up?0.05:-0.07;                       // にゅっと出て、すっと潜る
+  MOLE.rise=Math.max(0,Math.min(1,MOLE.rise));
+  if(!MOLE.up && MOLE.rise===0 && MOLE.relocate){        // 完全に潜ったら別の塚へ移る
+    MOLE.i=(MOLE.i+1+((rnd()*(MOLE_SPOTS.length-1))|0))%MOLE_SPOTS.length;
+    MOLE.relocate=false;
+  }
+  if(dlgOpen||panelOpen) return;                         // 会話中は出たまま待つ
+  MOLE.t--;
+  if(MOLE.t<=0){
+    MOLE.up=!MOLE.up;
+    if(MOLE.up){ MOLE.t=300+rnd()*300; }                 // 顔を出している時間
+    else { MOLE.t=240+rnd()*480; MOLE.relocate=true; }   // 土の中の時間
+  }
+}
+
 /* ── player ── */
 const P={px:HUB[0]*TS, py:HUB[1]*TS+TS, dir:'down', speed:1.5, frame:0, moving:false,
          swim:false, berries:0, grapes:0, lettuce:0, tomato:0, mushroom:0, flowers:0, lastCrop:'', boostUntil:0, slowUntil:0, blinkOff:1700};
@@ -1323,6 +1341,16 @@ function interact(){
     dlgConfirm=()=>{ HERON.flying=true; HERON.flyT=0; }; return; }
   // boulder? (話しかけられる古き岩)
   const btc=(fx/TS)|0, btr=(fy/TS)|0;
+  // モグラ? (顔を出しているときだけ話せる。話し終えると潜って、別の塚から現れる)
+  { const ms=MOLE_SPOTS[MOLE.i];
+    if(MOLE.rise>0.5 && Math.abs(fx-(ms.c*TS+TS/2))<TS && Math.abs(fy-(ms.r*TS+TS/2))<TS){
+      openDialog('モグラ','',MOLE_PAGES);
+      dlgConfirm=()=>{ MOLE.up=false; MOLE.t=300+rnd()*480; MOLE.relocate=true; };
+      return; } }
+  // モグラ塚? (空の塚を調べると、土の下の気配)
+  for(let mi=0;mi<MOLE_SPOTS.length;mi++){ const ms=MOLE_SPOTS[mi];
+    if(btc===ms.c&&btr===ms.r && !(mi===MOLE.i&&MOLE.rise>0.5)){
+      openDialog('モグラ塚','',MOLE_MOUND_PAGES); return; } }
   // 観測機? (トマト畑のセンサー：将来 raspi の観測データを反映)
   for(const o of OBJS){ if(o.type==='sensor' && btc>=o.x&&btc<o.x+o.w&&btr>=o.y&&btr<o.y+o.h){
     fetchCloudObs(); openDialog('観測機','📡 畑の観測データ', sensorPages()); startObsLive(); return; } }
@@ -1467,6 +1495,7 @@ function update(){
     moveEnt(BEAR,dx,dy,0.35);
   }
   if(!dlgOpen&&!panelOpen) updatePheasants();   // 雉の親子が一列で歩く
+  updateMole();                                 // モグラの出入り（潜る動きは会話中も続く）
   if(!dlgOpen&&!panelOpen){
     let dx=0,dy=0;
     if(keys['arrowup']||keys['w']||keys['_up'])dy=-1;
@@ -2049,6 +2078,21 @@ function drawHeron(){
     ctx.globalAlpha=1;
   }
 }
+/* モグラ塚（いつも見える土の盛り上がり）＋ 顔を出すモグラ */
+function drawMoleSpot(ms,active){
+  const sx=Math.round(ms.c*TS-cam.x), sy=Math.round(ms.r*TS-cam.y), t=Date.now();
+  px(sx+2,sy+11,12,4,'#7a5c3a'); px(sx+3,sy+10,10,2,'#8a6a44');   // 土の盛り上がり
+  px(sx+5,sy+9,6,2,'#94744c'); px(sx+6,sy+13,4,2,'#5f4628');      // 頂とほの暗い穴
+  if(!active || MOLE.rise<=0) return;
+  const h=Math.round(MOLE.rise*8), by=sy+11-h;                    // 出ている高さ 0..8
+  px(sx+5,by,6,h+1,'#3a2e26'); px(sx+5,by,6,1,'#4a3a30');         // ビロードの体
+  px(sx+7,by+2,2,2,'#e89aa0'); px(sx+7,by+2,1,1,'#f2b4b8');       // ピンクの鼻
+  if(((t/420)|0)%2) px(sx+7,by+1,2,1,'#3a2e26');                  // 鼻ひくひく
+  px(sx+6,by+1,1,1,'#100c08'); px(sx+9,by+1,1,1,'#100c08');       // ちいさな目
+  px(sx+4,by+3,1,2,'#c9b8a6'); px(sx+11,by+3,1,2,'#c9b8a6');      // 前足の爪
+  if(MOLE.rise<1){ px(sx+3+((t/90|0)%3),sy+9,1,1,'#8a6a44');       // 掘り土がぱらぱら
+    px(sx+11,sy+10,1,1,'#8a6a44'); }
+}
 function drawWarp(){
   const x=WARP.x*TS-cam.x, y=WARP.y*TS-cam.y, w=WARP.w*TS, h=WARP.h*TS;
   const cx=x+w/2, cy=y+h/2, t=Date.now()/400;
@@ -2319,6 +2363,7 @@ function render(){
     ents.push({y:L.py+TS,fn:()=>{ if(al<1)ctx.globalAlpha=al; drawPheasant(L.px-cam.x,L.py-cam.y,L.dir,L.frame,L.moving,'male'); ctx.globalAlpha=1; }});
     PHEASANTS.followers.forEach(f=>ents.push({y:f.py+TS,fn:()=>{ if(al<1)ctx.globalAlpha=al; drawPheasant(f.px-cam.x,f.py-cam.y,f.dir,f.frame,f.moving,f.kind); ctx.globalAlpha=1; }})); }
   PROPS.forEach(p=>ents.push({y:p.y*TS+TS,fn:()=>drawFire(p.x*TS-cam.x,p.y*TS-cam.y)}));
+  MOLE_SPOTS.forEach((ms,mi)=>ents.push({y:ms.r*TS+TS,fn:()=>drawMoleSpot(ms,mi===MOLE.i)}));
   const wob=Date.now()<P.slowUntil?Math.sin(Date.now()/110)*1.6:0;
   ents.push({y:P.py+TS,fn:()=>{
     if(P.swim){ drawSwimmer(P.px-cam.x+wob,P.py-cam.y,P.dir,P.frame); return; }
