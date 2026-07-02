@@ -641,6 +641,11 @@ function npcHidden(n){ if(n.until!=null) return Date.now()>=n.until;
   return isNight() && !n.keepNight && !n.cat && n.gives==null; }
 // night:true の獣は夜だけ里へ下りてくる（昼は不在）
 function animalHidden(a){ return a.night && !isNight(); }
+// 動物の台詞を時間帯で選ぶ。talk が配列ならそのまま（夜だけ出る獣など）、
+// {morning,day,evening,night} のオブジェクトなら現在の時間帯に合うものを返す
+function animalLines(a){ const t=a.talk;
+  if(Array.isArray(t)) return t;
+  return t[curMode()] || t.day || t.morning || t.evening || t.night; }
 function applyTint(){ const m=curMode(),c=TINT[m];
   if(c){ ctx.fillStyle=c; ctx.fillRect(0,0,cv.width,cv.height); }
   if(m==='night'){
@@ -1317,7 +1322,7 @@ function interact(){
   // animal? (もののけ的に語り、話し終えると走り去って消える)
   for(const a of ANIMALS){ if(animalHidden(a))continue; if(!a.gone&&!a.fleeing&&Math.abs(fx-(a.px+TS/2))<TS&&Math.abs(fy-(a.py+TS/2))<TS){
     a.dir={up:'down',down:'up',left:'right',right:'left'}[P.dir];
-    openDialog(ANAME[a.type],'',a.talk);
+    openDialog(ANAME[a.type],'',animalLines(a));
     dlgConfirm=()=>{ a.fleeing=true; a.fleeT=0;
       const ang=Math.atan2(a.py-P.py, a.px-P.px); a.fvx=Math.cos(ang)*1.7; a.fvy=Math.sin(ang)*1.7; };
     return; } }
