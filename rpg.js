@@ -1346,6 +1346,15 @@ function interact(){
     dlgConfirm=()=>{ HERON.flying=true; HERON.flyT=0; }; return; }
   // boulder? (話しかけられる古き岩)
   const btc=(fx/TS)|0, btr=(fy/TS)|0;
+  // 宝を最優先で調べる（台所・観測機など周囲の設備の判定域に埋もれて開けられなくなるのを防ぐ）
+  // treasure chest? (facing it)
+  for(const t of TREASURES){ if(t.type==='chest'&&btc===t.x&&btr===t.y){
+    if(getTreasure(t)) showToast(t.icon+' 宝箱だ！ <'+t.name+'> 💎'+treasCount()+'/8');
+    else showToast('（からっぽの宝箱）'); return; } }
+  // hidden treasure spot? (proximity — water/tree/lava/crop areas; before harvest)
+  for(const t of TREASURES){ if(t.type==='spot'&&!t.found){
+    const d=Math.hypot((t.x+0.5)*TS-(P.px+TS/2),(t.y+0.5)*TS-(P.py+TS/2));
+    if(d<TS*1.6){ getTreasure(t); showToast(t.icon+' 宝を発見！ <'+t.name+'> 💎'+treasCount()+'/8'); return; } } }
   // モグラ? (顔を出しているときだけ話せる。話し終えると潜って、別の塚から現れる)
   { const ms=MOLE_SPOTS[MOLE.i];
     if(MOLE.rise>0.5 && Math.abs(fx-(ms.c*TS+TS/2))<TS && Math.abs(fy-(ms.r*TS+TS/2))<TS){
@@ -1399,14 +1408,6 @@ function interact(){
        'きみも、ゆっくりしておゆき。']); return; } }
   // signboard (ワープサークルの案内)?
   if(btc===SIGN.x&&btr===SIGN.y){ openDialog('立て看板','',[SIGN.lines.join('<br>')]); return; }
-  // treasure chest? (facing it)
-  for(const t of TREASURES){ if(t.type==='chest'&&btc===t.x&&btr===t.y){
-    if(getTreasure(t)) showToast(t.icon+' 宝箱だ！ <'+t.name+'> 💎'+treasCount()+'/8');
-    else showToast('（からっぽの宝箱）'); return; } }
-  // hidden treasure spot? (proximity — water/tree/lava/crop areas; before harvest)
-  for(const t of TREASURES){ if(t.type==='spot'&&!t.found){
-    const d=Math.hypot((t.x+0.5)*TS-(P.px+TS/2),(t.y+0.5)*TS-(P.py+TS/2));
-    if(d<TS*1.6){ getTreasure(t); showToast(t.icon+' 宝を発見！ <'+t.name+'> 💎'+treasCount()+'/8'); return; } } }
   // crop harvest? (いちご / ぶどう / レタス)
   const stc=(fx/TS)|0, str=(fy/TS)|0, here=M[str]&&M[str][stc];
   // 花を摘む（tile 4）— 摘むと手に持つ。20秒ほどで咲きなおす
