@@ -243,7 +243,7 @@ const PICKED=[]; // {c,r,at,ripe} for crop regrow
 const inB=(c,r)=>{for(const s of SPOTS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
   for(const s of DECO)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
   for(const s of BOULDERS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
-  for(const s of OBJS)if(c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
+  for(const s of OBJS)if(!objHidden(s)&&c>=s.x&&c<s.x+s.w&&r>=s.y&&r<s.y+s.h)return true;
   for(const t of TREASURES)if(t.type==='chest'&&c===t.x&&r===t.y)return true;
   if(c===SIGN.x&&r===SIGN.y)return true;
   if(c>=SHRINE.x&&c<SHRINE.x+SHRINE.w&&r>=SHRINE.y&&r<SHRINE.y+SHRINE.h)return true;
@@ -298,18 +298,19 @@ document.getElementById('eat').addEventListener('touchstart',e=>{e.preventDefaul
 document.getElementById('eat').addEventListener('click',eatCrop);
 
 /* ── dialog (paged) ── */
-let dlgOpen=false,curPages=[],curIdx=0,dlgConfirm=null;
+let dlgOpen=false,curPages=[],curIdx=0,dlgConfirm=null,barSceneOn=false,dlgWho0='',barBond=0,barGuests=[];
 const dlg=document.getElementById('dlg');
 function openDialog(who,title,pages){
-  dlgConfirm=null;
+  dlgConfirm=null; dlgWho0=who||'';
   curPages=pages;curIdx=0;
-  document.getElementById('dlgWho').textContent=who||'';
   document.getElementById('dlgTitle').innerHTML=title||'';
   renderPage(); dlg.classList.add('show'); dlgOpen=true;
 }
 function renderPage(){
   const cur=curPages[curIdx];
-  const body=document.getElementById('dlgBody'), next=document.getElementById('dlgNext');
+  const body=document.getElementById('dlgBody'), next=document.getElementById('dlgNext'), whoEl=document.getElementById('dlgWho');
+  // 話者名：ページに who があればそれを、なければ既定（例：バーのマスター）を出す
+  if(whoEl) whoEl.textContent=(cur&&typeof cur==='object'&&cur.who)?cur.who:dlgWho0;
   if(cur&&typeof cur==='object'&&cur.choices){          // 分岐ページ：選択肢ボタンを出す
     let h=cur.q?('<div class="dlgq">'+cur.q+'</div>'):'';
     h+='<div class="dlgchoices">';
@@ -318,16 +319,21 @@ function renderPage(){
     body.innerHTML=h; next.style.display='none';
     body.querySelectorAll('.dlgchoice').forEach(b=>b.addEventListener('click',ev=>{ ev.stopPropagation(); chooseBranch(+b.dataset.i); }));
   } else {
-    body.innerHTML=cur; next.style.display=(curIdx<curPages.length-1)?'block':'none';
+    body.innerHTML=(cur&&typeof cur==='object')?(cur.say||''):cur;   // {who,say} または文字列
+    next.style.display=(curIdx<curPages.length-1)?'block':'none';
   }
 }
 function chooseBranch(i){ const cur=curPages[curIdx]; if(!cur||!cur.choices||!cur.choices[i])return;
-  curPages=cur.choices[i].next||[]; curIdx=0; renderPage(); }
+  const c=cur.choices[i];
+  if(c.guest) barGuestEnter(c.guest);                                 // 選択に応じて動物が入店
+  if(c.bond){ barBond+=c.bond; try{localStorage.setItem('awai_bar_bond',String(barBond));}catch(e){} } // マスターとの友好度
+  curPages=c.next||[]; curIdx=0; renderPage(); }
 function advance(){ const cur=curPages[curIdx];
   if(cur&&typeof cur==='object'&&cur.choices) return;    // 選択待ち：スペース/クリックでは進めない
   if(curIdx<curPages.length-1){curIdx++;renderPage();}
   else { const cb=dlgConfirm; dlgConfirm=null; closeDlg(); if(cb)cb(); } }
-function closeDlg(){dlg.classList.remove('show');dlgOpen=false;dlgConfirm=null;stopObsLive();}
+function closeDlg(){dlg.classList.remove('show');dlgOpen=false;dlgConfirm=null;stopObsLive();
+  if(barSceneOn)hideBarScene();}   // バーの会話劇なら、閉じるときに背景の絵もしまう
 function openConfirm(title,pages,onYes){ openDialog('',title,pages); dlgConfirm=onYes; }
 dlg.addEventListener('click',e=>{if(e.target.closest('a,.close,.dlgchoice'))return;advance();});
 
@@ -342,6 +348,227 @@ function openPanel(title,html){
 function closePanel(){panel.classList.remove('show');panelOpen=false;
   if(KITCHEN.open){ KITCHEN.open=false; kitchenClear(); } }   // 台所を閉じたら演奏を止める
 panel.addEventListener('click',e=>{if(e.target===panel)closePanel();});
+
+/* ── バーの会話劇：16bitドット絵（240×184の低解像度キャンバスをニアレストで拡大）。
+   月夜に開くバー——一点透視の奥行き・限られた寒色パレット・窓から差す月光。
+   トガリネズミのマスターはシェイカーを振りながら斜に構える。目は暗く、独特のムード。
+   炎・瞬き・鼻・シェイクはコマ送りで動かす（ファミコン期のトンマナを16bitで） ── */
+let barTimer=null, barBuf=null, barAppearStart=0;
+const BAYER4=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];      // 4×4ベイヤー（ディザ・ディゾルブの閾値）
+function drawBarArt(g,t){
+  let cur=g;                                              // 描画先：マスターだけ裏バッファへ差し替えてディゾルブ
+  const p=(x,y,w,h,c)=>{ cur.fillStyle=c; cur.fillRect(x,y,w,h); };
+  const dith=(x,y,w,h,c,ph)=>{ cur.fillStyle=c;           // 市松ディザ（柔らかい境界）
+    for(let yy=y;yy<y+h;yy++) for(let xx=x+((yy+(ph||0))&1);xx<x+w;xx+=2) cur.fillRect(xx,yy,1,1); };
+  const glowEll=(cx,cy,rx,ry,c,ph2)=>{ cur.fillStyle=c;    // 楕円の中だけ市松に打つ（丸い暈）
+    for(let yy=cy-ry;yy<=cy+ry;yy++){ const k=(yy-cy)/ry, hw=Math.round(rx*Math.sqrt(Math.max(0,1-k*k)));
+      for(let xx=cx-hw+((yy+(ph2||0))&1);xx<=cx+hw;xx+=2) cur.fillRect(xx,yy,1,1); } };
+  const disc=(cx,cy,r,c)=>{ cur.fillStyle=c;
+    for(let yy=-r;yy<=r;yy++){ const hw=Math.round(Math.sqrt(r*r-yy*yy)); cur.fillRect(cx-hw,cy+yy,2*hw+1,1); } };
+  const line=(x0,y0,x1,y1,c)=>{ const dx=x1-x0,dy=y1-y0,n=Math.max(Math.abs(dx),Math.abs(dy))||1;
+    cur.fillStyle=c; for(let i=0;i<=n;i++) cur.fillRect(Math.round(x0+dx*i/n),Math.round(y0+dy*i/n),1,1); };
+  // ── 月夜のパレット（寒色主体・ろうそくの暖色をひと差し） ──
+  const CEIL='#0a0e18', WLL='#141d38', WLR='#111834', WEDGE='#0a0f1e',
+        BWALL='#1b2846', SEAM='#2e4070', FLOOR='#0e1526',
+        SKY='#284670', SKYD='#172a4e', MOON='#e7ecf8', MOOND='#c2cde8', STAR='#dfe8fb', BEAM='#93a8d4',
+        FURL='#9aa2b6', FUR='#6f7382', FURD='#494d5e', FURS='#31333f', FURW='#7c6a5e',
+        MUZ='#b3b9cc', MUZD='#7c8296',
+        PINK='#a87f8a', NOSE='#3a2f3c', NOSEL='#5c4a5a',
+        VEST='#171a26', VESTL='#282d43', SHIRT='#c4cadb', SHIRTD='#959bb2',
+        TIE='#7d2f39', TIED='#511f27',
+        MTL='#a9b1c6', MTLL='#e2e8f4', MTLD='#656d84',
+        WOOD='#241f2c', WOODL='#3a3448', WOODE='#5a5a78', GRAIN='#181420',
+        CAND='#e6dcc4', FL1='#ff9a34', FL2='#ffd06a', FL3='#fff0be', WARM='#d8a458';
+  const W=g.canvas.width, H=g.canvas.height, CX=W>>1, OX=CX-120;          // パノラマ：中央 CX、原画は中央(120)基準→OX平行移動
+  const BWX0=CX-72,BWX1=CX+72,BWY0=34,BWY1=118,FLY=132;
+  // ── 一点透視の部屋：フレーム四隅へ収束するワイド構図（天井・左右壁・床・奥壁） ──
+  for(let y=0;y<BWY0;y++){ const s=y/BWY0, xl=Math.round(BWX0*s), xr=Math.round(W-(W-BWX1)*s);
+    p(xl,y,xr-xl,1,CEIL); }                                                // 天井
+  for(let x=0;x<BWX0;x++){ const s=x/BWX0, yt=Math.round(BWY0*s), yb=Math.round(FLY-(FLY-BWY1)*s);
+    p(x,yt,1,yb-yt, x<14?WEDGE:WLL); }                                     // 左壁（手前ほど暗い）
+  for(let x=BWX1;x<W;x++){ const s=(W-x)/(W-BWX1), yt=Math.round(BWY0*s), yb=Math.round(FLY-(FLY-BWY1)*s);
+    p(x,yt,1,yb-yt, x>W-14?WEDGE:WLR); }                                   // 右壁
+  for(let y=BWY1;y<FLY;y++){ const s=(y-BWY1)/(FLY-BWY1), xl=Math.round(BWX0*(1-s)), xr=Math.round(BWX1+(W-BWX1)*s);
+    p(xl,y,xr-xl,1,FLOOR); }                                              // 床
+  p(BWX0,BWY0,BWX1-BWX0,BWY1-BWY0,BWALL);                                 // 奥壁
+  // 透視の稜線（ファミコン風の線）
+  line(0,0,BWX0,BWY0,SEAM); line(W,0,BWX1,BWY0,SEAM);
+  line(0,FLY,BWX0,BWY1,SEAM); line(W,FLY,BWX1,BWY1,SEAM);
+  p(BWX0,BWY0,BWX1-BWX0,1,SEAM); p(BWX0,BWY1-1,BWX1-BWX0,1,'#0a0f1e');
+  for(const fx of [CX-52,CX,CX+52]) line(fx,FLY,BWX0+(fx/W)*(BWX1-BWX0),BWY1,'#141d33'); // 床板の収束線
+  // ══ 背景の作り込み（窓・棚・月光ビーム・ろうそくの暈）→ 本画面 ══
+  const ff=((t/140)|0)%3, fy=98+ff;
+  g.save(); g.translate(OX,0);
+  // ── 奥壁の窓＋月＋星（左肩ごしに） ──
+  p(58,40,40,40,'#070a12'); p(60,42,36,36,SKYD); p(60,42,36,12,SKY);      // 窓枠と夜空
+  const tw=((t/620)|0)&3;
+  p(66,47,1,1,STAR); if(tw!==1)p(88,45,1,1,STAR); p(82,58,1,1,'#9fb0d4'); if(tw!==2)p(92,66,1,1,STAR); p(64,68,1,1,'#9fb0d4');
+  disc(80,58,9,MOON); disc(84,55,8,SKYD);                                 // 三日月（影で欠けさせる）
+  p(74,54,2,1,MOOND); p(73,58,2,1,MOOND);                                 // 月のクレーター
+  p(78,49,1,1,'#ffffff');
+  p(60,42,36,1,'#26365e'); p(60,77,36,1,'#0a0f1e');                       // 窓の桟
+  p(77,42,2,36,'#0d1426'); p(60,59,36,1,'#0d1426');
+  // ── 奥壁の酒棚（月あかりに沈む瓶のシルエット＋寒色のリム） ──
+  const shelf=(y,x0,x1)=>{
+    for(let bx=x0;bx<x1;bx+=11){ const h=12+((bx+y)%7);
+      p(bx,y-h,6,h,'#0e1626'); p(bx,y-h,1,h,'#33456e'); p(bx+1,y-h-3,2,3,'#0e1626');
+      if((bx+y)%3===0) p(bx+3,y-h+2,1,3,'#3a5a8a'); }                     // たまに色ガラスが光る
+    p(x0-2,y,(x1-x0)+4,2,'#0a0f1e'); p(x0-2,y,(x1-x0)+4,1,'#26365e'); };
+  shelf(70,104,190); shelf(96,104,190); shelf(112,60,96);
+  // ── 窓から差す月光のビーム（斜めのディザ） ──
+  const bph=((t/500)|0)&1;
+  cur.globalAlpha=.10;
+  for(let y=60;y<150;y++){ const cx=84+(y-60)*0.66, w=12+(y-60)*0.16;
+    dith(Math.round(cx-w/2),y,Math.round(w),1,BEAM,(y+bph)&1); }
+  cur.globalAlpha=.16; glowEll(40,fy+4,10,12,WARM,ff&1); cur.globalAlpha=1; // ろうそくの暈（マスターの背後）
+  g.restore();
+  // ══ マスター（トガリネズミ）：登場はビット感のディザ・ディゾルブでフェードイン ══
+  const shear=(y)=>Math.round((74-y)/13);                                 // 上ほど右へ＝小首をかしげる傾き
+  const pL=(x,y,w,h,c)=>p(x+shear(y+(h>>1)),y,w,h,c);
+  const ear=(ex,ey)=>{ pL(ex+2,ey,16,4,FUR); pL(ex,ey+4,20,18,FUR); pL(ex+2,ey+22,16,4,FUR);
+    pL(ex+5,ey+7,10,2,PINK); pL(ex+4,ey+9,12,10,PINK); pL(ex+6,ey+16,8,4,'#8a6672');
+    pL(ex+2,ey,16,2,FURL); };
+  const ap=Math.min(1,(Date.now()-barAppearStart)/900), fading=ap<1;      // 約0.9秒かけて溶けるように現れる
+  let mg=g;
+  if(fading){ if(!barBuf)barBuf=document.createElement('canvas');
+    if(barBuf.width!==W||barBuf.height!==H){ barBuf.width=W; barBuf.height=H; }
+    mg=barBuf.getContext('2d'); mg.clearRect(0,0,W,H); }
+  cur=mg; mg.save(); mg.translate(OX,0);
+  ear(66,30); ear(154,36);
+  // 頭（段差で丸み）＋毛の寒色3トーン・月光の当たる左を明るく
+  pL(96,40,48,6,FUR); pL(90,46,60,8,FUR); pL(86,54,68,20,FUR); pL(90,74,60,10,FUR); pL(96,84,48,8,FUR);
+  pL(88,46,10,30,FURL); pL(96,40,40,3,FURL);                              // 左（窓側）の月光リム
+  pL(140,52,8,26,FURD); pL(92,80,56,6,FURD); pL(96,84,48,8,FURD);         // 右と顎の陰
+  dith(86,72,68,4,FURD);
+  pL(94,74,16,12,FURW); dith(94,80,18,8,FURW,1);                          // ろうそく側（左下）のほのかな暖色
+  // 長い鼻づら
+  pL(104,88,32,8,MUZ); pL(108,96,24,8,MUZ); pL(112,104,16,8,MUZ); pL(116,112,8,6,MUZ);
+  pL(104,88,20,2,'#cfd4e4'); pL(118,88,4,26,'#c6ccdd');                   // 鼻すじの光
+  pL(132,90,4,6,MUZD); pL(128,98,4,6,MUZD); pL(124,106,4,6,MUZD);         // 右の陰
+  const nt=((t/420)|0)%2;                                                 // 鼻先ひくひく
+  pL(116,116-nt,8,6,NOSE); pL(117,117-nt,3,2,NOSEL); pL(117,116-nt,2,1,PINK);
+  // 目（眉なし・真っ黒・光点もクマもなし＝のっぺりして何を考えているか読めない眼）
+  if((t%5200)<150){ pL(100,63,11,1,'#000000'); pL(130,63,11,1,'#000000'); }   // ときどき瞬き
+  else{ pL(100,60,11,6,'#000000'); pL(130,60,11,6,'#000000'); }               // まんまるく暗い、ただの黒い眼
+  // ひげ
+  const WSK='#cdd6ea55';
+  pL(64,93,40,1,WSK); pL(60,95,6,1,WSK); pL(58,101,46,1,WSK); pL(64,108,40,1,WSK); pL(60,106,6,1,WSK);
+  pL(136,93,40,1,WSK); pL(174,95,6,1,WSK); pL(136,101,46,1,WSK); pL(136,108,40,1,WSK); pL(174,106,6,1,WSK);
+  // 口もと（片ほう上げた薄い笑み）
+  pL(112,121,7,2,'#241a26'); pL(119,119,5,2,'#241a26');
+  // ── 肩・胴（ベスト）——右肩を上げ、体をわずかに開いて斜に構える ──
+  p(74,124,92,20,VEST); p(80,118,74,8,VEST);
+  p(150,116,14,10,VEST); p(150,116,4,10,VESTL);                          // 上がった右肩
+  p(82,120,72,2,VESTL);                                                  // 襟の陰影
+  p(112,118,16,20,SHIRT); p(124,120,2,16,SHIRTD); p(112,118,3,20,'#d8dcea');
+  p(106,122,10,10,TIE); p(126,122,10,10,TIE); p(107,123,3,3,'#a84a54');
+  p(116,124,10,6,TIED); p(118,125,6,4,TIE);                              // 蝶ネクタイ
+  // ── 右腕を上げてシェイカーを振る（顔から離した右上・コマ送りで小刻みに） ──
+  const shk=[0,-1,-1,0,1,1][((t/80)|0)%6], sx0=176, sy0=50+shk;
+  p(150,120,14,10,VEST);                                                 // 右肩の付け根
+  p(158,102,12,20,VEST); p(158,102,3,20,VESTL);                          // 上腕（袖）
+  p(166,78,12,26,FUR); p(166,78,3,26,FURL); p(175,80,3,22,FURD);         // 前腕（毛・月光リム）
+  p(sx0-4,sy0+22,18,6,FUR); p(sx0-4,sy0+22,18,2,FURL);                    // シェイカーを握る手
+  p(sx0-2,sy0+26,3,3,FURS); p(sx0+3,sy0+26,3,3,FURS); p(sx0+8,sy0+26,3,3,FURS);
+  p(sx0+1,sy0,12,4,MTLD); p(sx0,sy0+4,14,7,MTL); p(sx0+1,sy0+4,4,7,MTLL); p(sx0+10,sy0+5,3,6,MTLD); // 蓋
+  p(sx0-1,sy0+11,16,15,MTL); p(sx0+1,sy0+12,4,12,MTLL); p(sx0+11,sy0+12,4,13,MTLD); // 胴
+  p(sx0-1,sy0+11,16,1,'#f0f4fc'); p(sx0-1,sy0+17,16,1,'#c2cbe0');
+  // 振りのモーションライン＋しずく（顔と反対の右側へ飛ばす）
+  const mo=((t/80)|0)&1;
+  if(mo){ p(sx0+17,sy0+4,5,1,'#aebad6'); p(sx0+18,sy0+11,6,1,'#8fa0c4'); p(sx0+16,sy0+19,4,1,'#7a8bb0'); }
+  else  { p(sx0+17,sy0+8,6,1,'#aebad6'); p(sx0+18,sy0+15,5,1,'#8fa0c4'); p(sx0+16,sy0-1,4,1,'#7a8bb0'); }
+  p(sx0+5+mo,sy0-5,1,3,'#cfd8ee'); p(sx0+9-mo,sy0-3,1,2,'#aebad6');       // 飛んだしずく
+  mg.restore(); cur=g;                                                    // ══ マスター群おわり ══
+  if(fading){ // 裏バッファのマスターを、ベイヤー閾値でパラパラと本画面へ焼き込む（ドットが溶けて現れる）
+    const sd=mg.getImageData(0,0,W,H).data, id=g.getImageData(0,0,W,H), dd=id.data, thr=ap*16;
+    for(let y=0;y<H;y++){ const rb=(y&3)*4; for(let x=0;x<W;x++){ const i=(y*W+x)<<2, a=sd[i+3];
+      if(a&&BAYER4[rb+(x&3)]<thr){ const af=a/255, ib=1-af;
+        dd[i]=sd[i]*af+dd[i]*ib; dd[i+1]=sd[i+1]*af+dd[i+1]*ib; dd[i+2]=sd[i+2]*af+dd[i+2]*ib; dd[i+3]=255; } } }
+    g.putImageData(id,0,0); }
+  // ── 手前のバーカウンター（フル幅・月光に沈む木口） ──
+  p(0,FLY,W,3,WOODE); p(0,FLY,W,1,'#6a6a88'); p(0,FLY+3,W,2,WOODL);       // 天板のふち（明）
+  p(0,FLY+5,W,H-FLY-5,WOOD);
+  for(let x=40;x<W;x+=70) p(x,FLY+7,2,H-FLY-7,GRAIN);                     // 板の継ぎ目
+  p(20,146,26,1,'#322a3c'); p(96,152,28,1,'#322a3c'); p(170,149,24,1,'#322a3c');
+  p(250,156,26,1,'#322a3c'); p(305,151,24,1,'#322a3c'); p(120,162,30,1,'#322a3c');
+  p(0,H-3,W,3,'#0a0710');
+  // ── 手前の小物（マスターの左ひじ・ろうそく・マティーニ）も中央寄せ ──
+  g.save(); g.translate(OX,0);
+  g.globalAlpha=.12; dith(10,FLY+6,60,12,WARM,0); g.globalAlpha=1;        // ろうそくの暖色がにじむ左
+  if(!fading){ p(60,126,22,10,FUR); p(60,126,22,2,FURL); p(62,134,18,2,FURD);   // 左ひじ（溶け終わってから置く）
+    p(64,132,2,4,FURS); p(69,132,2,4,FURS); p(74,132,2,4,FURS); }
+  p(34,116,12,18,CAND); p(34,116,4,18,'#f2ead6'); p(44,116,2,18,'#cfc4ac'); // ろうそく
+  p(36,114,8,2,'#d8ccb2'); p(39,110,2,5,'#4a3a2a');
+  p(38,fy,6,12-ff,FL1); p(39,fy+2,4,8-ff,FL2); p(40,fy+3,2,4,FL3); p(35,120,2,7,'#f2ead6');
+  p(190,110,30,3,'#0a0f1e');                                              // マティーニの縁
+  p(192,113,26,6,'#7fa0c0'); p(196,119,18,5,'#7fa0c0'); p(200,124,10,4,'#6a8ab0'); // 澄んだ酒（寒色）
+  p(193,113,7,2,'#bcd0e4'); p(203,114,2,4,'#e8f0fa');                     // 液面の照り
+  p(204,128,4,10,'#0a0f1e'); p(198,138,16,3,'#0a0f1e');                   // 脚と台座
+  p(210,104,2,12,'#6a7288'); p(206,113,6,5,'#5a7a3a'); p(207,114,2,2,'#7fa050'); // ピックとオリーブ
+  g.restore();
+  // ── 今夜の客（動物）：入店したらカウンターの端に、下からすっと現れる ──
+  for(const gu of barGuests) drawBarGuest(g,gu);
+  // ── シネマのレターボックス（上下の黒帯） ──
+  p(0,0,W,6,'#000'); p(0,H-6,W,6,'#000');
+}
+/* ── バーの客（動物）：背中向きのシルエットで、席の端に座る。種ごとに耳と毛色を変える ── */
+const GUEST_DEF={
+  cat:   { name:'ねこ',   fur:'#484852', furL:'#6e6e7a', ears:'cat'   },
+  fox:   { name:'きつね', fur:'#6a4530', furL:'#9c6438', ears:'fox'   },
+  owl:   { name:'ふくろう',fur:'#564636', furL:'#82704e', ears:'owl'  },
+  rabbit:{ name:'うさぎ', fur:'#7d7a86', furL:'#b8b8c6', ears:'rabbit'},
+};
+function barGuestEnter(id){
+  if(barGuests.some(x=>x.id===id))return;                // すでに居るなら何もしない
+  const used=barGuests.map(x=>x.seat);
+  const seat=!used.includes('L')?'L':(!used.includes('R')?'R':'L');
+  if(used.includes(seat)) barGuests=barGuests.filter(x=>x.seat!==seat); // 席が埋まっていれば古い客と交代
+  barGuests.push({id,seat,t0:Date.now()});
+}
+function drawBarGuest(g,gu){
+  const d=GUEST_DEF[gu.id]; if(!d)return;
+  const W=g.canvas.width,H=g.canvas.height, mid=W>>1;
+  const pr=Math.min(1,(Date.now()-gu.t0)/460), ease=1-(1-pr)*(1-pr), dy=Math.round((1-ease)*30);
+  const cx=(gu.seat==='L')?mid-120:mid+120, by=H+6+dy, inr=(gu.seat==='L')?1:-1;
+  const P=(x,y,w,h,c)=>{ g.fillStyle=c; g.fillRect(Math.round(x),Math.round(y),w,h); };
+  const earTri=(ex,baseY,bw,hg,c)=>{ for(let k=0;k<hg;k++){ const w=Math.max(1,Math.round(bw*(1-k/hg))); P(ex-(w>>1),baseY-1-k,w,1,c); } };
+  g.save(); g.globalAlpha=0.4+0.6*pr;                     // 入店時はうすく現れる
+  P(cx-17,by-30,34,30,d.fur); P(cx-17,by-30,34,3,d.furL); // 肩・背中
+  P(inr>0?cx-17:cx+14,by-28,3,26,d.furL);                // 内側の縁の光
+  const hw=(d.ears==='owl')?12:9;                         // 頭
+  P(cx-hw,by-47,hw*2,19,d.fur); P(cx-hw,by-47,hw*2,2,d.furL);
+  g.fillStyle='rgba(216,164,88,.45)'; g.fillRect(Math.round(inr>0?cx+hw-2:cx-hw),by-45,2,15); // 暖色リム
+  if(d.ears==='cat'){ earTri(cx-6,by-47,7,8,d.fur); earTri(cx+6,by-47,7,8,d.fur);
+    earTri(cx-6,by-47,3,4,d.furL); earTri(cx+6,by-47,3,4,d.furL); }
+  else if(d.ears==='fox'){ earTri(cx-7,by-47,9,12,d.fur); earTri(cx+7,by-47,9,12,d.fur);
+    earTri(cx-7,by-47,4,6,'#cbc4b2'); earTri(cx+7,by-47,4,6,'#cbc4b2'); }
+  else if(d.ears==='rabbit'){ P(cx-7,by-68,4,22,d.fur); P(cx+3,by-68,4,22,d.fur);
+    P(cx-7,by-68,4,3,d.furL); P(cx+3,by-68,4,3,d.furL);
+    P(cx-6,by-64,2,15,'#b0989a'); P(cx+4,by-64,2,15,'#b0989a'); }     // 耳の内側
+  else if(d.ears==='owl'){ earTri(cx-8,by-47,6,6,d.fur); earTri(cx+8,by-47,6,6,d.fur); } // 羽角
+  g.restore();
+}
+function openBarScene(){
+  const art=document.getElementById('bsArt');
+  let cvb=document.getElementById('bsCv');
+  if(!cvb){ art.innerHTML='<canvas id="bsCv" role="img" aria-label="トガリネズミのバーテンダー"></canvas>';
+    cvb=document.getElementById('bsCv'); }
+  cvb.width=340; cvb.height=170;                       // パノラマ（2:1のシネスコ画角）
+  const g=cvb.getContext('2d');
+  if(barTimer)clearInterval(barTimer);
+  barAppearStart=Date.now();                           // 開くたびにディゾルブのフェードインを最初から
+  barGuests=[];                                        // 客はいったんリセット
+  barBond=+(localStorage.getItem('awai_bar_bond')||0)||0; // マスターとの友好度（来店をまたいで蓄積）
+  const draw=()=>drawBarArt(g,Date.now());
+  draw(); barTimer=setInterval(draw,130);              // ドットのコマ送りアニメ
+  const sc=document.getElementById('barscene');
+  sc.classList.remove('show'); void sc.offsetWidth;    // 開くたびに拡大アニメを再生
+  sc.classList.add('show'); barSceneOn=true;
+  openDialog(BAR_MASTER,'',barBuildPages(barBond));    // 友好度に応じた会話を組み立てて重ねる
+}
+function hideBarScene(){ if(!barSceneOn)return; barSceneOn=false; barGuests=[];
+  if(barTimer){clearInterval(barTimer);barTimer=null;}
+  document.getElementById('barscene').classList.remove('show'); }
 
 /* ── 全体マップ（メニューから表示） ── */
 // 全体マップ用：タイルごとに小さなモチーフを描いて“詳細な地図”にする
@@ -641,6 +868,8 @@ function npcHidden(n){ if(n.until!=null) return Date.now()>=n.until;
   return isNight() && !n.keepNight && !n.cat && n.gives==null; }
 // night:true の獣は夜だけ里へ下りてくる（昼は不在）
 function animalHidden(a){ return a.night && !isNight(); }
+// night:true の設備（バーの小屋など）は夜だけ現れる（昼は描画も当たり判定も無し）
+function objHidden(o){ return o.night && !isNight(); }
 // 動物の台詞を時間帯で選ぶ。talk が配列ならそのまま（夜だけ出る獣など）、
 // {morning,day,evening,night} のオブジェクトなら現在の時間帯に合うものを返す
 function animalLines(a){ const t=a.talk;
@@ -660,6 +889,25 @@ function applyTint(){ const m=curMode(),c=TINT[m];
         px(cx-3,cy-3,6,6,'#ffe49a');   // 窓の灯りを点け直す
       }
     }
+    // 夜だけ開くバーの小屋：薄闇の上に、古ぼけた暖色の灯りが弱く明滅する
+    { const tt=Date.now();
+      let flk=0.72+0.12*Math.sin(tt/540)+0.05*Math.sin(tt/97);       // ゆっくりした揺らぎ＋細かなちらつき
+      if((tt%2600)<80||(tt%4300)<55) flk*=0.5;                        // 古い灯りがときどきジジッと落ちる
+      flk=Math.max(0.38,Math.min(1,flk));
+      const A=a=>(a*flk).toFixed(3);
+      for(const o of OBJS){ if(o.type!=='bar'||objHidden(o))continue;
+        const bx=o.x*TS-cam.x, by=o.y*TS-cam.y, bw=o.w*TS, bh=o.h*TS, cx=bx+bw/2;
+        if(cx<-80||cx>cv.width+80||by<-80||by>cv.height+80)continue;
+        const pool=ctx.createRadialGradient(cx,by+bh-3,4, cx,by+bh-3,bw*1.05); // 足元にこぼれる光（弱め）
+        pool.addColorStop(0,'rgba(230,182,102,'+A(0.15)+')'); pool.addColorStop(0.5,'rgba(226,174,94,'+A(0.06)+')'); pool.addColorStop(1,'rgba(226,174,94,0)');
+        ctx.fillStyle=pool; ctx.fillRect(cx-bw*1.2,by,bw*2.4,bh+10);
+        const lamp=ctx.createRadialGradient(cx,by+13,2, cx,by+13,22);          // 酒棚を照らす古いランタン
+        lamp.addColorStop(0,'rgba(238,198,120,'+A(0.28)+')'); lamp.addColorStop(0.55,'rgba(230,186,108,'+A(0.10)+')'); lamp.addColorStop(1,'rgba(230,186,108,0)');
+        ctx.fillStyle=lamp; ctx.fillRect(cx-24,by,48,bh);
+        const sign=ctx.createRadialGradient(cx,by+1,1, cx,by+1,11);            // 吊り看板(🍷)がじりっと灯る
+        sign.addColorStop(0,'rgba(238,202,120,'+A(0.30)+')'); sign.addColorStop(1,'rgba(238,202,120,0)');
+        ctx.fillStyle=sign; ctx.fillRect(cx-11,by-11,22,22);
+        px(Math.round(cx-8),Math.round(by+11),16,2,'rgba(242,206,136,'+A(0.18)+')'); } } // 棚のいちばん明るい芯
     // spotlight on 劇団員ラリー — 足元に広がる円形の光のみ
     const lx=Math.round(LARRY.px+TS/2-cam.x), ly=Math.round(LARRY.py+TS-cam.y);
     if(lx>-60&&lx<cv.width+60&&ly>-60&&ly<cv.height+60){
@@ -1401,6 +1649,9 @@ function interact(){
   // アトリエの屋外台所（おさらの音楽：食材をのせるとアンビエントが生まれる）
   for(const o of OBJS){ if(o.type==='kitchen' && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
     openKitchenPanel(); return; } }
+  // バーの小屋（調べると、トガリネズミのマスターとの会話劇が拡大して始まる）
+  for(const o of OBJS){ if(o.type==='bar' && !objHidden(o) && btc>=o.x-1&&btc<=o.x+o.w&&btr>=o.y-1&&btr<=o.y+o.h){
+    openBarScene(); return; } }
   // 水神の祠（東の池のほとり）
   if(btc>=SHRINE.x-1&&btc<=SHRINE.x+SHRINE.w&&btr>=SHRINE.y-1&&btr<=SHRINE.y+SHRINE.h){
     openDialog('水神の祠','⛩ 水神の祠', shrinePages()); return; }
@@ -1559,6 +1810,7 @@ function update(){
     const here=M[pr]&&M[pr][pc];
     if(Math.hypot(17*TS-(P.px+TS/2),37.5*TS-(P.py+TS/2))<TS*2.2) label='🍳 <b>台所</b> — おさらに食材をのせると音楽が生まれる';
     else if(Math.hypot(21.5*TS-(P.px+TS/2),11.5*TS-(P.py+TS/2))<TS*1.8) label='🎙 <b>焚き火ラジオ</b> — 調べる（準備中）';
+    else if(Math.hypot(20*TS-(P.px+TS/2),7.5*TS-(P.py+TS/2))<TS*1.8) label='🍸 <b>バーの小屋</b> — 調べる';
     else if(pc>=15&&pc<=22&&pr>=6&&pr<=11) label='🎶 <b>自由の広場</b> — ワイワイ';
     else if(here===12||here===13||around(12)||around(13)) label='🍓 <b>いちご畑</b> — 調べて収穫';
     else if(here===14||here===15||around(14)||around(15)) label='🍇 <b>ぶどう畑</b>（ワイン用）— 調べて収穫';
@@ -2062,6 +2314,42 @@ function drawObj(o){
     px(sx+W-13,sy+4,10,1,'#6a6e74'); px(sx+W-9,sy+3,2,1,'#8a8e94');   // ふち＋とって
     if((Date.now()%1800)<1000){ const a=0.4*(1-(Date.now()%1800)/1000);  // 鍋の湯気
       ctx.fillStyle='rgba(236,246,245,'+a.toFixed(2)+')'; ctx.fillRect(sx+W-9,sy+1-((Date.now()%1800)/200),2,2); } }
+  else if(o.type==='bar'){       // バーの小屋（屋根なし・酒棚とカウンター）
+    const night=isNight(), mid=sx+W/2;
+    const POST='#6b4a2c', POSTL='#8a6a44', WOOD='#7a5230', WOODL='#9c6c3c', WOODD='#54371f';
+    // 骨組み：前の二本柱＋上の横木（屋根はなし＝空が抜ける）
+    px(sx+2,sy+7,2,22,POST);   px(sx+2,sy+7,1,22,POSTL);            // 左前の柱
+    px(sx+W-4,sy+7,2,22,POST); px(sx+W-4,sy+7,1,22,POSTL);         // 右前の柱
+    px(sx+1,sy+5,W-2,2,POST);  px(sx+1,sy+5,W-2,1,POSTL);          // 前の横木（梁）
+    px(sx+6,sy+3,1,4,POST); px(sx+W-7,sy+3,1,4,POST);              // 看板を吊る短い支柱
+    // 奥の酒棚（背板＋棚板）
+    px(sx+4,sy+10,W-8,8,'#5f4229'); px(sx+4,sy+10,W-8,1,'#734f33'); // 背板
+    px(sx+4,sy+13,W-8,1,WOODD);                                     // 棚板
+    if(night) px(sx+5,sy+11,W-10,6,'rgba(255,196,110,.18)');        // 夜は棚にほのかな灯り
+    // 酒瓶（棚に並ぶ・色とりどり）
+    const bot=(bx,by,h,c,hl)=>{ px(sx+bx,sy+by,2,h,c); px(sx+bx,sy+by,1,1,hl); };
+    bot(6,8,4,'#3a7a4a','#7bbf8a');   // 緑
+    bot(9,7,5,'#8a3324','#c26a58');   // 赤ワイン
+    bot(12,8,4,'#c69a2e','#ecc85f');  // ウイスキー
+    bot(16,8,4,'#35548a','#6f92c6');  // 青
+    bot(19,7,5,'#7a3a7a','#ac6cac');  // 紫
+    bot(22,8,4,'#3f8a86','#77b6b2');  // 青緑
+    // カウンター（前面の天板）
+    px(sx+1,sy+17,W-2,5,WOOD); px(sx+1,sy+17,W-2,1,WOODL);          // 天板
+    px(sx+1,sy+21,W-2,1,WOODD);                                     // 天板の陰
+    for(let i=1;i*8<W-2;i++) px(sx+i*8,sy+18,1,4,WOODD);            // 板の継ぎ目
+    // カウンター上のグラス（２つ）
+    px(sx+7,sy+14,2,3,'rgba(214,232,240,.72)'); px(sx+7,sy+16,2,1,'#c99a3a');
+    px(sx+W-9,sy+14,2,3,'rgba(214,232,240,.72)'); px(sx+W-9,sy+16,2,1,'#a83a3a');
+    // 手前のスツール（丸椅子ふたつ）
+    px(sx+6,sy+24,4,2,'#8a5a36'); px(sx+7,sy+26,1,3,WOODD); px(sx+8,sy+26,1,3,WOODD);
+    px(sx+W-10,sy+24,4,2,'#8a5a36'); px(sx+W-9,sy+26,1,3,WOODD); px(sx+W-8,sy+26,1,3,WOODD);
+    // 吊り看板（🍷）
+    px(mid-6,sy,12,5,'#2c1e14'); px(mid-6,sy,12,1,'#4a3626');
+    ctx.save(); ctx.font='9px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🍷',mid,sy+2);
+    if(night){ ctx.fillStyle='rgba(255,210,120,.25)'; ctx.beginPath(); ctx.arc(mid,sy+10,9,0,7); ctx.fill(); }
+    ctx.restore(); }
 }
 function drawBear(){
   const sx=Math.round(BEAR.px-cam.x), sy=Math.round(BEAR.py-cam.y), bob=BEAR.moving?(Math.floor(BEAR.frame)%2):0;
@@ -2361,7 +2649,7 @@ function render(){
   ents.push({y:(SHRINE.y+SHRINE.h)*TS,fn:drawShrine});
   DECO.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
   BOULDERS.forEach(b=>ents.push({y:(b.y+b.h)*TS,fn:()=>drawBoulder(b)}));
-  OBJS.forEach(o=>ents.push({y:(o.y+o.h)*TS,fn:()=>drawObj(o)}));
+  OBJS.forEach(o=>{ if(objHidden(o))return; ents.push({y:(o.y+o.h)*TS,fn:()=>drawObj(o)}); });
   TREASURES.forEach(t=>{ if(t.type==='chest') ents.push({y:(t.y+1)*TS,fn:()=>drawChest(t)}); });
   SPOTS.forEach(s=>ents.push({y:(s.y+s.h)*TS,fn:()=>drawBuilding(s)}));
   NPCS.forEach(n=>{ if(npcHidden(n))return; ents.push({y:n.py+TS,fn:()=>{
