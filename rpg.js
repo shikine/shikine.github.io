@@ -2715,6 +2715,11 @@ function loop(){ if(!running)return; update();render();requestAnimationFrame(loo
 function startGame(){ document.getElementById('title').classList.add('hide'); startAudio(); if(!running){running=true;loop();} }
 /* ── ambient BGM (procedural drone + slow pads, 情景で切り替え) ── */
 let audioCtx=null, masterGain=null, audioOn=true, audioStarted=false, noteTimer=null;
+/* iOS: 消音スイッチ(マナーモード)でもBGMが鳴るよう、再生用オーディオセッションを宣言（iOS17+） */
+try{ if(navigator.audioSession) navigator.audioSession.type='playback'; }catch(e){}
+/* iOSは画面ロック・アプリ切替・他の音の再生でAudioContextが'interrupted'になる。
+   'suspended'だけでなく running 以外すべてから復帰させる */
+function resumeAudio(){ if(audioCtx&&audioCtx.state!=='running'){ const p=audioCtx.resume(); if(p&&p.catch)p.catch(()=>{}); } }
 const volEl=document.getElementById('vol'), audioBtn=document.getElementById('audioBtn');
 function volFromSlider(){ return (volEl.value/100)*0.4; }
 function applyVol(){ if(masterGain) masterGain.gain.setTargetAtTime(audioOn?volFromSlider():0, audioCtx.currentTime, 0.2); }
@@ -2772,11 +2777,12 @@ function crossfadeTo(key, fade){
 function syncBgm(){ if(audioStarted&&audioCtx&&audioCtx.state==='running') crossfadeTo(targetBgmKey()); }
 function startAudio(){
   try{
-    if(audioStarted){ if(audioCtx.state==='suspended')audioCtx.resume(); return; }
+    if(audioStarted){ resumeAudio(); return; }
     audioStarted=true;
     audioCtx=new (window.AudioContext||window.webkitAudioContext)();
     masterGain=audioCtx.createGain(); masterGain.gain.value=audioOn?volFromSlider():0;
     masterGain.connect(audioCtx.destination);
+    audioCtx.onstatechange=()=>{ if(audioOn&&!document.hidden) resumeAudio(); };  // iOSの割り込み終了後に自動復帰
     crossfadeTo(targetBgmKey(), 2.5);            // 最初の情景を立ち上げる
     setInterval(syncBgm, 4000);                  // 時間帯の移ろいに追従
     scheduleNote();
@@ -2800,7 +2806,7 @@ function scheduleNote(){
   noteTimer=setTimeout(scheduleNote, nt.gapMin+Math.random()*(nt.gapMax-nt.gapMin));
 }
 audioBtn.addEventListener('click',()=>{ audioOn=!audioOn; audioBtn.textContent=audioOn?'🔊':'🔇';
-  if(audioOn&&audioCtx&&audioCtx.state==='suspended')audioCtx.resume(); applyVol(); });
+  if(audioOn)resumeAudio(); applyVol(); });
 volEl.addEventListener('input',applyVol);
 /* BGM情景セグメント（自動／高原／夕暮れ／星夜） */
 function updateBgmBtn(){ document.querySelectorAll('#bgmSeg button').forEach(b=>b.classList.toggle('on',b.dataset.b===bgmMode)); }
@@ -2848,7 +2854,7 @@ const KSPEC={
       o.start(t); o.stop(t+1.2); layer.timer=setTimeout(tw, 1800+Math.random()*2600); };
     tw(); }},
 };
-function ensureKitchenBus(){ if(!audioStarted) startAudio(); else if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume();
+function ensureKitchenBus(){ if(!audioStarted) startAudio(); else resumeAudio();
   if(audioCtx && !kitchenBus){ kitchenBus=audioCtx.createGain(); kitchenBus.gain.value=1; kitchenBus.connect(masterGain); } }
 function kitchenDuck(){ if(!audioCtx||!curPad) { bgmDuck=Object.keys(KITCHEN.layers).length?0.18:1; return; }
   bgmDuck=Object.keys(KITCHEN.layers).length?0.18:1; const t=audioCtx.currentTime;
@@ -2907,8 +2913,13 @@ function openKitchenPanel(){
   renderPlate();
 }
 /* どの入口（通常 / ?to=larry 自動開始）でも、最初のユーザー操作でBGMを開始・再開する */
-function unlockAudio(){ if(!audioStarted) startAudio(); else if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume(); }
-['pointerdown','keydown','touchstart'].forEach(ev=>window.addEventListener(ev,unlockAudio));
+function unlockAudio(){ if(!audioStarted) startAudio(); else resumeAudio(); }
+/* iOS Safariのユーザー操作認定はtouchstartでは不確実なので、touchend/clickでも解除する */
+['pointerdown','keydown','touchstart','touchend','click'].forEach(ev=>window.addEventListener(ev,unlockAudio));
+/* タブに戻ってきたとき・iOSの割り込み(電話/画面ロック/他アプリの音)明けにBGMを再開する */
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&audioOn) resumeAudio(); });
+window.addEventListener('pageshow',()=>{ if(audioOn) resumeAudio(); });
+window.addEventListener('focus',()=>{ if(audioOn) resumeAudio(); });
 
 if(('ontouchstart' in window) || (window.matchMedia && window.matchMedia('(pointer:coarse)').matches))
   document.body.classList.add('touch');
