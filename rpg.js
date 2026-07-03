@@ -2917,10 +2917,12 @@ let _autostart=false;
 (function(){ const q=new URLSearchParams(location.search);
   const SPN={larry:[48,34,'up'], momo:[11,34,'up'], gallery:[56,9,'up'], bear:[4,18,'up'], mizu:[54,26,'right'], firefly:[8,22,'left'], hotaru:[8,22,'left'],
     berry:[54,8,'up'], ichigo:[54,8,'up'], noichigo:[54,8,'up'],
-    speaker:[56,8,'up'], oto:[56,8,'up'], sanroku:[56,8,'up'], forestspk:[56,8,'up']};
+    speaker:[56,8,'up'], oto:[56,8,'up'], sanroku:[56,8,'up'], forestspk:[56,8,'up'],
+    bar:[56,18,'up'], izakaya:[56,18,'up'], master:[56,18,'up']};   // バーの小屋の前（大通りの突き当たり）
   const s=q.get('to')||q.get('spawn'); if(!s)return;
   const pos = SPN[s] || (/^\d+,\d+$/.test(s)?s.split(',').map(Number):null);
   if(pos){ P.px=pos[0]*TS; P.py=pos[1]*TS; if(pos[2])P.dir=pos[2]; _autostart=true; }
+  if(s==='bar'||s==='izakaya'||s==='master'){ try{ timeMode='night'; }catch(e){} }   // バーは夜だけ開くので夜に固定
   if(s==='firefly'||s==='hotaru'){ try{ timeMode='night'; seasonMode='summer'; _lastSeason=null; refreshSeasonPal(); }catch(e){} }   // ホタルは夏の夜だけなので固定
   if(s==='berry'||s==='ichigo'||s==='noichigo'){ try{ seasonMode='summer'; _lastSeason=null; refreshSeasonPal(); }catch(e){} } })();   // 野イチゴは夏限定なので夏に固定
 /* portrait-mobile viewport: fewer tiles -> bigger character, fills the screen */
