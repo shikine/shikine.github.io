@@ -86,6 +86,22 @@ OBJS.forEach(o=>{ for(let r=o.y;r<o.y+o.h;r++)for(let c=o.x;c<o.x+o.w;c++)
   set(c,r,(r>=34&&c>=3&&c<19)?7:0); });
 // prep ground under treasure chests
 TREASURES.forEach(t=>{ if(t.type==='chest') set(t.x,t.y,(t.y>=34&&t.x>=3&&t.x<19)?7:0); });
+/* ── 移動式バー（キッチンカー）：夜ごとに停まる場所が変わる ──
+   停車候補地。どこに現れても足もとが草になるよう、全候補を均しておく。
+   ax,ay = プレイヤーがバーの前に立つ接近タイル（上を向いて調べる） */
+const BAR_SPOTS=[
+  {x:56,y:16,ax:56,ay:18,name:'東の大通りの突き当たり'},
+  {x:24,y:16,ax:24,ay:18,name:'村の大通り・中ほど'},
+  {x:40,y:24,ax:40,ay:26,name:'郵便屋の東の空き地'},
+  {x:22,y:12,ax:22,ay:14,name:'自由の広場のかたわら'},
+  {x:16,y:22,ax:16,ay:24,name:'アトリエの東の辻'},
+  {x:50,y:20,ax:50,ay:22,name:'工房の南の路地'},
+];
+for(const s of BAR_SPOTS) for(let r=s.y;r<s.y+2;r++)for(let c=s.x;c<s.x+2;c++) set(c,r,0);
+const BAR_OBJ=OBJS.find(o=>o.type==='bar');
+let _barSpotIdx=(Math.random()*BAR_SPOTS.length)|0;
+function placeBar(i){ _barSpotIdx=i; const s=BAR_SPOTS[i]; if(BAR_OBJ){ BAR_OBJ.x=s.x; BAR_OBJ.y=s.y; } }
+placeBar(_barSpotIdx);                       // 初期位置（このセッションの夜の停車地）
 // keep the cat's spot beside the truck clear (rescued from the kei truck)
 set(16,30,0); set(16,31,0);
 // keep Larry's spot near the lava clear
@@ -880,7 +896,10 @@ let _duskPurple=0, _lastTintMode=null;
 function rollDusk(m){ if(m==='evening' && _lastTintMode!=='evening')
     _duskPurple=(Math.random()<0.30)?(0.75+Math.random()*0.25):0;
   _lastTintMode=m; }
-function applyTint(){ const m=curMode(); rollDusk(m);
+// 夜に入るたび、移動式バーを別の停車地へ（＝夜ごとに色んな所に現れる）
+let _lastBarMode=(typeof curMode==='function')?curMode():'day';
+function rollBar(m){ if(m==='night' && _lastBarMode!=='night') placeBar((Math.random()*BAR_SPOTS.length)|0); _lastBarMode=m; }
+function applyTint(){ const m=curMode(); rollDusk(m); rollBar(m);
   if(m==='evening' && _duskPurple>0){                 // 紫の夕暮れ：天頂の菫→中天のマゼンタ→地平のばら色
     const s=_duskPurple, g=ctx.createLinearGradient(0,0,0,cv.height);
     g.addColorStop(0,   'rgba(92,44,124,'+(0.38*s).toFixed(3)+')');
@@ -2326,42 +2345,52 @@ function drawObj(o){
     px(sx+W-13,sy+4,10,1,'#6a6e74'); px(sx+W-9,sy+3,2,1,'#8a8e94');   // ふち＋とって
     if((Date.now()%1800)<1000){ const a=0.4*(1-(Date.now()%1800)/1000);  // 鍋の湯気
       ctx.fillStyle='rgba(236,246,245,'+a.toFixed(2)+')'; ctx.fillRect(sx+W-9,sy+1-((Date.now()%1800)/200),2,2); } }
-  else if(o.type==='bar'){       // バーの小屋（屋根なし・酒棚とカウンター）
-    const night=isNight(), mid=sx+W/2;
-    const POST='#6b4a2c', POSTL='#8a6a44', WOOD='#7a5230', WOODL='#9c6c3c', WOODD='#54371f';
-    // 骨組み：前の二本柱＋上の横木（屋根はなし＝空が抜ける）
-    px(sx+2,sy+7,2,22,POST);   px(sx+2,sy+7,1,22,POSTL);            // 左前の柱
-    px(sx+W-4,sy+7,2,22,POST); px(sx+W-4,sy+7,1,22,POSTL);         // 右前の柱
-    px(sx+1,sy+5,W-2,2,POST);  px(sx+1,sy+5,W-2,1,POSTL);          // 前の横木（梁）
-    px(sx+6,sy+3,1,4,POST); px(sx+W-7,sy+3,1,4,POST);              // 看板を吊る短い支柱
-    // 奥の酒棚（背板＋棚板）
-    px(sx+4,sy+10,W-8,8,'#5f4229'); px(sx+4,sy+10,W-8,1,'#734f33'); // 背板
-    px(sx+4,sy+13,W-8,1,WOODD);                                     // 棚板
-    if(night) px(sx+5,sy+11,W-10,6,'rgba(255,196,110,.18)');        // 夜は棚にほのかな灯り
+  else if(o.type==='bar'){       // 移動式バー（キッチンカー・側面／前は左。夜だけ現れ、場所を変える）
+    const night=isNight(), t=Date.now(), mid=sx+W/2;
+    const BODY='#35695a', BODYL='#4c8a76', BODYD='#244a3e', CREAM='#e9ddc2', GLASS='#9cc6d0',
+          WOOD='#9c6c3c', WOODL='#bb8a54', WOODD='#6d4a24', TIRE='#1e1e1e';
+    // 影＋タイヤ
+    px(sx+3,sy+27,W-5,3,'rgba(0,0,0,.28)');
+    px(sx+5,sy+24,6,6,TIRE); px(sx+6,sy+25,4,4,'#333'); px(sx+7,sy+26,2,2,'#666');
+    px(sx+20,sy+24,6,6,TIRE); px(sx+21,sy+25,4,4,'#333'); px(sx+22,sy+26,2,2,'#666');
+    // 車体（箱バン・側面）
+    px(sx+2,sy+9,W-4,17,BODY); px(sx+2,sy+9,W-4,2,BODYL); px(sx+2,sy+24,W-4,2,BODYD);
+    px(sx+2,sy+20,W-4,4,CREAM);                                     // 下部のクリーム帯
+    px(sx+2,sy+9,2,17,BODYD);                                       // 前端の陰
+    // キャブ（運転席・左）
+    px(sx+2,sy+11,7,9,'#2b5749');
+    px(sx+3,sy+12,5,5,GLASS); px(sx+3,sy+12,5,1,'#c6e4ec');         // フロントガラス
+    px(sx+2,sy+18,1,2,'#ffe9a8');                                   // ヘッドライト
+    px(sx+8,sy+11,1,9,BODYD);                                       // キャブと荷室の境
+    // サービス窓（右・室内は暗く、奥に酒棚）
+    px(sx+10,sy+11,W-13,7,'#1f4136'); px(sx+10,sy+11,W-13,1,'#2e5a4b');
+    if(night) px(sx+10,sy+12,W-13,6,'rgba(255,196,110,.20)');       // 夜は室内に暖色灯
     // 酒瓶（棚に並ぶ・色とりどり）
     const bot=(bx,by,h,c,hl)=>{ px(sx+bx,sy+by,2,h,c); px(sx+bx,sy+by,1,1,hl); };
-    bot(6,8,4,'#3a7a4a','#7bbf8a');   // 緑
-    bot(9,7,5,'#8a3324','#c26a58');   // 赤ワイン
-    bot(12,8,4,'#c69a2e','#ecc85f');  // ウイスキー
-    bot(16,8,4,'#35548a','#6f92c6');  // 青
-    bot(19,7,5,'#7a3a7a','#ac6cac');  // 紫
-    bot(22,8,4,'#3f8a86','#77b6b2');  // 青緑
-    // カウンター（前面の天板）
-    px(sx+1,sy+17,W-2,5,WOOD); px(sx+1,sy+17,W-2,1,WOODL);          // 天板
-    px(sx+1,sy+21,W-2,1,WOODD);                                     // 天板の陰
-    for(let i=1;i*8<W-2;i++) px(sx+i*8,sy+18,1,4,WOODD);            // 板の継ぎ目
+    bot(12,13,4,'#8a3324','#c26a58'); bot(15,12,5,'#c69a2e','#ecc85f');
+    bot(18,13,4,'#35548a','#6f92c6'); bot(21,12,5,'#7a3a7a','#ac6cac'); bot(24,13,4,'#3f8a86','#77b6b2');
+    // 縞のオーニング（サービス窓の上に張り出す）
+    for(let i=0;i*3<W-10;i++) px(sx+9+i*3,sy+5,3,4,(i%2)?'#c8503c':'#efe3c8');
+    px(sx+9,sy+5,W-10,1,'#f4ecd8'); px(sx+9,sy+8,W-10,1,'#9a3d2c');  // 上辺の光・下の縁
+    // カウンター（フォールドダウンの天板＋支え脚）
+    px(sx+9,sy+18,W-10,2,WOOD); px(sx+9,sy+18,W-10,1,WOODL); px(sx+9,sy+20,W-10,1,WOODD);
+    px(sx+10,sy+20,1,4,WOODD); px(sx+W-4,sy+20,1,4,WOODD);
     // カウンター上のグラス（２つ）
-    px(sx+7,sy+14,2,3,'rgba(214,232,240,.72)'); px(sx+7,sy+16,2,1,'#c99a3a');
-    px(sx+W-9,sy+14,2,3,'rgba(214,232,240,.72)'); px(sx+W-9,sy+16,2,1,'#a83a3a');
-    // 手前のスツール（丸椅子ふたつ）
-    px(sx+6,sy+24,4,2,'#8a5a36'); px(sx+7,sy+26,1,3,WOODD); px(sx+8,sy+26,1,3,WOODD);
-    px(sx+W-10,sy+24,4,2,'#8a5a36'); px(sx+W-9,sy+26,1,3,WOODD); px(sx+W-8,sy+26,1,3,WOODD);
-    // 吊り看板（🍷）
-    px(mid-6,sy,12,5,'#2c1e14'); px(mid-6,sy,12,1,'#4a3626');
-    ctx.save(); ctx.font='9px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('🍷',mid,sy+2);
-    if(night){ ctx.fillStyle='rgba(255,210,120,.25)'; ctx.beginPath(); ctx.arc(mid,sy+10,9,0,7); ctx.fill(); }
-    ctx.restore(); }
+    px(sx+13,sy+15,2,3,'rgba(214,232,240,.75)'); px(sx+13,sy+17,2,1,'#c99a3a');
+    px(sx+20,sy+15,2,3,'rgba(214,232,240,.75)'); px(sx+20,sy+17,2,1,'#a83a3a');
+    // スツール（丸椅子ふたつ）
+    px(sx+12,sy+24,3,1,'#8a5a36'); px(sx+13,sy+25,1,2,WOODD);
+    px(sx+19,sy+24,3,1,'#8a5a36'); px(sx+20,sy+25,1,2,WOODD);
+    // 屋根の看板（BAR）
+    px(mid-8,sy,16,5,'#2c1e14'); px(mid-8,sy,16,1,'#4a3626');
+    ctx.save(); ctx.font='bold 7px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#e7c878'; ctx.fillText('BAR',mid,sy+2); ctx.restore();
+    if(night){                                                      // 夜：豆電球・看板と窓の光
+      for(let i=0;i*5<W-10;i++){ const on=(Math.sin(t/300+i)>-.3); px(sx+10+i*5,sy+9,1,1,on?'#ffdf8a':'#7a6a3a'); }
+      ctx.save();
+      ctx.fillStyle='rgba(255,210,120,.20)'; ctx.beginPath(); ctx.arc(mid,sy+3,8,0,7); ctx.fill();
+      ctx.fillStyle='rgba(255,206,120,.12)'; ctx.fillRect(sx+9,sy+10,W-11,9);
+      ctx.restore(); } }
 }
 function drawBear(){
   const sx=Math.round(BEAR.px-cam.x), sy=Math.round(BEAR.py-cam.y), bob=BEAR.moving?(Math.floor(BEAR.frame)%2):0;
@@ -2929,12 +2958,15 @@ let _autostart=false;
 (function(){ const q=new URLSearchParams(location.search);
   const SPN={larry:[48,34,'up'], momo:[11,34,'up'], gallery:[56,9,'up'], bear:[4,18,'up'], mizu:[54,26,'right'], firefly:[8,22,'left'], hotaru:[8,22,'left'],
     berry:[54,8,'up'], ichigo:[54,8,'up'], noichigo:[54,8,'up'],
-    speaker:[56,8,'up'], oto:[56,8,'up'], sanroku:[56,8,'up'], forestspk:[56,8,'up'],
-    bar:[56,18,'up'], izakaya:[56,18,'up'], master:[56,18,'up']};   // バーの小屋の前（大通りの突き当たり）
+    speaker:[56,8,'up'], oto:[56,8,'up'], sanroku:[56,8,'up'], forestspk:[56,8,'up']};
   const s=q.get('to')||q.get('spawn'); if(!s)return;
+  if(s==='bar'||s==='izakaya'||s==='master'){   // 夜だけ開く移動式バー：今夜の停車地の前に出す
+    try{ timeMode='night'; _lastBarMode='night'; }catch(e){}   // 初回フレームで停車地が動かないよう固定
+    const bs=BAR_SPOTS[_barSpotIdx]||BAR_SPOTS[0];
+    P.px=bs.ax*TS; P.py=bs.ay*TS; P.dir='up'; _autostart=true; return;
+  }
   const pos = SPN[s] || (/^\d+,\d+$/.test(s)?s.split(',').map(Number):null);
   if(pos){ P.px=pos[0]*TS; P.py=pos[1]*TS; if(pos[2])P.dir=pos[2]; _autostart=true; }
-  if(s==='bar'||s==='izakaya'||s==='master'){ try{ timeMode='night'; }catch(e){} }   // バーは夜だけ開くので夜に固定
   if(s==='firefly'||s==='hotaru'){ try{ timeMode='night'; seasonMode='summer'; _lastSeason=null; refreshSeasonPal(); }catch(e){} }   // ホタルは夏の夜だけなので固定
   if(s==='berry'||s==='ichigo'||s==='noichigo'){ try{ seasonMode='summer'; _lastSeason=null; refreshSeasonPal(); }catch(e){} } })();   // 野イチゴは夏限定なので夏に固定
 /* portrait-mobile viewport: fewer tiles -> bigger character, fills the screen */
