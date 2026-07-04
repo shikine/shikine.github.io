@@ -875,8 +875,20 @@ function objHidden(o){ return o.night && !isNight(); }
 function animalLines(a){ const t=a.talk;
   if(Array.isArray(t)) return t;
   return t[curMode()] || t.day || t.morning || t.evening || t.night; }
-function applyTint(){ const m=curMode(),c=TINT[m];
-  if(c){ ctx.fillStyle=c; ctx.fillRect(0,0,cv.width,cv.height); }
+// 夕方たまに紫の空：夕方に入るたび抽選し、約3割の夕暮れが菫色に染まる
+let _duskPurple=0, _lastTintMode=null;
+function rollDusk(m){ if(m==='evening' && _lastTintMode!=='evening')
+    _duskPurple=(Math.random()<0.30)?(0.75+Math.random()*0.25):0;
+  _lastTintMode=m; }
+function applyTint(){ const m=curMode(); rollDusk(m);
+  if(m==='evening' && _duskPurple>0){                 // 紫の夕暮れ：天頂の菫→中天のマゼンタ→地平のばら色
+    const s=_duskPurple, g=ctx.createLinearGradient(0,0,0,cv.height);
+    g.addColorStop(0,   'rgba(92,44,124,'+(0.38*s).toFixed(3)+')');
+    g.addColorStop(0.45,'rgba(150,72,140,'+(0.32*s).toFixed(3)+')');
+    g.addColorStop(1,   'rgba(228,122,98,'+(0.22*s).toFixed(3)+')');
+    ctx.fillStyle=g; ctx.fillRect(0,0,cv.width,cv.height);
+  } else { const c=TINT[m];
+    if(c){ ctx.fillStyle=c; ctx.fillRect(0,0,cv.width,cv.height); } }
   if(m==='night'){
     // 各家の窓からこぼれる灯り（夜の闇の上に暖色をにじませる）
     for(const s of HOUSES){
