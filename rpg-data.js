@@ -156,8 +156,8 @@ const COACH_PAGES=(()=>{
 /* ── NPCs (villagers) ── */
 const NPCS=[
  // ── 砂漠：夜だけ現れる詩人（薄暗いスポットライトの円のなかで詠む。名も肩書きも性別も、詩の前では脱いでいける） ──
- {x:10,y:41, nightOnly:true, still:true, poet:true, slim:true, dir:'down',
-  c1:'#4a3a6e', c2:'#e8c39a', hair:'#241c30', hatc:'#241c30', name:'夜の詩人',
+ {x:10,y:41, nightOnly:true, still:true, slim:true, female:true, dir:'down',
+  c1:'#4a3a6e', c2:'#e8c39a', hair:'#4fa870', name:'夜の詩人',
   pages:['（砂漠のただなか、うすぐらいスポットライトの円のなかに、詩人がひとり立っている）',
          '夜の詩人「ようこそ。ここは、夜にだけひらく舞台。」',
          '「昼のあいだ、言葉は砂の下でねむっている。夜になって、ようやく掘り起こされるの。」',

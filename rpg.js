@@ -2724,10 +2724,6 @@ function render(){
       px(sx+1,sy-17,1,10,'#d8d2c4'); px(sx+21,sy-17,1,10,'#bcb4a4');          // 板の枠
       ctx.save(); ctx.font='bold 7px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillStyle='#c0341f'; ctx.fillText('NO WAR', sx+11, sy-12); ctx.restore(); }
-    if(n.poet){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y), hc=n.hatc||'#241c30'; // 幅広の詩人帽
-      px(sx+1,sy,14,2,hc); px(sx+1,sy,14,1,'#463a5e');       // 幅広のつば＋上辺の光
-      px(sx+5,sy-4,6,4,hc); px(sx+5,sy-4,6,1,'#463a5e');     // クラウン（山）＋光
-      px(sx+5,sy-1,6,1,'#140f1e'); }                          // つばとの境の陰
   }}); });
   ANIMALS.forEach(a=>{ if(a.gone||animalHidden(a))return; ents.push({y:a.py+TS,fn:()=>{
     const al=a.fleeing?Math.max(0,1-a.fleeT/90):1; if(al<1)ctx.globalAlpha=al;
