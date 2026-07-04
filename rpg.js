@@ -139,6 +139,7 @@ NPCS.forEach(n=>{n.px=n.x*TS;n.py=n.y*TS;n.hx=n.px;n.hy=n.py;n.dir=n.dir||'down'
 /* 元気なNPCの「ぴょこっ」アクション（amp=高さ, hops=回数） */
 function startHop(n,amp,hops){ n.hopAmp=amp; n.hopN=hops; n.hopDur=hops*13; n.hopT=n.hopDur; }
 const LARRY=NPCS.find(n=>n.name==='劇団員ラリー'); // 夜にスポットライトを当てる対象
+const POET=NPCS.find(n=>n.name==='夜の詩人');       // 夜だけ砂漠に現れる詩人（薄暗いスポットライト）
 
 ANIMALS.forEach(a=>{a.px=a.x*TS;a.py=a.y*TS;a.hx=a.px;a.hy=a.py;a.dir=rnd()<.5?'left':'right';a.frame=0;a.t=rnd()*120;a.mdir=null;a.moving=false;a.fleeing=false;a.gone=false;a.fleeT=0;a.fvx=0;a.fvy=0;});
 
@@ -881,6 +882,7 @@ function isNight(){ return curMode()==='night'; }
 // 夜は里の人が寝静まる：keepNight 指定・ねこ・宝を授ける者だけ残し、ほかの村人は隠す
 // until 指定の者（例：平和の行進者）はその時刻まで昼夜とも常駐し、過ぎたら去る
 function npcHidden(n){ if(n.until!=null) return Date.now()>=n.until;
+  if(n.nightOnly) return !isNight();   // 夜だけ現れる者（砂漠の詩人など）は昼は不在
   return isNight() && !n.keepNight && !n.cat && n.gives==null; }
 // night:true の獣は夜だけ里へ下りてくる（昼は不在）
 function animalHidden(a){ return a.night && !isNight(); }
@@ -945,6 +947,15 @@ function applyTint(){ const m=curMode(); rollDusk(m); rollBar(m);
       const g=ctx.createRadialGradient(lx,ly,3, lx,ly,40);
       g.addColorStop(0,'rgba(255,245,200,0.3)'); g.addColorStop(0.55,'rgba(255,240,190,0.12)'); g.addColorStop(1,'rgba(255,240,190,0)');
       ctx.fillStyle=g; ctx.fillRect(0,0,cv.width,cv.height);
+    }
+    // 砂漠の夜の詩人 — 薄暗い、青白いスポットライト（足元の小さな円）
+    if(POET && !npcHidden(POET)){
+      const qx=Math.round(POET.px+TS/2-cam.x), qy=Math.round(POET.py+TS-cam.y);
+      if(qx>-60&&qx<cv.width+60&&qy>-60&&qy<cv.height+60){
+        const g=ctx.createRadialGradient(qx,qy-7,3, qx,qy,34);
+        g.addColorStop(0,'rgba(216,210,240,0.30)'); g.addColorStop(0.5,'rgba(198,192,226,0.13)'); g.addColorStop(1,'rgba(198,192,226,0)');
+        ctx.fillStyle=g; ctx.fillRect(0,0,cv.width,cv.height);
+      }
     } } }
 function updateTimeBtn(){ document.querySelectorAll('#timeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.m===timeMode)); }
 const TNAME={morning:'🌅 朝',day:'☀️ 昼',evening:'🌆 夕',night:'🌙 夜'};
@@ -2713,6 +2724,10 @@ function render(){
       px(sx+1,sy-17,1,10,'#d8d2c4'); px(sx+21,sy-17,1,10,'#bcb4a4');          // 板の枠
       ctx.save(); ctx.font='bold 7px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillStyle='#c0341f'; ctx.fillText('NO WAR', sx+11, sy-12); ctx.restore(); }
+    if(n.poet){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y), hc=n.hatc||'#241c30'; // 幅広の詩人帽
+      px(sx+1,sy,14,2,hc); px(sx+1,sy,14,1,'#463a5e');       // 幅広のつば＋上辺の光
+      px(sx+5,sy-4,6,4,hc); px(sx+5,sy-4,6,1,'#463a5e');     // クラウン（山）＋光
+      px(sx+5,sy-1,6,1,'#140f1e'); }                          // つばとの境の陰
   }}); });
   ANIMALS.forEach(a=>{ if(a.gone||animalHidden(a))return; ents.push({y:a.py+TS,fn:()=>{
     const al=a.fleeing?Math.max(0,1-a.fleeT/90):1; if(al<1)ctx.globalAlpha=al;
