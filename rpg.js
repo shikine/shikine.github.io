@@ -2974,7 +2974,8 @@ let _autostart=false;
 (function(){ const q=new URLSearchParams(location.search);
   const SPN={larry:[48,34,'up'], momo:[11,34,'up'], gallery:[56,9,'up'], bear:[4,18,'up'], mizu:[54,26,'right'], firefly:[8,22,'left'], hotaru:[8,22,'left'],
     berry:[54,8,'up'], ichigo:[54,8,'up'], noichigo:[54,8,'up'],
-    speaker:[56,8,'up'], oto:[56,8,'up'], sanroku:[56,8,'up'], forestspk:[56,8,'up']};
+    speaker:[56,8,'up'], oto:[56,8,'up'], sanroku:[56,8,'up'], forestspk:[56,8,'up'],
+    poet:[10,42,'up'], shijin:[10,42,'up'], uta:[10,42,'up']};   // 夜の詩人の目の前（砂漠のスポットライト）
   const s=q.get('to')||q.get('spawn'); if(!s)return;
   if(s==='bar'||s==='izakaya'||s==='master'){   // 夜だけ開く移動式バー：今夜の停車地の前に出す
     try{ timeMode='night'; _lastBarMode='night'; }catch(e){}   // 初回フレームで停車地が動かないよう固定
@@ -2983,6 +2984,7 @@ let _autostart=false;
   }
   const pos = SPN[s] || (/^\d+,\d+$/.test(s)?s.split(',').map(Number):null);
   if(pos){ P.px=pos[0]*TS; P.py=pos[1]*TS; if(pos[2])P.dir=pos[2]; _autostart=true; }
+  if(s==='poet'||s==='shijin'||s==='uta'){ try{ timeMode='night'; }catch(e){} }   // 詩人は夜だけ現れるので夜に固定
   if(s==='firefly'||s==='hotaru'){ try{ timeMode='night'; seasonMode='summer'; _lastSeason=null; refreshSeasonPal(); }catch(e){} }   // ホタルは夏の夜だけなので固定
   if(s==='berry'||s==='ichigo'||s==='noichigo'){ try{ seasonMode='summer'; _lastSeason=null; refreshSeasonPal(); }catch(e){} } })();   // 野イチゴは夏限定なので夏に固定
 /* portrait-mobile viewport: fewer tiles -> bigger character, fills the screen */
