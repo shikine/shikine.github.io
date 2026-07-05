@@ -1497,7 +1497,7 @@ function openAppsPanel(){
 /* ── 詩と挿絵（本の見開きを再現：クリームの紙面に、縦書きの詩＋細かいドット絵） ── */
 const POEMS={
   '2020-10':{ date:'2020.10', title:'サンドウィッチ',
-    author:'本間董子', source:'shinonoto', link:'https://www.instagram.com/h_sumireko/',
+    author:'本間菫子', source:'shinonoto', link:'https://www.instagram.com/h_sumireko/',
     img:'poems/2020-10-sandwich.png',
     lines:['サンドウィッチでしかない','むねとのどとおなかがぺちゃんこにつぶされている',
       '横になり目を閉じて泣くと目から花が咲く','花が咲いてしおれることに意味はない',
