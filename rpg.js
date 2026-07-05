@@ -2709,10 +2709,11 @@ function render(){
     drawChar(n.px-cam.x,n.py-cam.y,n.dir,n.frame,n.moving,n.c1,n.c2,n.hair,n.cat,n.slim,isBlinking(n.blinkOff));
     if(n.female){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y); // 長めの髪
       px(sx+3,sy+2,2,7,n.hair); px(sx+11,sy+2,2,7,n.hair); }
-    if(n.roots){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y); // 頭頂の地毛（染めが伸びた根元＝プリン）
+    if(n.roots){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y); // 頭頂：黒い地毛→かすかな金→緑（染めの伸び＝プリン）
       px(sx+5,sy,6,1,n.roots);                                  // 生え際の黒い帯
-      px(sx+4,sy+1,1,1,n.roots); px(sx+11,sy+1,1,1,n.roots);    // 両サイドの根元
-      px(sx+6,sy+1,1,1,n.roots); px(sx+9,sy+1,1,1,n.roots); }   // 頭頂のむら（自然なぼかし）
+      px(sx+4,sy+1,1,1,n.roots); px(sx+11,sy+1,1,1,n.roots);    // 両サイドの根元の黒
+      if(n.fade){ px(sx+6,sy+1,4,1,n.fade); px(sx+7,sy+2,2,1,n.fade); } // 黒と緑のあいだに、かすかに残るブリーチの金
+      else { px(sx+6,sy+1,1,1,n.roots); px(sx+9,sy+1,1,1,n.roots); } }  // （金なしなら頭頂のむら）
     if(n.bob){ const sx=Math.round(n.px-cam.x),sy=Math.round(n.py-cam.y); // ふんわり短めのボブ
       px(sx+4,sy+1,2,4,n.hair); px(sx+10,sy+1,2,4,n.hair);  // 両サイド（短め）
       px(sx+4,sy,8,1,n.hair);                                // 前髪のふち
