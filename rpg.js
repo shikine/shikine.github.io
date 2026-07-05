@@ -1496,7 +1496,9 @@ function openAppsPanel(){
 }
 /* ── 詩と挿絵（本の見開きを再現：クリームの紙面に、縦書きの詩＋細かいドット絵） ── */
 const POEMS={
-  '2020-10':{ date:'2020.10', img:'poems/2020-10-sandwich.png',
+  '2020-10':{ date:'2020.10', title:'サンドウィッチ',
+    author:'本間董子', source:'shinonoto', link:'https://www.instagram.com/h_sumireko/',
+    img:'poems/2020-10-sandwich.png',
     lines:['サンドウィッチでしかない','むねとのどとおなかがぺちゃんこにつぶされている',
       '横になり目を閉じて泣くと目から花が咲く','花が咲いてしおれることに意味はない',
       '翼が一枚落ちているということは','そこに鳥がいたということ',
@@ -1505,11 +1507,15 @@ const POEMS={
 function openPoemPanel(id){
   const p=POEMS[id]; if(!p) return;
   const body=p.lines.map(l=>'<p>'+l+'</p>').join('');
-  openPanel('📖 詩 — 渡邊織音',
+  openPanel('📖 詩「'+p.title+'」',
     '<style>'
     +'.poem-card{background:#efeae0;color:#241f1c;border:1px solid #cabfa8;box-shadow:0 6px 24px rgba(0,0,0,.45);'
     +'padding:20px 22px;border-radius:2px;max-width:760px;margin:0 auto}'
     +'.poem-head{font-size:12px;color:#8a7f68;letter-spacing:.12em;margin-bottom:14px}'
+    +'.poem-credit{margin-top:18px;padding-top:12px;border-top:1px solid #d8cdb6;font-size:12.5px;'
+    +'color:#6f6553;line-height:1.8;text-align:right}'
+    +'.poem-credit b{color:#4a4030;font-weight:600}'
+    +'.poem-credit a{color:#8a6a3a;text-decoration:underline}'
     +'.poem-spread{display:flex;gap:26px;align-items:flex-start;justify-content:center;flex-wrap:nowrap}'
     +'.poem-illus{flex:0 0 auto;width:min(300px,44%)}'
     +'.poem-illus img{width:100%;height:auto;display:block;image-rendering:pixelated;'
@@ -1524,7 +1530,10 @@ function openPoemPanel(id){
     +'<div class="poem-spread">'
     +'<div class="poem-illus"><img src="'+p.img+'" alt="詩の挿絵（ドット絵）"></div>'
     +'<div class="poem-body">'+body+'</div>'
-    +'</div></div>');
+    +'</div>'
+    +'<div class="poem-credit">「'+p.title+'」（'+p.date+'）　<b>'+p.author+'</b>『'+p.source+'』より<br>'
+    +'<a href="'+p.link+'" target="_blank" rel="noopener">Instagram @h_sumireko ↗</a></div>'
+    +'</div>');
 }
 function openGalleryPanel(){
   let h='<p style="font-size:13px;line-height:1.8;margin-bottom:10px">渡邊織音の3D作品（Sketchfab）。カードを選ぶと、その場で回して鑑賞できます。</p><div class="agrid">';
