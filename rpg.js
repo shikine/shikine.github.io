@@ -1494,6 +1494,38 @@ function openAppsPanel(){
   h+='</div>';
   openPanel('🔧 工房 — Apps',h);
 }
+/* ── 詩と挿絵（本の見開きを再現：クリームの紙面に、縦書きの詩＋細かいドット絵） ── */
+const POEMS={
+  '2020-10':{ date:'2020.10', img:'poems/2020-10-sandwich.png',
+    lines:['サンドウィッチでしかない','むねとのどとおなかがぺちゃんこにつぶされている',
+      '横になり目を閉じて泣くと目から花が咲く','花が咲いてしおれることに意味はない',
+      '翼が一枚落ちているということは','そこに鳥がいたということ',
+      '肉がここにあるということは','ここに動物がいたということ'] },
+};
+function openPoemPanel(id){
+  const p=POEMS[id]; if(!p) return;
+  const body=p.lines.map(l=>'<p>'+l+'</p>').join('');
+  openPanel('📖 詩 — 渡邊織音',
+    '<style>'
+    +'.poem-card{background:#efeae0;color:#241f1c;border:1px solid #cabfa8;box-shadow:0 6px 24px rgba(0,0,0,.45);'
+    +'padding:20px 22px;border-radius:2px;max-width:760px;margin:0 auto}'
+    +'.poem-head{font-size:12px;color:#8a7f68;letter-spacing:.12em;margin-bottom:14px}'
+    +'.poem-spread{display:flex;gap:26px;align-items:flex-start;justify-content:center;flex-wrap:nowrap}'
+    +'.poem-illus{flex:0 0 auto;width:min(300px,44%)}'
+    +'.poem-illus img{width:100%;height:auto;display:block;image-rendering:pixelated;'
+    +'image-rendering:crisp-edges}'
+    +'.poem-body{writing-mode:vertical-rl;font-family:"Hiragino Mincho ProN","Yu Mincho","YuMincho",serif;'
+    +'font-size:15px;line-height:2.2;letter-spacing:.1em;max-height:60vh;color:#2a231c}'
+    +'.poem-body p{margin:0}'
+    +'@media(max-width:600px){.poem-spread{flex-direction:column;align-items:center;gap:18px}'
+    +'.poem-illus{width:min(260px,72%)}.poem-body{max-height:none;font-size:14px;line-height:2.1}}'
+    +'</style>'
+    +'<div class="poem-card"><div class="poem-head">'+p.date+'</div>'
+    +'<div class="poem-spread">'
+    +'<div class="poem-illus"><img src="'+p.img+'" alt="詩の挿絵（ドット絵）"></div>'
+    +'<div class="poem-body">'+body+'</div>'
+    +'</div></div>');
+}
 function openGalleryPanel(){
   let h='<p style="font-size:13px;line-height:1.8;margin-bottom:10px">渡邊織音の3D作品（Sketchfab）。カードを選ぶと、その場で回して鑑賞できます。</p><div class="agrid">';
   SKETCHFAB.forEach((m,i)=> h+='<button class="acard gcard" onclick="galleryShow('+i+')"><div class="an">'+m.name+'</div><div class="au">3Dで見る ▶</div></button>');
