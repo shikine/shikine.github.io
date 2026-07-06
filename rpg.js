@@ -112,6 +112,8 @@ set(11,34,7);
 set(4,18,0);
 // keep the firefly spawn tile walkable (east bank by the river fireflies)
 set(8,22,0);
+// keep the crow's perch and its approach walkable (by the rice paddy)
+set(26,20,0); set(26,21,0);
 // keep the tile in front of the forest speaker walkable (small clearing to listen)
 set(56,8,0);
 // open south paddock for the grazing horse (clear trees/bushes to grass)
@@ -200,6 +202,7 @@ HERON.px=HERON.x*TS; HERON.py=HERON.y*TS;
 
 BEAR.px=BEAR.x*TS; BEAR.py=BEAR.y*TS; BEAR.hx=BEAR.px; BEAR.hy=BEAR.py;
 CUB.ox=TS*0.5; CUB.oy=TS*1.5; CUB.px=BEAR.px+CUB.ox; CUB.py=BEAR.py+CUB.oy;   // 親熊の足もとに寄り添う
+CROW.px=CROW.x*TS; CROW.py=CROW.y*TS; CROW.hx=CROW.px; CROW.hy=CROW.py;        // 烏（田んぼのそばの杭）
 
 /* ── 雉の親子（雄雉が先導し、子6羽と母雉が一列でついて歩く） ── */
 const PHEASANTS=(()=>{
@@ -657,6 +660,7 @@ function openMapPanel(){
     {t:'⛰ 八ヶ岳',x:32,y:2},{t:'💧 西の池',x:9.5,y:10.5},{t:'💧 東の池',x:55,y:23},
     {t:'🎶 自由の広場',x:18.5,y:6.8},{t:'🎙 焚き火ラジオ',x:21.5,y:12.5,mini:true},{t:'🍄 きのこの森',x:13,y:17,mini:true},{t:'🌊 川',x:6,y:27},
     {t:'🗿 縄文の遺跡',x:5,y:6.5},{t:'⛩ 水神の祠',x:58.3,y:20},{t:'🐴 南の牧場',x:35.5,y:35.5},
+    {t:'🐦‍⬛ 烏',x:26,y:20,mini:true},
     {t:'🔊 裏山の音',x:57,y:6},
     {t:'🍓 野イチゴ',x:53,y:9.5,mini:true},
     {t:'🍓 いちご畑',x:22,y:31},{t:'🍇 ぶどう畑',x:39,y:10},{t:'⛲🍷 井戸・ワインの室',x:35.5,y:14.6},{t:'🥃 蒸留所',x:38.5,y:17.4},{t:'🥬 レタス畑',x:39,y:22},
@@ -1790,6 +1794,12 @@ function interact(){
   if(!HERON.gone && !HERON.flying && Math.abs(fx-(HERON.px+TS/2))<TS+4 && Math.abs(fy-(HERON.py+TS/2))<TS+4){
     openDialog('シロサギ','',HERON.pages);
     dlgConfirm=()=>{ HERON.flying=true; HERON.flyT=0; }; return; }
+  // 烏? (神の化身であり邪魔者。話しても去らず、少し跳ねてまた迷う。時間帯で語りが移ろう)
+  if(Math.abs(fx-(CROW.px+TS/2))<TS && Math.abs(fy-(CROW.py+TS/2))<TS){
+    CROW.dir={up:'down',down:'up',left:'right',right:'left'}[P.dir]; CROW.caw=Date.now()+700;
+    openDialog('烏','',animalLines(CROW));
+    dlgConfirm=()=>{ CROW.mdir=['left','right'][(rnd()*2)|0]; CROW.hopT=12; CROW.caw=Date.now()+600; };
+    return; }
   // boulder? (話しかけられる古き岩)
   const btc=(fx/TS)|0, btr=(fy/TS)|0;
   // 宝を最優先で調べる（台所・観測機など周囲の設備の判定域に埋もれて開けられなくなるのを防ぐ）
@@ -1959,6 +1969,18 @@ function update(){
   }
   if(!dlgOpen&&!panelOpen) updatePheasants();   // 雉の親子が一列で歩く
   updateMole();                                 // モグラの出入り（潜る動きは会話中も続く）
+  // 烏：杭の近くを気ままにちょんちょん跳ね、ときどき鳴く（話しても去らない・煮え切らない）
+  if(CROW.hopT>0){ CROW.hopT--; }
+  if(!dlgOpen&&!panelOpen){ CROW.t--;
+    if(CROW.t<=0){ CROW.t=90+rnd()*150;
+      if(rnd()<.45){ CROW.caw=Date.now()+700; }                                  // ときどき「カア」
+      CROW.mdir = rnd()<.5?null:['up','down','left','right'][(rnd()*4)|0];
+      if(CROW.mdir) CROW.hopT=10; }
+    let dx=0,dy=0;
+    if(CROW.mdir){ const d={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]}[CROW.mdir];
+      if(Math.hypot(CROW.px-CROW.hx,CROW.py-CROW.hy)<TS*2.4){dx=d[0];dy=d[1];}else{CROW.mdir=null;CROW.t=40;} }
+    moveEnt(CROW,dx,dy,0.7);
+  }
   if(!dlgOpen&&!panelOpen){
     let dx=0,dy=0;
     if(keys['arrowup']||keys['w']||keys['_up'])dy=-1;
@@ -2601,6 +2623,24 @@ function drawHeron(){
     ctx.globalAlpha=1;
   }
 }
+function drawCrow(){
+  const sx=Math.round(CROW.px-cam.x), sy=Math.round(CROW.py-cam.y);
+  const R=CROW.dir!=='left', hop=CROW.hopT>0?-1:0, cawing=Date.now()<CROW.caw;
+  const BLK='#1a1a20', SHN='#3a3f56', GLD='#5a6480';   // 濡れ羽色＋青黒い照り
+  px(sx+4,sy+15,8,2,'rgba(0,0,0,.26)');                 // 影
+  px(R?sx+6:sx+7,sy+12+hop,1,3,'#3a3436'); px(R?sx+8:sx+9,sy+12+hop,1,3,'#3a3436');  // 脚
+  // 尾（後ろへ長め）
+  px(R?sx+1:sx+11,sy+7+hop,5,3,BLK); px(R?sx+1:sx+13,sy+8+hop,3,1,SHN);
+  // 胴
+  px(sx+4,sy+6+hop,8,6,BLK); px(sx+5,sy+6+hop,6,1,SHN); px(sx+6,sy+7+hop,4,1,GLD);   // 背の青黒い照り
+  // 頭
+  const hx=R?sx+8:sx+4;
+  px(hx,sy+3+hop,5,5,BLK); px(hx+1,sy+3+hop,3,1,SHN);
+  px(R?hx+2:hx+1,sy+5+hop,1,1,'#c9b64a');               // 金の目
+  // くちばし（鳴くと開く）
+  if(cawing){ px(R?hx+5:hx-3,sy+3+hop,4,1,'#2a2226'); px(R?hx+5:hx-3,sy+6+hop,4,1,'#2a2226'); px(R?hx+8:hx-3,sy+4+hop,1,2,'#2a2226'); }
+  else { px(R?hx+5:hx-2,sy+4+hop,3,2,'#2a2226'); }
+}
 /* モグラ塚（いつも見える土の盛り上がり）＋ 顔を出すモグラ */
 function drawMoleSpot(ms,active){
   const sx=Math.round(ms.c*TS-cam.x), sy=Math.round(ms.r*TS-cam.y), t=Date.now();
@@ -2892,6 +2932,7 @@ function render(){
   if(!HERON.gone) ents.push({y:HERON.py+TS,fn:drawHeron});
   ents.push({y:BEAR.py+2*TS,fn:drawBear});
   ents.push({y:CUB.py+TS,fn:drawCub});
+  ents.push({y:CROW.py+TS,fn:drawCrow});
   if(!PHEASANTS.gone){ const L=PHEASANTS.lead, al=PHEASANTS.fleeing?Math.max(0,1-PHEASANTS.fleeT/90):1;
     ents.push({y:L.py+TS,fn:()=>{ if(al<1)ctx.globalAlpha=al; drawPheasant(L.px-cam.x,L.py-cam.y,L.dir,L.frame,L.moving,'male'); ctx.globalAlpha=1; }});
     PHEASANTS.followers.forEach(f=>ents.push({y:f.py+TS,fn:()=>{ if(al<1)ctx.globalAlpha=al; drawPheasant(f.px-cam.x,f.py-cam.y,f.dir,f.frame,f.moving,f.kind); ctx.globalAlpha=1; }})); }
@@ -3134,7 +3175,8 @@ let _autostart=false;
   const SPN={larry:[48,34,'up'], momo:[11,34,'up'], gallery:[56,9,'up'], bear:[4,18,'up'], mizu:[54,26,'right'], firefly:[8,22,'left'], hotaru:[8,22,'left'],
     berry:[54,8,'up'], ichigo:[54,8,'up'], noichigo:[54,8,'up'],
     speaker:[56,8,'up'], oto:[56,8,'up'], sanroku:[56,8,'up'], forestspk:[56,8,'up'],
-    poet:[10,42,'up'], shijin:[10,42,'up'], uta:[10,42,'up']};   // 夜の詩人の目の前（砂漠のスポットライト）
+    poet:[10,42,'up'], shijin:[10,42,'up'], uta:[10,42,'up'],   // 夜の詩人の目の前（砂漠のスポットライト）
+    crow:[26,21,'up'], karasu:[26,21,'up']};                    // 烏の杭の前（田んぼのそば）
   const s=q.get('to')||q.get('spawn'); if(!s)return;
   if(s==='bar'||s==='izakaya'||s==='master'){   // 夜だけ開く移動式バー：今夜の停車地の前に出す
     try{ timeMode='night'; _lastBarMode='night'; }catch(e){}   // 初回フレームで停車地が動かないよう固定
