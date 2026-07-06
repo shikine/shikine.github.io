@@ -1591,8 +1591,8 @@ function openAppsPanel(){
   h+='</div>';
   openPanel('🔧 工房 — Apps',h);
 }
-/* ── 詩と挿絵（本間菫子『shinonoto』からの抜粋。題はなく、日付で辿る。縦書き＋細かいドット絵） ── */
-const POEM_META={ author:'本間菫子', source:'shinonoto', link:'https://www.instagram.com/h_sumireko/' };
+/* ── 詩と挿絵（本間菫子『shinooto』からの抜粋。題はなく、日付で辿る。縦書き＋細かいドット絵） ── */
+const POEM_META={ author:'本間菫子', source:'shinooto', link:'https://www.instagram.com/h_sumireko/' };
 const POEMS={
   '2020-10':{ date:'2020.10', img:'poems/2020-10-sandwich.png',
     lines:['サンドウィッチでしかない','むねとのどとおなかがぺちゃんこにつぶされている',
@@ -1615,7 +1615,7 @@ function openPoemPanel(id){
       +'<button onclick="openPoemPanel(\''+prev+'\')">‹ 前の詩</button>'
       +'<span>'+(i+1)+' / '+N+'</span>'
       +'<button onclick="openPoemPanel(\''+next+'\')">次の詩 ›</button></div>' : '';
-  openPanel('📖 本間菫子『shinonoto』より',
+  openPanel('📖 本間菫子『shinooto』より',
     '<style>'
     +'.poem-card{background:#efeae0;color:#241f1c;border:1px solid #cabfa8;box-shadow:0 6px 24px rgba(0,0,0,.45);'
     +'padding:20px 22px;border-radius:2px;max-width:760px;margin:0 auto}'
