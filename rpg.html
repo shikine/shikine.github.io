@@ -49,6 +49,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .tag{background:rgba(20,18,15,.82);border:2px solid var(--gold);
     padding:7px 12px;font-size:13px;letter-spacing:.05em;line-height:1.5}
   .tag b{color:var(--gold)}
+  #warn{border-color:#e8913a;background:rgba(58,30,14,.9);align-items:center;gap:5px;
+    animation:warnpulse 1.6s ease-in-out infinite}
+  #warn b{color:#ffb45a}
+  @keyframes warnpulse{50%{border-color:#ffcf7a}}
   .hint{font-size:11px;color:#d8d2c4;opacity:.9}
 
   #dlg{position:fixed;left:50%;bottom:18px;transform:translateX(-50%) translateY(150%);
@@ -222,6 +226,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div id="hud">
   <div class="tag" id="loc">📍 <b>あわい村</b></div>
   <div class="tag" id="weather">🌤 <b>天気…</b></div>
+  <div class="tag" id="warn" role="status" aria-live="polite" style="display:none"></div>
   <div class="tag" id="crops">🍓 <b>×0</b>&ensp;🍇 <b>×0</b>&ensp;🥬 <b>×0</b></div>
   <div class="tag" id="treas">💎 <b>0/8</b></div>
 </div>

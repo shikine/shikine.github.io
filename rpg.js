@@ -701,7 +701,7 @@ function openMapPanel(){
     +'<div class="mpad"><div class="mwrap"><canvas id="mapcv" width="'+w+'" height="'+h+'"></canvas>'+lab+'</div></div>'
     +'<div style="margin-top:8px;font-size:12px;line-height:1.7;color:#b7ad97">'
     +'🔴 いまの現在地。季節や天候で畑や森の様子も移ろう。歩きまわって村を探そう。（スマホは地図を横にスクロール）</div>'
-    +leg);
+    +leg + quakeMapHtml());
   const mc=document.getElementById('mapcv'); if(!mc)return;
   const mx=mc.getContext('2d');
   mx.fillStyle='#3a5a3a'; mx.fillRect(0,0,w,h);
@@ -793,7 +793,7 @@ function openCrossPanel(){
     +'<div style="margin-top:8px;font-size:12px;line-height:1.7;color:#b7ad97">'
     +'🔴 いまの現在地を通る、北（八ヶ岳）→南の断面。八ヶ岳の噴火が積もり、川が削って段丘をつくった。'
     +'深部には<b>マグマだまり</b>が八ヶ岳を支える。高さは強調表示——平らに見えて、<b>意外と起伏のある土地</b>です。</div>'
-    +leg);
+    +leg + quakeMapHtml());
   const cv2=document.getElementById('xcv'); if(!cv2)return;
   const g=cv2.getContext('2d');
   const sky=g.createLinearGradient(0,0,0,H); sky.addColorStop(0,'#1b2a3a'); sky.addColorStop(0.5,'#2a3a4a'); sky.addColorStop(1,'#0e1410');
@@ -1032,32 +1032,125 @@ async function fetchWeather(){
   }catch(e){ WEATHER.icon='🌤'; WEATHER.label='天気を取得できず'; }
   updateWeatherHud();
 }
+/* ══ 長野県富士見町の気象警報・注意報（気象庁 JSON・CORS可）→ 環境を強める ══ */
+const JMA_WARN_NAMES={'02':'暴風雪警報','03':'大雨警報','04':'洪水警報','05':'暴風警報','06':'大雪警報','07':'波浪警報','08':'高潮警報',
+  '10':'大雨注意報','12':'大雪注意報','13':'風雪注意報','14':'雷注意報','15':'強風注意報','16':'波浪注意報',
+  '18':'洪水注意報','19':'高潮注意報','20':'濃霧注意報','21':'乾燥注意報','22':'なだれ注意報','23':'低温注意報',
+  '24':'霜注意報','25':'着氷注意報','26':'着雪注意報','32':'暴風雪特別警報','33':'大雨特別警報','35':'暴風特別警報','36':'大雪特別警報','37':'波浪特別警報','38':'高潮特別警報'};
+const WARN={names:'',level:0,snow:0,rain:0,flood:0,thunder:0,fog:0,wind:0,storm:false,ok:false,updated:0};
+function _warnLv(c){ if(['32','33','35','36','37','38'].includes(c))return 3; if(['02','03','04','05','06','07','08'].includes(c))return 2; return 1; }
+function updateWarnHud(){ const e=document.getElementById('warn'); if(!e)return;
+  if(WARN.names){ const ic=WARN.level>=3?'🚨':WARN.level>=2?'⚠️':'⚠'; e.innerHTML=ic+' <b>'+WARN.names+'</b>'; e.style.display='flex'; }
+  else e.style.display='none'; }
+async function fetchWarnings(){
+  try{
+    const d=await (await fetch('https://www.jma.go.jp/bosai/warning/data/warning/200000.json',{cache:'no-store'})).json();
+    let entry=null; for(const a of (d.areaTypes||[]))for(const ar of (a.areas||[])) if(ar.code==='2036200') entry=ar;
+    const ws=(entry&&entry.warnings)||[]; const names=[]; let lv=0; const st={snow:0,rain:0,flood:0,thunder:0,fog:0,wind:0}; let hasWind=false,hasRain=false;
+    for(const it of ws){ const c=it.code;
+      if(it.status==='解除'||it.status==='発表警報・注意報はなし'||!JMA_WARN_NAMES[c]) continue;
+      names.push(JMA_WARN_NAMES[c]); const l=_warnLv(c); lv=Math.max(lv,l); const inten=l>=2?2:1;
+      if(['06','36','02','32','12','26','25'].includes(c)) st.snow=Math.max(st.snow,inten);
+      if(['03','33','10'].includes(c)){ st.rain=Math.max(st.rain,inten); hasRain=true; }
+      if(['04','18'].includes(c)) st.flood=Math.max(st.flood,inten);
+      if(c==='14') st.thunder=Math.max(st.thunder,inten);
+      if(c==='20') st.fog=Math.max(st.fog,inten);
+      if(['05','35','15','13','02','32'].includes(c)){ st.wind=Math.max(st.wind,inten); hasWind=true; }
+    }
+    Object.assign(WARN,st,{names:names.join('・'),level:lv,storm:(hasWind&&hasRain),ok:true,updated:Date.now()});
+  }catch(e){ WARN.ok=false; }
+  updateWarnHud();
+}
+/* Open-Meteo と警報を合成した“実効天候” */
+function effWx(){ const w=WEATHER;
+  let type=(w.cond==='snow')?'snow':(w.cond==='rain')?'rain':'none', level=(type!=='none')?1:0;
+  if(WARN.snow>0){ type='snow'; level=Math.max(level,WARN.snow+1); }
+  else if(WARN.rain>0){ type='rain'; level=Math.max(level,WARN.rain+1); }
+  const wind=(w.windy?1:0)+WARN.wind;
+  const fog=(w.cond==='fog'?(w.label==='濃い霧'?2:1):0)+WARN.fog;
+  return { type, level:Math.min(3,level), wind:Math.min(3,wind), fog:Math.min(3,fog), thunder:WARN.thunder, flood:WARN.flood, storm:WARN.storm }; }
+/* ── 雷（雷注意報・警報のとき、閃光＋稲妻） ── */
+let _lgNext=0,_lgUntil=0,_bolt=null;
+function _makeBolt(){ const x0=40+Math.random()*(cv.width-80); const seg=[[x0,0]]; let x=x0,y=0;
+  while(y<cv.height*0.62){ y+=14+Math.random()*22; x+=(Math.random()-0.5)*40; seg.push([x,y]); } return seg; }
+function updateLightning(){ if(effWx().thunder<=0)return; const now=Date.now();
+  if(now>_lgNext){ const th=effWx().thunder; _lgNext=now+(th>=2?5000:11000)+Math.random()*9000; _lgUntil=now+240; _bolt=_makeBolt(); } }
+function drawLightning(){ if(effWx().thunder<=0)return; const now=Date.now(); if(now>=_lgUntil)return;
+  const k=now-(_lgUntil-240), a=(k<70||(k>110&&k<170))?0.55:0.16;
+  ctx.fillStyle='rgba(226,232,255,'+a+')'; ctx.fillRect(0,0,cv.width,cv.height);
+  if(_bolt&&k<170){ ctx.save(); ctx.strokeStyle='rgba(200,214,255,.5)'; ctx.lineWidth=5; ctx.beginPath();
+    _bolt.forEach((p,i)=> i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,.92)'; ctx.lineWidth=2; ctx.stroke(); ctx.restore(); } }
+/* ── 洪水（洪水警報・注意報のとき、画面下から増水の気配） ── */
+function drawFlood(){ const e=effWx(); if(e.flood<=0)return; const t=Date.now(); const h=cv.height*(0.10+0.05*e.flood);
+  const g=ctx.createLinearGradient(0,cv.height-h,0,cv.height);
+  g.addColorStop(0,'rgba(40,70,110,0)'); g.addColorStop(1,'rgba(40,70,110,'+(0.16+0.06*e.flood)+')');
+  ctx.fillStyle=g; ctx.fillRect(0,cv.height-h,cv.width,h);
+  ctx.strokeStyle='rgba(150,190,220,.35)'; ctx.lineWidth=1;
+  for(let i=0;i<3;i++){ const yy=cv.height-h+h*0.32*i+Math.sin(t/500+i)*2;
+    ctx.beginPath(); ctx.moveTo(0,yy); ctx.lineTo(cv.width,yy+Math.sin(t/700)*2); ctx.stroke(); } }
+/* ══ 地震（気象庁）→ 地図に表示＋長野で有感なら画面が揺れる ══ */
+const QUAKE={list:[],latest:null,felt:null,seen:null,shakeUntil:0,shakeMag:0,ok:false,updated:0};
+function _cod(s){ const m=(s||'').match(/([+-]\d+(?:\.\d+)?)([+-]\d+(?:\.\d+)?)/); return m?[parseFloat(m[1]),parseFloat(m[2])]:[null,null]; }
+function intLabel(v){ return ({'1':'1','2':'2','3':'3','4':'4','5-':'5弱','5+':'5強','6-':'6弱','6+':'6強','7':'7'})[v]||v; }
+async function fetchQuakes(){
+  try{
+    const arr=await (await fetch('https://www.jma.go.jp/bosai/quake/data/list.json',{cache:'no-store'})).json();
+    const now=Date.now(), seen={}, out=[];
+    for(const it of arr){ if(!it.at||!it.cod)continue; const t=Date.parse(it.at); if(isNaN(t)||now-t>3*86400e3)continue;
+      if(it.eid&&seen[it.eid])continue; if(it.eid)seen[it.eid]=1;
+      const nag=(it.int||[]).find(r=>r.code==='20'); const [la,lo]=_cod(it.cod);
+      out.push({t,at:it.at,anm:it.anm||'—',mag:it.mag||null,maxi:it.maxi||null,nagi:nag?nag.maxi:null,la,lo,eid:it.eid}); }
+    out.sort((a,b)=>b.t-a.t);
+    QUAKE.list=out; QUAKE.latest=out[0]||null; QUAKE.felt=out.find(q=>q.nagi!=null)||null; QUAKE.ok=true; QUAKE.updated=Date.now();
+    if(QUAKE.felt){ if(QUAKE.seen!==null && QUAKE.felt.eid!==QUAKE.seen){
+        const iv=QUAKE.felt.nagi, mag=({'1':2,'2':3,'3':4,'4':5,'5-':6,'5+':6,'6-':6})[iv]||3;
+        QUAKE.shakeMag=mag; QUAKE.shakeUntil=Date.now()+(2000+mag*300);
+        showToast('🔴 地震 '+QUAKE.felt.anm+'　M'+QUAKE.felt.mag+'／富士見あたり震度'+intLabel(iv)); }
+      QUAKE.seen=QUAKE.felt.eid; }
+  }catch(e){ QUAKE.ok=false; }
+}
+function quakeMapHtml(){
+  if(!QUAKE.list||!QUAKE.list.length) return '';
+  const rows=QUAKE.list.slice(0,4).map(q=>{ const d=new Date(q.t);
+    const md=(d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+    const felt=q.nagi!=null?'　<b style="color:#e0603a">長野 震度'+intLabel(q.nagi)+'</b>':'';
+    return '<div>'+md+'　'+q.anm+'　M'+(q.mag||'—')+felt+'</div>'; }).join('');
+  return '<div style="margin-top:10px;font-size:11.5px;line-height:1.85;color:#c9c0aa;border-top:1px solid #4a4030;padding-top:8px">'
+    +'🔴 <b>最近の地震（3日以内・気象庁）</b>'+(QUAKE.felt?'　※長野で有感あり':'')
+    +'<div style="color:#b7ad97;margin-top:4px">'+rows+'</div></div>';
+}
 let WX=[];   // 雨・雪・強風の粒子（見やすさ優先で“ほんの少し”だけ）
 function updateWeather(){
-  const w=WEATHER, push=(w.windy?2.0:0.5)*(w.wind>=12?1.3:1);
-  // 降りものは限りなく最小限に
-  const cap = w.cond==='rain'?10 : w.cond==='snow'?9 : (w.windy?6:0);
-  while(WX.length<cap && Math.random()<0.18){
+  const e=effWx();
+  // 警報が強いほど降りものを増やす（通常は“ほんの少し”のまま）
+  const base = e.type==='rain'?10 : e.type==='snow'?9 : (e.wind>0?6:0);
+  const cap = Math.round(base*(1+Math.max(0,e.level-1)*0.9) + e.wind*3);
+  const push=(e.wind>0?2.0:0.5)*(1+e.wind*0.4)*(WEATHER.wind>=12?1.3:1);
+  const spawnP=0.18 + Math.max(0,e.level-1)*0.14 + e.wind*0.06;
+  while(WX.length<cap && Math.random()<spawnP){
     WX.push({ x:Math.random()*(cv.width+60)-30, y:-8-Math.random()*30, ph:Math.random()*6.28,
-      vy: w.cond==='rain'?(6+Math.random()*3) : w.cond==='snow'?(0.8+Math.random()*0.8) : (0.4+Math.random()*0.6),
-      vx: push*(0.6+Math.random()*0.8) + (w.cond==='rain'?1.0:0),
-      len: w.cond==='rain'?(4+Math.random()*3):0 });
+      vy: e.type==='rain'?(6+Math.random()*3+e.level*1.2) : e.type==='snow'?(0.8+Math.random()*0.8) : (0.4+Math.random()*0.6),
+      vx: push*(0.6+Math.random()*0.8) + (e.type==='rain'?1.0:0),
+      len: e.type==='rain'?(4+Math.random()*3+e.level):0, big:(e.type==='snow'&&e.level>=3) });
   }
   for(let i=WX.length-1;i>=0;i--){ const p=WX[i];
-    p.ph+=0.05; p.y+=p.vy; p.x+=p.vx + (w.cond==='snow'?Math.sin(p.ph)*0.6:0);
+    p.ph+=0.05; p.y+=p.vy; p.x+=p.vx + (e.type==='snow'?Math.sin(p.ph)*0.6:0);
     if(p.y>cv.height+12||p.x>cv.width+34||p.x<-34) WX.splice(i,1); }
   if(WX.length>cap) WX.length=cap;
 }
-// 天気は主に淡い空の色で示す（視界をさえぎらない）
-const WTINT={sunny:null, cloudy:'rgba(150,156,168,0.12)', rain:'rgba(78,92,116,0.16)', snow:'rgba(210,222,240,0.10)'};
 function drawWeather(){
-  const w=WEATHER, c=WTINT[w.cond];
-  if(c){ ctx.fillStyle=c; ctx.fillRect(0,0,cv.width,cv.height); }
+  const e=effWx();
+  let tint = e.type==='rain'?'rgba(78,92,116,'+(0.16+e.level*0.05).toFixed(2)+')'
+           : e.type==='snow'?'rgba(210,222,240,'+(0.10+e.level*0.05).toFixed(2)+')'
+           : (WEATHER.cond==='cloudy'?'rgba(150,156,168,0.12)':null);
+  if(e.storm) tint='rgba(40,46,64,0.24)';                    // 嵐（暴風＋大雨＝台風級）は暗く
+  if(tint){ ctx.fillStyle=tint; ctx.fillRect(0,0,cv.width,cv.height); }
   for(const p of WX){
-    if(w.cond==='rain'){ ctx.strokeStyle='rgba(180,200,228,0.30)'; ctx.lineWidth=1;
+    if(e.type==='rain'){ ctx.strokeStyle='rgba(180,200,228,'+(0.30+e.level*0.06).toFixed(2)+')'; ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x-p.vx*0.7, p.y-p.len); ctx.stroke(); }
-    else if(w.cond==='snow'){ ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.fillRect(p.x|0,p.y|0,1,1); }
-    else { ctx.strokeStyle='rgba(228,226,210,0.22)'; ctx.lineWidth=1;   // 強風の舞い（晴・曇でも）
+    else if(e.type==='snow'){ ctx.fillStyle='rgba(255,255,255,0.8)'; const s=p.big?2:1; ctx.fillRect(p.x|0,p.y|0,s,s); }
+    else { ctx.strokeStyle='rgba(228,226,210,0.22)'; ctx.lineWidth=1;   // 強風の舞い
       ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x-7,p.y-1); ctx.stroke(); }
   }
 }
@@ -1083,11 +1176,11 @@ function drawRainbow(){
 // 濃い霧（霧・濃い霧）：白い靄がゆっくり流れ、視界がぼやける。出はじめ・晴れ間に淡くなる
 let fogA=0;
 function drawFog(){
-  const isFog=(WEATHER.cond==='fog');
-  const target=isFog?1:0;
+  const e=effWx();
+  const target=e.fog>0?1:0;
   fogA += (target-fogA)*0.02;                          // ゆっくり立ちこめ・晴れる
   if(fogA<0.01) return;
-  const dense=(WEATHER.label==='濃い霧')?1.35:1;        // rime fog はより濃く
+  const dense=(e.fog>=3?1.7:e.fog>=2?1.35:1);           // 濃霧注意報・濃い霧はより濃く
   const t=Date.now();
   ctx.save();
   ctx.fillStyle='rgba(214,220,226,'+(0.22*dense*fogA)+')';  // 全面のうっすらした靄
@@ -1802,6 +1895,7 @@ function moveEnt(ent,dx,dy,spd){
 }
 function update(){
   updateWeather();   // 富士見の天候（雨・雪・強風の舞い）
+  updateLightning(); // 雷の閃光タイミング（警報連動）
   // strawberry regrow
   const now=Date.now();
   for(let i=PICKED.length-1;i>=0;i--) if(now>=PICKED[i].at){ const p=PICKED[i];
@@ -2747,6 +2841,10 @@ function drawPheasant(x,y,dir,frame,moving,kind){
 }
 function render(){
   refreshSeasonPal();   // 現在の季節の植物パレットを反映
+  let _qsx=0,_qsy=0;    // 地震のゆれ（長野で有感のときだけ）
+  if(Date.now()<QUAKE.shakeUntil){ const dk=Math.min(6,QUAKE.shakeMag)*Math.min(1,(QUAKE.shakeUntil-Date.now())/1500+0.15);
+    _qsx=Math.round((Math.random()-0.5)*2*dk); _qsy=Math.round((Math.random()-0.5)*2*dk); }
+  ctx.save(); ctx.translate(_qsx,_qsy);
   const c0=(cam.x/TS)|0, r0=(cam.y/TS)|0, ox=cam.x%TS, oy=cam.y%TS;
   for(let r=0;r<=VH;r++)for(let c=0;c<=VW;c++){
     const mc=c0+c, mr=r0+r; if(mr<0||mr>=MH||mc<0||mc>=MW)continue;
@@ -2820,10 +2918,13 @@ function render(){
   drawFireflies(); // 川辺のホタル（6月限定）
   drawWeather();   // 富士見のリアルタイム天候（晴・曇・雨・雪・霧・強風）
   drawFog();       // 濃い霧（白い靄が立ちこめる）
+  drawFlood();     // 洪水（洪水警報・注意報：増水の気配）
+  drawLightning(); // 雷（雷注意報・警報：閃光と稲妻）
   // fireworks on top
   for(const p of FW){ ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.col;
     ctx.fillRect(p.x|0,p.y|0,2,2); }
   ctx.globalAlpha=1;
+  ctx.restore();   // 地震のゆれを戻す
 }
 let running=false;
 function loop(){ if(!running)return; update();render();requestAnimationFrame(loop); }
@@ -3059,4 +3160,6 @@ addEventListener('orientationchange', setupViewport);
 setupViewport();
 updateTimeBtn(); updateSeasonBtn(); updateTreasHud(); updateCropHud(); update();render(); // draw a frame behind title
 fetchWeather(); setInterval(fetchWeather, 15*60*1000);   // 富士見の天候を取得し15分ごとに更新
+fetchWarnings(); setInterval(fetchWarnings, 5*60*1000);  // 富士見町の気象警報・注意報を5分ごとに更新
+fetchQuakes();   setInterval(fetchQuakes,  2*60*1000);   // 気象庁の地震情報を2分ごとに更新
 if(_autostart) startGame();
