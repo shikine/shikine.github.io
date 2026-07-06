@@ -1494,20 +1494,31 @@ function openAppsPanel(){
   h+='</div>';
   openPanel('🔧 工房 — Apps',h);
 }
-/* ── 詩と挿絵（本の見開きを再現：クリームの紙面に、縦書きの詩＋細かいドット絵） ── */
+/* ── 詩と挿絵（本間菫子『shinonoto』からの抜粋。題はなく、日付で辿る。縦書き＋細かいドット絵） ── */
+const POEM_META={ author:'本間菫子', source:'shinonoto', link:'https://www.instagram.com/h_sumireko/' };
 const POEMS={
-  '2020-10':{ date:'2020.10', title:'サンドウィッチ',
-    author:'本間菫子', source:'shinonoto', link:'https://www.instagram.com/h_sumireko/',
-    img:'poems/2020-10-sandwich.png',
+  '2020-10':{ date:'2020.10', img:'poems/2020-10-sandwich.png',
     lines:['サンドウィッチでしかない','むねとのどとおなかがぺちゃんこにつぶされている',
       '横になり目を閉じて泣くと目から花が咲く','花が咲いてしおれることに意味はない',
       '翼が一枚落ちているということは','そこに鳥がいたということ',
       '肉がここにあるということは','ここに動物がいたということ'] },
+  '2021-03':{ date:'2021.3', img:'poems/2021-03.png',
+    lines:['一秒毎に変わっていく','少し前の私も私とは思えない',
+      'この写真に写る人は誰ですか','これを買ったのは本当に私ですか',
+      '消えていった人達はどこにいく','毎秒　窒息　つみかさねられて',
+      '停車しない駅に置いてけぼり'] },
 };
+const POEM_ORDER=['2020-10','2021-03'];
 function openPoemPanel(id){
   const p=POEMS[id]; if(!p) return;
   const body=p.lines.map(l=>'<p>'+l+'</p>').join('');
-  openPanel('📖 詩「'+p.title+'」',
+  const i=POEM_ORDER.indexOf(id), N=POEM_ORDER.length;
+  const prev=POEM_ORDER[(i-1+N)%N], next=POEM_ORDER[(i+1)%N];
+  const nav = N>1 ? '<div class="poem-nav">'
+      +'<button onclick="openPoemPanel(\''+prev+'\')">‹ 前の詩</button>'
+      +'<span>'+(i+1)+' / '+N+'</span>'
+      +'<button onclick="openPoemPanel(\''+next+'\')">次の詩 ›</button></div>' : '';
+  openPanel('📖 本間菫子『shinonoto』より',
     '<style>'
     +'.poem-card{background:#efeae0;color:#241f1c;border:1px solid #cabfa8;box-shadow:0 6px 24px rgba(0,0,0,.45);'
     +'padding:20px 22px;border-radius:2px;max-width:760px;margin:0 auto}'
@@ -1523,17 +1534,23 @@ function openPoemPanel(id){
     +'.poem-body{writing-mode:vertical-rl;font-family:"Hiragino Mincho ProN","Yu Mincho","YuMincho",serif;'
     +'font-size:15px;line-height:2.2;letter-spacing:.1em;max-height:60vh;color:#2a231c}'
     +'.poem-body p{margin:0}'
+    +'.poem-nav{display:flex;align-items:center;justify-content:center;gap:14px;margin:14px auto 0;max-width:760px}'
+    +'.poem-nav button{background:rgba(231,200,120,.1);border:2px solid #4a4030;color:var(--paper);'
+    +'font-family:inherit;font-size:13px;padding:8px 16px;cursor:pointer}'
+    +'.poem-nav button:hover{background:var(--gold);color:#221d16;border-color:var(--gold)}'
+    +'.poem-nav span{font-size:12px;color:#b7ad97}'
     +'@media(max-width:600px){.poem-spread{flex-direction:column;align-items:center;gap:18px}'
     +'.poem-illus{width:min(260px,72%)}.poem-body{max-height:none;font-size:14px;line-height:2.1}}'
     +'</style>'
-    +'<div class="poem-card"><div class="poem-head">'+p.date+'</div>'
+    +'<div class="poem-card"><div class="poem-head">'+p.date+'　—　『'+POEM_META.source+'』より</div>'
     +'<div class="poem-spread">'
     +'<div class="poem-illus"><img src="'+p.img+'" alt="詩の挿絵（ドット絵）"></div>'
     +'<div class="poem-body">'+body+'</div>'
     +'</div>'
-    +'<div class="poem-credit">「'+p.title+'」（'+p.date+'）　<b>'+p.author+'</b>『'+p.source+'』より<br>'
-    +'<a href="'+p.link+'" target="_blank" rel="noopener">Instagram @h_sumireko ↗</a></div>'
-    +'</div>');
+    +'<div class="poem-credit">（'+p.date+'）　<b>'+POEM_META.author+'</b>『'+POEM_META.source+'』より　抜粋<br>'
+    +'<a href="'+POEM_META.link+'" target="_blank" rel="noopener">Instagram @h_sumireko ↗</a></div>'
+    +'</div>'
+    + nav);
 }
 function openGalleryPanel(){
   let h='<p style="font-size:13px;line-height:1.8;margin-bottom:10px">渡邊織音の3D作品（Sketchfab）。カードを選ぶと、その場で回して鑑賞できます。</p><div class="agrid">';
