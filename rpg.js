@@ -1797,7 +1797,9 @@ function interact(){
   // 烏? (神の化身であり邪魔者。話しても去らず、少し跳ねてまた迷う。時間帯で語りが移ろう)
   if(Math.abs(fx-(CROW.px+TS/2))<TS && Math.abs(fy-(CROW.py+TS/2))<TS){
     CROW.dir={up:'down',down:'up',left:'right',right:'left'}[P.dir]; CROW.caw=Date.now()+700;
-    openDialog('烏','',animalLines(CROW));
+    const crowPages=[...animalLines(CROW),
+      '烏「カア。そうだ、わたしの名を借りた便りがある。karasuletters。人の声と、森の気配のあいだを飛ぶ紙だ。」<br><a href="#" class="more" onclick="closeDlg();openNewsPanel();return false;">karasuletters に登録する →</a>'];
+    openDialog('烏','',crowPages);
     dlgConfirm=()=>{ CROW.mdir=['left','right'][(rnd()*2)|0]; CROW.hopT=12; CROW.caw=Date.now()+600; };
     return; }
   // boulder? (話しかけられる古き岩)
