@@ -112,8 +112,8 @@ const CONTENT={
      <li><a href="https://www.instagram.com/watanabeshikine/" target="_blank">Instagram</a> /
          <a href="https://twitter.com/watanabeshikine" target="_blank">X</a></li>
    </ul>`]},
- news:{who:'メルマガ',t:'📜 Newsletter',pages:[`不定期のメルマガ「karasuletters」。制作の裏側や活動のお知らせを綴っています。
-   <a class="more" href="mailto:watanabeshikine@gmail.com?subject=karasuletters%20%E8%B3%BC%E8%AA%AD%E5%B8%8C%E6%9C%9B">メールで購読希望を送る →</a>`]},
+ news:{who:'メルマガ',t:'📜 Newsletter',pages:[`不定期のメルマガ「烏_letters」。制作の裏側や活動のお知らせを綴っています。
+   <a class="more" href="mailto:watanabeshikine@gmail.com?subject=%E7%83%8F_letters%20%E8%B3%BC%E8%AA%AD%E5%B8%8C%E6%9C%9B">メールで購読希望を送る →</a>`]},
 };
 
 /* ── apps (工房) ── */

@@ -1724,13 +1724,13 @@ async function openForestSpeakerPanel(){
 function openNewsPanel(){
   openPanel('📜 メルマガ — Newsletter',
     `<form id="nlForm" class="nlform">
-       <p>不定期メルマガ「karasuletters」。制作の裏側や活動のお知らせをお届けします。<br>下のフォームから購読登録できます。</p>
+       <p>不定期メルマガ「烏_letters」。制作の裏側や活動のお知らせをお届けします。<br>下のフォームから購読登録できます。</p>
        <label>お名前<input id="nlName" type="text" autocomplete="name" required></label>
        <label>メールアドレス<input id="nlEmail" type="email" autocomplete="email" required></label>
        <button id="nlBtn" type="submit">購読する</button>
        <div id="nlError" class="nlerr" hidden></div>
      </form>
-     <div id="nlThanks" class="nlthanks" hidden>✉ 登録ありがとうございます！<br>karasuletters の配信をお待ちください。</div>`);
+     <div id="nlThanks" class="nlthanks" hidden>✉ 登録ありがとうございます！<br>烏_letters の配信をお待ちください。</div>`);
   const f=document.getElementById('nlForm');
   f.addEventListener('submit',async e=>{
     e.preventDefault();
@@ -1803,7 +1803,7 @@ function interact(){
   if(Math.abs(fx-(CROW.px+TS/2))<TS && Math.abs(fy-(CROW.py+TS/2))<TS){
     CROW.dir={up:'down',down:'up',left:'right',right:'left'}[P.dir]; CROW.caw=Date.now()+700;
     const crowPages=[...animalLines(CROW),
-      '烏「カア。そうだ、わたしの名を借りた便りがある。karasuletters。人の声と、森の気配のあいだを飛ぶ紙だ。」<br><a href="#" class="more" onclick="closeDlg();openNewsPanel();return false;">karasuletters に登録する →</a>'];
+      '烏「カア。そうだ、わたしの名を借りた便りがある。烏_letters。人の声と、森の気配のあいだを飛ぶ紙だ。」<br><a href="#" class="more" onclick="closeDlg();openNewsPanel();return false;">烏_letters に登録する →</a>'];
     openDialog('烏','',crowPages);
     dlgConfirm=()=>{ CROW.mdir=['left','right'][(rnd()*2)|0]; CROW.hopT=12; CROW.caw=Date.now()+600; };
     return; }
@@ -3179,7 +3179,7 @@ if(('ontouchstart' in window) || (window.matchMedia && window.matchMedia('(point
 /* deep-link spawn: ?to=larry など で最初からその場所に出現してゲーム開始 */
 let _autostart=false;
 (function(){ const q=new URLSearchParams(location.search);
-  const SPN={larry:[48,34,'up'], momo:[11,34,'up'], gallery:[56,9,'up'], bear:[4,18,'up'], mizu:[54,26,'right'], news:[48,29,'up'], newsletter:[48,29,'up'], merumaga:[48,29,'up'], mailmag:[48,29,'up'], karasuletters:[48,29,'up'], firefly:[8,22,'left'], hotaru:[8,22,'left'],
+  const SPN={larry:[48,34,'up'], momo:[11,34,'up'], gallery:[56,9,'up'], bear:[4,18,'up'], mizu:[54,26,'right'], news:[48,29,'up'], newsletter:[48,29,'up'], merumaga:[48,29,'up'], mailmag:[48,29,'up'], karasuletters:[48,29,'up'], '烏_letters':[48,29,'up'], firefly:[8,22,'left'], hotaru:[8,22,'left'],
     berry:[54,8,'up'], ichigo:[54,8,'up'], noichigo:[54,8,'up'],
     speaker:[56,8,'up'], oto:[56,8,'up'], sanroku:[56,8,'up'], forestspk:[56,8,'up'],
     poet:[10,42,'up'], shijin:[10,42,'up'], uta:[10,42,'up'],   // 夜の詩人の目の前（砂漠のスポットライト）
