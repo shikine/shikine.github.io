@@ -1041,11 +1041,15 @@ const JMA_WARN_PREF_CODE='200000';       // Nagano Prefecture
 const JMA_WARN_FUJIMI_CODE='2036200';    // Fujimi Town
 const JMA_WARN_SOURCE_URL='https://www.jma.go.jp/bosai/warning/#area_type=class20s&area_code=2036200&lang=ja';
 const JMA_WARN_POLL_MS=60*1000;
+const JMA_ACTIVE_WARN_STATUSES=new Set(['発表','継続','切替','警報から注意報','注意報から警報']);
 const JMA_WARN_NAMES={'02':'暴風雪警報','03':'大雨警報','04':'洪水警報','05':'暴風警報','06':'大雪警報','07':'波浪警報','08':'高潮警報',
   '10':'大雨注意報','12':'大雪注意報','13':'風雪注意報','14':'雷注意報','15':'強風注意報','16':'波浪注意報',
   '18':'洪水注意報','19':'高潮注意報','20':'濃霧注意報','21':'乾燥注意報','22':'なだれ注意報','23':'低温注意報',
   '24':'霜注意報','25':'着氷注意報','26':'着雪注意報','32':'暴風雪特別警報','33':'大雨特別警報','35':'暴風特別警報','36':'大雪特別警報','37':'波浪特別警報','38':'高潮特別警報'};
 const WARN={names:'',level:0,snow:0,rain:0,flood:0,thunder:0,fog:0,wind:0,storm:false,ok:false,updated:0};
+function clearWarnings(ok){
+  Object.assign(WARN,{names:'',level:0,snow:0,rain:0,flood:0,thunder:0,fog:0,wind:0,storm:false,ok:!!ok,updated:Date.now()});
+}
 function _warnLv(c){ if(['32','33','35','36','37','38'].includes(c))return 3; if(['02','03','04','05','06','07','08'].includes(c))return 2; return 1; }
 function updateWarnHud(){ const e=document.getElementById('warn'); if(!e)return;
   if(WARN.names){ const ic=WARN.level>=3?'🚨':WARN.level>=2?'⚠️':'⚠';
@@ -1057,9 +1061,10 @@ async function fetchWarnings(){
     const url='https://www.jma.go.jp/bosai/warning/data/warning/'+JMA_WARN_PREF_CODE+'.json?t='+Date.now();
     const d=await (await fetch(url,{cache:'no-store'})).json();
     let entry=null; for(const a of (d.areaTypes||[]))for(const ar of (a.areas||[])) if(ar.code===JMA_WARN_FUJIMI_CODE) entry=ar;
+    if(!entry){ clearWarnings(false); updateWarnHud(); return; }
     const ws=(entry&&entry.warnings)||[]; const names=[]; let lv=0; const st={snow:0,rain:0,flood:0,thunder:0,fog:0,wind:0}; let hasWind=false,hasRain=false;
     for(const it of ws){ const c=it.code;
-      if(it.status==='解除'||it.status==='発表警報・注意報はなし'||!JMA_WARN_NAMES[c]) continue;
+      if(!JMA_ACTIVE_WARN_STATUSES.has(it.status)||!JMA_WARN_NAMES[c]) continue;
       names.push(JMA_WARN_NAMES[c]); const l=_warnLv(c); lv=Math.max(lv,l); const inten=l>=2?2:1;
       if(['06','36','02','32','12','26','25'].includes(c)) st.snow=Math.max(st.snow,inten);
       if(['03','33','10'].includes(c)){ st.rain=Math.max(st.rain,inten); hasRain=true; }
@@ -1069,7 +1074,7 @@ async function fetchWarnings(){
       if(['05','35','15','13','02','32'].includes(c)){ st.wind=Math.max(st.wind,inten); hasWind=true; }
     }
     Object.assign(WARN,st,{names:names.join('・'),level:lv,storm:(hasWind&&hasRain),ok:true,updated:Date.now()});
-  }catch(e){ WARN.ok=false; }
+  }catch(e){ clearWarnings(false); }
   updateWarnHud();
 }
 /* Open-Meteo と警報を合成した“実効天候” */
