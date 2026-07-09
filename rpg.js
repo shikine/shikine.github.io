@@ -3172,7 +3172,7 @@ if(('ontouchstart' in window) || (window.matchMedia && window.matchMedia('(point
 /* deep-link spawn: ?to=larry など で最初からその場所に出現してゲーム開始 */
 let _autostart=false;
 (function(){ const q=new URLSearchParams(location.search);
-  const SPN={larry:[48,34,'up'], momo:[11,34,'up'], gallery:[56,9,'up'], bear:[4,18,'up'], mizu:[54,26,'right'], firefly:[8,22,'left'], hotaru:[8,22,'left'],
+  const SPN={larry:[48,34,'up'], momo:[11,34,'up'], gallery:[56,9,'up'], bear:[4,18,'up'], mizu:[54,26,'right'], news:[48,29,'up'], newsletter:[48,29,'up'], merumaga:[48,29,'up'], mailmag:[48,29,'up'], karasuletters:[48,29,'up'], firefly:[8,22,'left'], hotaru:[8,22,'left'],
     berry:[54,8,'up'], ichigo:[54,8,'up'], noichigo:[54,8,'up'],
     speaker:[56,8,'up'], oto:[56,8,'up'], sanroku:[56,8,'up'], forestspk:[56,8,'up'],
     poet:[10,42,'up'], shijin:[10,42,'up'], uta:[10,42,'up'],   // 夜の詩人の目の前（砂漠のスポットライト）
