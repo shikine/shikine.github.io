@@ -1037,6 +1037,9 @@ async function fetchWeather(){
   updateWeatherHud();
 }
 /* ══ 長野県富士見町の気象警報・注意報（気象庁 JSON・CORS可）→ 環境を強める ══ */
+const JMA_WARN_PREF_CODE='200000';       // Nagano Prefecture
+const JMA_WARN_FUJIMI_CODE='2036200';    // Fujimi Town
+const JMA_WARN_POLL_MS=60*1000;
 const JMA_WARN_NAMES={'02':'暴風雪警報','03':'大雨警報','04':'洪水警報','05':'暴風警報','06':'大雪警報','07':'波浪警報','08':'高潮警報',
   '10':'大雨注意報','12':'大雪注意報','13':'風雪注意報','14':'雷注意報','15':'強風注意報','16':'波浪注意報',
   '18':'洪水注意報','19':'高潮注意報','20':'濃霧注意報','21':'乾燥注意報','22':'なだれ注意報','23':'低温注意報',
@@ -1048,8 +1051,9 @@ function updateWarnHud(){ const e=document.getElementById('warn'); if(!e)return;
   else e.style.display='none'; }
 async function fetchWarnings(){
   try{
-    const d=await (await fetch('https://www.jma.go.jp/bosai/warning/data/warning/200000.json',{cache:'no-store'})).json();
-    let entry=null; for(const a of (d.areaTypes||[]))for(const ar of (a.areas||[])) if(ar.code==='2036200') entry=ar;
+    const url='https://www.jma.go.jp/bosai/warning/data/warning/'+JMA_WARN_PREF_CODE+'.json?t='+Date.now();
+    const d=await (await fetch(url,{cache:'no-store'})).json();
+    let entry=null; for(const a of (d.areaTypes||[]))for(const ar of (a.areas||[])) if(ar.code===JMA_WARN_FUJIMI_CODE) entry=ar;
     const ws=(entry&&entry.warnings)||[]; const names=[]; let lv=0; const st={snow:0,rain:0,flood:0,thunder:0,fog:0,wind:0}; let hasWind=false,hasRain=false;
     for(const it of ws){ const c=it.code;
       if(it.status==='解除'||it.status==='発表警報・注意報はなし'||!JMA_WARN_NAMES[c]) continue;
@@ -1148,6 +1152,7 @@ function drawWeather(){
   let tint = e.type==='rain'?'rgba(78,92,116,'+(0.16+e.level*0.05).toFixed(2)+')'
            : e.type==='snow'?'rgba(210,222,240,'+(0.10+e.level*0.05).toFixed(2)+')'
            : (WEATHER.cond==='cloudy'?'rgba(150,156,168,0.12)':null);
+  if(e.thunder>0 && !tint) tint='rgba(58,64,94,'+(0.10+e.thunder*0.04).toFixed(2)+')';
   if(e.storm) tint='rgba(40,46,64,0.24)';                    // 嵐（暴風＋大雨＝台風級）は暗く
   if(tint){ ctx.fillStyle=tint; ctx.fillRect(0,0,cv.width,cv.height); }
   for(const p of WX){
@@ -3204,6 +3209,9 @@ addEventListener('orientationchange', setupViewport);
 setupViewport();
 updateTimeBtn(); updateSeasonBtn(); updateTreasHud(); updateCropHud(); update();render(); // draw a frame behind title
 fetchWeather(); setInterval(fetchWeather, 15*60*1000);   // 富士見の天候を取得し15分ごとに更新
-fetchWarnings(); setInterval(fetchWarnings, 5*60*1000);  // 富士見町の気象警報・注意報を5分ごとに更新
+fetchWarnings(); setInterval(fetchWarnings, JMA_WARN_POLL_MS);  // 富士見町の気象警報・注意報をほぼリアルタイム更新
+addEventListener('focus',fetchWarnings);
+addEventListener('online',fetchWarnings);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) fetchWarnings(); });
 fetchQuakes();   setInterval(fetchQuakes,  2*60*1000);   // 気象庁の地震情報を2分ごとに更新
 if(_autostart) startGame();
