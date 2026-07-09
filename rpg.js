@@ -1039,6 +1039,7 @@ async function fetchWeather(){
 /* ══ 長野県富士見町の気象警報・注意報（気象庁 JSON・CORS可）→ 環境を強める ══ */
 const JMA_WARN_PREF_CODE='200000';       // Nagano Prefecture
 const JMA_WARN_FUJIMI_CODE='2036200';    // Fujimi Town
+const JMA_WARN_SOURCE_URL='https://www.jma.go.jp/bosai/warning/#area_type=class20s&area_code=2036200&lang=ja';
 const JMA_WARN_POLL_MS=60*1000;
 const JMA_WARN_NAMES={'02':'暴風雪警報','03':'大雨警報','04':'洪水警報','05':'暴風警報','06':'大雪警報','07':'波浪警報','08':'高潮警報',
   '10':'大雨注意報','12':'大雪注意報','13':'風雪注意報','14':'雷注意報','15':'強風注意報','16':'波浪注意報',
@@ -1047,7 +1048,9 @@ const JMA_WARN_NAMES={'02':'暴風雪警報','03':'大雨警報','04':'洪水警
 const WARN={names:'',level:0,snow:0,rain:0,flood:0,thunder:0,fog:0,wind:0,storm:false,ok:false,updated:0};
 function _warnLv(c){ if(['32','33','35','36','37','38'].includes(c))return 3; if(['02','03','04','05','06','07','08'].includes(c))return 2; return 1; }
 function updateWarnHud(){ const e=document.getElementById('warn'); if(!e)return;
-  if(WARN.names){ const ic=WARN.level>=3?'🚨':WARN.level>=2?'⚠️':'⚠'; e.innerHTML=ic+' <b>'+WARN.names+'</b>'; e.style.display='flex'; }
+  if(WARN.names){ const ic=WARN.level>=3?'🚨':WARN.level>=2?'⚠️':'⚠';
+    e.innerHTML='<a href="'+JMA_WARN_SOURCE_URL+'" target="_blank" rel="noopener" title="気象庁: 富士見町の警報・注意報">'+ic+' <b>'+WARN.names+'</b></a>';
+    e.style.display='flex'; }
   else e.style.display='none'; }
 async function fetchWarnings(){
   try{
