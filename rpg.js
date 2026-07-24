@@ -710,7 +710,7 @@ function openMapPanel(){
   const mx=mc.getContext('2d');
   mx.fillStyle='#3a5a3a'; mx.fillRect(0,0,w,h);
   for(let r=0;r<MH;r++)for(let c=0;c<MW;c++) drawMapTile(mx,M[r][c],c*sc,r*sc,sc,c,r);
-  // 家（装飾の民家・施設とも、屋根＋壁＋扉で「家」に見えるように描く）
+  // 美術館は屋根＋壁＋扉の「家」、そのほかの施設・装飾は自然の形（木・岩・切り株・茂み）で描く
   const drawMapHouse=(s)=>{
     const x=s.x*sc, y=s.y*sc, wd=s.w*sc, ht=s.h*sc, roofH=Math.max(4,Math.round(ht*0.45));
     mx.fillStyle='rgba(0,0,0,.20)'; mx.fillRect(x-1,y+ht-2,wd+2,3);                                    // 影
@@ -722,8 +722,35 @@ function openMapPanel(){
     const dw=Math.max(3,Math.round(wd*0.14)), dh=Math.max(4,Math.round(ht*0.28));
     mx.fillRect(x+Math.round(wd/2-dw/2),y+ht-dh,dw,dh);                                                 // 扉
   };
-  DECO.forEach(drawMapHouse);
-  SPOTS.forEach(drawMapHouse);
+  const drawMapNature=(s)=>{
+    const x=s.x*sc, y=s.y*sc, wd=s.w*sc, ht=s.h*sc;
+    mx.fillStyle='rgba(0,0,0,.20)'; mx.fillRect(x+1,y+ht-2,wd-2,2);                                     // 影
+    if(s.nat==='cave'||s.nat==='bigrock'){                                                              // 岩山
+      mx.fillStyle='#8b8a86'; mx.fillRect(x+1,y+Math.round(ht*0.3),wd-2,Math.round(ht*0.68));
+      mx.fillStyle='#a3a29d'; mx.fillRect(x+3,y+Math.round(ht*0.18),wd-6,Math.round(ht*0.25));
+      mx.fillStyle='#5a7d3a'; mx.fillRect(x+3,y+Math.round(ht*0.22),Math.max(3,Math.round(wd*0.2)),2);  // 苔
+      if(s.nat==='cave'){ mx.fillStyle='#241a12';                                                       // 坑口
+        const dw=Math.max(3,Math.round(wd*0.18)), dh=Math.max(4,Math.round(ht*0.3));
+        mx.fillRect(x+Math.round(wd/2-dw/2),y+ht-dh,dw,dh); }
+    } else if(s.nat==='stump'){                                                                         // 切り株
+      mx.fillStyle='#7a5a3a'; mx.fillRect(x+2,y+Math.round(ht*0.4),wd-4,Math.round(ht*0.55));
+      mx.fillStyle='#caa264'; mx.fillRect(x+2,y+Math.round(ht*0.28),wd-4,Math.round(ht*0.24));
+      mx.fillStyle='#b8905a'; mx.fillRect(x+Math.round(wd*0.25),y+Math.round(ht*0.34),Math.round(wd*0.5),2);
+    } else if(s.nat==='bush'){                                                                          // 茂み
+      mx.fillStyle='#2f6b3a'; mx.fillRect(x+1,y+Math.round(ht*0.35),wd-2,Math.round(ht*0.6));
+      mx.fillStyle='#3a7d45'; mx.fillRect(x+3,y+Math.round(ht*0.22),wd-6,Math.round(ht*0.35));
+      mx.fillStyle='#e57ba0'; mx.fillRect(x+Math.round(wd*0.3),y+Math.round(ht*0.4),2,2);               // 花
+      mx.fillRect(x+Math.round(wd*0.65),y+Math.round(ht*0.6),2,2);
+    } else {                                                                                            // 木（大樹・巣箱の木・文かけの木・木立）
+      mx.fillStyle='#6b4a2c';
+      mx.fillRect(x+Math.round(wd/2-wd*0.08),y+Math.round(ht*0.5),Math.max(2,Math.round(wd*0.16)),Math.round(ht*0.5));
+      mx.fillStyle='#2f6b3a'; mx.fillRect(x+1,y+2,wd-2,Math.round(ht*0.55));
+      mx.fillStyle='#3a7d45'; mx.fillRect(x+3,y,wd-6,Math.round(ht*0.4));
+      mx.fillStyle='#4f9a57'; mx.fillRect(x+Math.round(wd*0.3),y+1,Math.round(wd*0.3),Math.round(ht*0.18));
+    }
+  };
+  DECO.forEach(s=>s.nat?drawMapNature(s):drawMapHouse(s));
+  SPOTS.forEach(s=>s.nat?drawMapNature(s):drawMapHouse(s));
   // スマホ（横スクロール時）：現在地が画面の中央に来るよう初期位置を合わせる
   const padEl=document.querySelector('#panel .mpad');
   if(padEl && padEl.scrollWidth>padEl.clientWidth+4){
@@ -915,9 +942,22 @@ function applyTint(){ const m=curMode(); rollDusk(m); rollBar(m);
   } else { const c=TINT[m];
     if(c){ ctx.fillStyle=c; ctx.fillRect(0,0,cv.width,cv.height); } }
   if(m==='night'){
-    // 各家の窓からこぼれる灯り（夜の闇の上に暖色をにじませる）
+    // 窓からこぼれる灯り（建物）／入口のランタン（自然になじむ施設）
     for(const s of HOUSES){
       const bx=s.x*TS-cam.x, by=s.y*TS-cam.y, bw=s.w*TS;
+      if(s.nat){
+        if(!s.key) continue;                             // 装飾の岩や木立は灯らない
+        const cx=bx+bw/2, cy=by+s.h*TS-9;                // 入口の小さなランタン
+        if(cx<-30||cx>cv.width+30||cy<-30||cy>cv.height+30) continue;
+        const f=0.82+0.18*Math.sin(Date.now()/700+s.x);  // ろうそくの揺らぎ
+        const wg=ctx.createRadialGradient(cx,cy,1, cx,cy,14);
+        wg.addColorStop(0,'rgba(255,214,106,'+(0.42*f).toFixed(3)+')');
+        wg.addColorStop(0.5,'rgba(255,206,120,'+(0.16*f).toFixed(3)+')');
+        wg.addColorStop(1,'rgba(255,206,120,0)');
+        ctx.fillStyle=wg; ctx.fillRect(cx-14,cy-14,28,28);
+        px(cx-2,cy-3,3,4,'#ffe49a');                     // 灯りの芯
+        continue;
+      }
       for(const cx of [bx+8, bx+bw-8]){ const cy=by+TS+9;
         if(cx<-30||cx>cv.width+30||cy<-30||cy>cv.height+30) continue;
         const wg=ctx.createRadialGradient(cx,cy,1, cx,cy,18);
@@ -2228,6 +2268,7 @@ function drawTile(c,r,sx,sy){
     px(sx+7,sy+9,2,2,'#fff'); px(sx+7,sy+9,1,1,'#ffe'); }           // 小さな白い花
 }
 function drawBuilding(s){
+  if(s.nat){ drawNature(s); return; }               // 自然になじむ施設（美術館以外）
   const x=s.x*TS-cam.x, y=s.y*TS-cam.y, w=s.w*TS, h=s.h*TS;
   px(x-3,y+h-2,w+6,4,'rgba(0,0,0,.25)');           // ground shadow
   px(x,y+TS,w,h-TS,s.wall);                          // wall
@@ -2250,6 +2291,115 @@ function drawBuilding(s){
   const dx=x+w/2-7; px(dx,y+h-15,14,15,'#5a3d28'); px(dx+2,y+h-13,10,13,'#3a2718');
   px(dx+9,y+h-8,1,2,'#e7c878');
   // sign
+  if(s.icon){ ctx.font='13px serif'; ctx.fillText(s.icon,x+w/2,y+TS-3); }
+  if(s.label){ ctx.font='9px monospace'; px(x+w/2-18,y+h+2,36,11,'rgba(20,18,15,.8)');
+    ctx.fillStyle='#fff'; ctx.fillText(s.label,x+w/2,y+h+11); }
+}
+/* ── 自然になじむ施設・造形（美術館以外は建物ではなく、木や岩に棲む）──
+   葉と苔の色は季節パレット VEG に連動し、冬は雪が積もる */
+function drawNature(s){
+  const x=s.x*TS-cam.x, y=s.y*TS-cam.y, w=s.w*TS, h=s.h*TS, V=VEG, t=Date.now();
+  px(x+2,y+h-3,w-4,4,'rgba(0,0,0,.22)');                                  // ground shadow
+  if(s.nat==='tree'){            // 大樹のアトリエ（幹に扉と丸窓を持つ住まい）
+    px(x+w/2-7,y+16,14,h-16,'#6b4a2c'); px(x+w/2-7,y+16,2,h-16,'#7d5836');  // 幹
+    px(x+w/2+5,y+16,2,h-16,'#573a20');
+    px(x+w/2-11,y+h-5,4,5,'#6b4a2c'); px(x+w/2+7,y+h-5,4,5,'#6b4a2c');      // 張り出す根
+    px(x+10,y+14,w/2-14,3,'#6b4a2c'); px(x+w/2+4,y+12,w/2-14,3,'#6b4a2c');  // 枝
+    px(x+4,y+4,w-8,14,V.tree[0]); px(x,y+8,w,8,V.tree[0]);                  // 葉（季節の色）
+    px(x+10,y-3,w-20,9,V.tree[0]);
+    px(x+8,y,w-16,14,V.tree[1]); px(x+14,y-1,w-28,8,V.tree[2]);
+    px(x+8,y+10,7,5,V.dark); px(x+w-16,y+5,6,4,V.dark);
+    if(V.snow){ px(x+12,y-3,w-24,3,'#eef2f8'); px(x+6,y+4,8,2,'#e6ecf4'); px(x+w-14,y+2,7,2,'#f2f6fb'); }
+    px(x+w/2-3,y+21,6,6,'#57402a');                                         // 幹の丸窓（夜は灯る）
+    px(x+w/2-2,y+22,4,4, isNight()?'#ffd86a':'#2a1c10');
+    const dx=x+w/2-6; px(dx,y+h-13,12,13,'#5a3d28'); px(dx+2,y+h-11,8,11,'#3a2718'); // 幹の扉
+    px(dx+8,y+h-7,1,2,'#e7c878');
+  }
+  else if(s.nat==='cave'){       // 岩屋の工房（苔むす岩山をくりぬいた仕事場）
+    px(x+4,y+10,w-8,h-13,'#83827e'); px(x+8,y+4,w-16,12,'#8b8a86');
+    px(x+16,y,w-32,8,'#97968f');
+    px(x+16,y,w-32,3,'#b0afaa'); px(x+8,y+4,10,2,'#a3a29d');                // 岩の頂の光
+    px(x+6,y+h-8,w-12,5,'#6e6d69');                                         // 足元の陰
+    px(x+12,y+16,2,10,'#6e6d69'); px(x+w-18,y+9,2,8,'#6e6d69');             // 割れ目
+    px(x+10,y+2,9,3,V.bush[0]); px(x+w-24,y+6,10,3,V.bush[0]);              // 苔
+    px(x+6,y+12,4,2,'#5a7d3a');
+    if(V.snow){ px(x+14,y,w-28,2,'#eef2f8'); px(x+8,y+4,12,2,'#e6ecf4'); }
+    px(x+w/2-10,y+h-18,20,3,'#5a4028');                                     // 坑口（角材の枠）
+    px(x+w/2-10,y+h-15,3,15,'#4a3422'); px(x+w/2+7,y+h-15,3,15,'#4a3422');
+    px(x+w/2-7,y+h-15,14,15,'#241a12'); px(x+w/2-5,y+h-13,10,13,'#15100a');
+    px(x+w/2-4,y+h-6,3,3,'#b5713a');                                        // 奥に銅の道具の照り
+    px(x+w-16,y-4,4,6,'#6e6d69'); px(x+w-16,y-4,4,1,'#8b8a86');             // 石の煙突
+    const pf=((t/600)|0)%3;                                                 // ものづくりの煙
+    px(x+w-15,y-8-pf,2,2,'rgba(230,230,225,.5)'); px(x+w-13,y-12-((pf+1)%3),2,2,'rgba(230,230,225,.32)');
+  }
+  else if(s.nat==='posttree'){   // 巣箱の郵便の木（幹に巣箱、根元に赤いポスト）
+    px(x+w/2-5,y+12,10,h-12,'#6b4a2c'); px(x+w/2-5,y+12,2,h-12,'#7d5836');  // 幹
+    px(x+6,y+2,w-12,12,V.tree[0]); px(x+2,y+6,w-4,7,V.tree[0]);             // 葉
+    px(x+10,y,w-20,10,V.tree[1]); px(x+16,y+1,10,4,V.tree[2]);
+    px(x+10,y+8,6,4,V.dark);
+    if(V.snow){ px(x+12,y,w-24,2,'#eef2f8'); }
+    const bh=(bx,by,rc)=>{ px(bx,by-2,7,2,rc); px(bx+1,by,5,6,'#caa46a');   // 巣箱（屋根の色ちがい）
+      px(bx+1,by,5,1,'#b8905a'); px(bx+3,by+2,2,2,'#241a12'); };
+    bh(x+8,y+18,'#b0503e'); bh(x+w-15,y+22,'#5a7a8a'); bh(x+w/2-3,y+26,'#7a8a4c');
+    const hop=((t/900)|0)%2?0:1;                                            // 小鳥がぴょこ
+    px(x+10,y+13-hop,3,2,'#f2ecda'); px(x+13,y+12-hop,1,1,'#e8913a');
+    px(x+w/2+9,y+h-14,10,14,'#c04a3a'); px(x+w/2+9,y+h-14,10,2,'#d86a52');  // 赤いポスト
+    px(x+w/2+11,y+h-10,6,2,'#241a12'); px(x+w/2+9,y+h-3,10,3,'#8a2f24');
+  }
+  else if(s.nat==='lettertree'){ // 文かけの木（枝に結ばれた手紙が風にそよぐ）
+    px(x+w/2-5,y+14,10,h-14,'#6b4a2c'); px(x+w/2-5,y+14,2,h-14,'#7d5836');  // 幹
+    px(x+8,y+16,w/2-12,2,'#6b4a2c'); px(x+w/2+3,y+13,w/2-12,2,'#6b4a2c');   // 文をかける枝
+    px(x+4,y+2,w-8,12,V.tree[0]); px(x,y+6,w,7,V.tree[0]);                  // 葉
+    px(x+8,y,w-16,10,V.tree[1]); px(x+14,y+1,12,4,V.tree[2]);
+    px(x+w-18,y+8,6,4,V.dark);
+    if(V.snow){ px(x+10,y,w-20,2,'#eef2f8'); }
+    for(let i=0;i<5;i++){                                                   // 結ばれた文（ふみ）
+      const lx=x+8+i*11, ly=y+18+((i*5)%7);
+      const sway=Math.round(Math.sin(t/420+i*1.7));
+      px(lx+2,ly-3,1,3,'#caa46a');                                          // 紐
+      px(lx+sway,ly,5,7,'#f4f2ed'); px(lx+sway,ly,5,1,'#dcd6c6');
+      px(lx+sway+1,ly+2,3,1,'#b7ad97'); px(lx+sway+1,ly+4,3,1,'#b7ad97');   // 文字の気配
+    }
+  }
+  else if(s.nat==='bigrock'){    // 苔むした大岩（装飾）
+    px(x+2,y+14,w-14,h-17,'#83827e'); px(x+5,y+8,w-20,12,'#8b8a86');
+    px(x+7,y+8,w-26,3,'#b0afaa'); px(x+4,y+h-8,w-18,5,'#6e6d69');
+    px(x+w-13,y+22,11,h-25,'#8b8a86'); px(x+w-12,y+20,8,4,'#a3a29d');       // 寄り添う小岩
+    px(x+10,y+18,2,12,'#6e6d69');
+    px(x+6,y+8,8,3,V.bush[0]); px(x+16,y+13,6,2,'#5a7d3a');                 // 苔
+    px(x+w-11,y+20,5,2,V.bush[0]);
+    if(V.snow){ px(x+6,y+8,10,2,'#eef2f8'); px(x+w-12,y+20,8,2,'#e6ecf4'); }
+  }
+  else if(s.nat==='stump'){      // 古木の大きな切り株（若芽が伸びる）
+    px(x+8,y+22,32,h-26,'#7a5a3a'); px(x+8,y+22,3,h-26,'#8a6a44');          // 樹皮
+    px(x+37,y+22,3,h-26,'#5f4429');
+    px(x+13,y+26,2,h-30,'#5f4429'); px(x+24,y+28,2,h-32,'#5f4429'); px(x+32,y+26,2,h-30,'#5f4429');
+    px(x+6,y+16,36,10,'#caa264'); px(x+8,y+18,32,6,'#b8905a');              // 切り口と年輪
+    px(x+14,y+19,20,4,'#caa264'); px(x+18,y+20,12,2,'#b8905a'); px(x+22,y+21,4,1,'#a5824a');
+    px(x+8,y+h-8,6,3,V.bush[0]);                                            // 根元の苔
+    px(x+28,y+10,2,7,'#4f7a3a'); px(x+26,y+8,3,3,V.tree[2]); px(x+30,y+9,3,3,V.tree[1]); // 若芽
+    px(x+12,y+h-6,3,3,'#c04a3a'); px(x+13,y+h-6,1,1,'#ffe');                // きのこ
+    if(V.snow){ px(x+8,y+16,32,2,'#eef2f8'); }
+  }
+  else if(s.nat==='grove'){      // ちいさな木立（装飾）
+    px(x+12,y+18,5,12,'#6b4a2c');                                           // 奥の木
+    px(x+4,y+2,22,16,V.tree[0]); px(x+7,y,16,12,V.tree[1]);
+    px(x+10,y+2,8,4,V.tree[2]); px(x+18,y+9,4,4,V.dark);
+    px(x+32,y+30,4,12,'#6b4a2c');                                           // 手前の若い木
+    px(x+25,y+16,18,14,V.tree[0]); px(x+28,y+14,12,10,V.tree[1]); px(x+30,y+16,6,3,V.tree[2]);
+    if(V.snow){ px(x+7,y,14,2,'#eef2f8'); px(x+28,y+14,10,2,'#e6ecf4'); }
+    if(V.flowers){ px(x+6,y+h-8,2,2,V.flowers[0]); px(x+22,y+h-4,2,2,V.flowers[1]); }
+  }
+  else if(s.nat==='bush'){       // 花の茂み（装飾）
+    px(x+4,y+18,20,14,V.bush[0]); px(x+7,y+15,14,7,V.bush[1]);
+    px(x+22,y+24,20,12,V.bush[0]); px(x+25,y+21,14,6,V.bush[1]);
+    px(x+14,y+30,18,12,V.bush[0]); px(x+17,y+28,12,5,V.bush[1]);
+    px(x+8,y+26,3,3,V.bush[2]); px(x+30,y+30,3,3,V.bush[2]);
+    if(V.flowers){ px(x+10,y+18,2,2,V.flowers[0]); px(x+28,y+24,2,2,V.flowers[1]);
+      px(x+20,y+32,2,2,V.flowers[2]); px(x+34,y+27,2,2,V.flowers[0]); px(x+16,y+22,2,2,V.flowers[3]); }
+    else { px(x+10,y+18,2,2,'#eef2f8'); px(x+28,y+24,2,2,'#e6ecf4'); }      // 冬は雪の帽子
+  }
+  // 立て札（施設だけ：アイコンと名前）
   if(s.icon){ ctx.font='13px serif'; ctx.fillText(s.icon,x+w/2,y+TS-3); }
   if(s.label){ ctx.font='9px monospace'; px(x+w/2-18,y+h+2,36,11,'rgba(20,18,15,.8)');
     ctx.fillStyle='#fff'; ctx.fillText(s.label,x+w/2,y+h+11); }

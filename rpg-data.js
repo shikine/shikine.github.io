@@ -12,22 +12,24 @@ const WILDBERRY=[
 // mushroom grove (きのこの森) — 池と川の南の湿った木陰：きのこは木のそばに３つだけ、道を塞がぬよう点在
 const MUSHROOM_CELLS=[ {c:13,r:16},{c:17,r:17},{c:12,r:19} ];
 
-/* ── buildings: tile col,row, size, roof color, icon, label, key ── */
+/* ── spots: tile col,row, size, icon, label, key ──
+   建物は美術館だけ。ほかの施設は nat（自然になじむ姿）で描かれる（rpg.js drawNature） */
 const SPOTS=[
  {x:24,y:7, w:5,h:4, roof:'#b0503e', wall:'#d8b486', icon:'🏛', label:'美術館',  key:'works'},
- {x:9, y:30,w:4,h:3, roof:'#6b8cb0', wall:'#d8b486', icon:'🏠', label:'アトリエ',key:'profile'},
- {x:50,y:13,w:4,h:3, roof:'#7a9c52', wall:'#cdaa70', icon:'🔧', label:'工房',    key:'apps'},
- {x:30,y:24,w:4,h:3, roof:'#c08a4c', wall:'#d8b486', icon:'📮', label:'郵便屋',  key:'contact'},
- {x:46,y:26,w:4,h:3, roof:'#9c6cb0', wall:'#d8b486', icon:'📜', label:'メルマガ',  key:'news'},
+ {x:9, y:30,w:4,h:3, nat:'tree',      icon:'🌳', label:'アトリエ',key:'profile'}, // 大樹の住まい（幹に扉と丸窓）
+ {x:50,y:13,w:4,h:3, nat:'cave',      icon:'🔧', label:'工房',    key:'apps'},    // 岩屋の工房（苔むす岩山）
+ {x:30,y:24,w:4,h:3, nat:'posttree',  icon:'📮', label:'郵便屋',  key:'contact'}, // 巣箱と赤いポストの木
+ {x:46,y:26,w:4,h:3, nat:'lettertree',icon:'📜', label:'メルマガ',  key:'news'},    // 文かけの木（手紙が風に揺れる）
 ];
-/* decorative houses (non-interactive, village atmosphere) */
+/* decorative nature (non-interactive, village atmosphere)
+   もとは装飾の民家。自然の造形に置き換えた（語り部たちはこの前に立つ） */
 const DECO=[
- {x:16,y:13,w:3,h:3, roof:'#8a5a3c', wall:'#d2ab74'},
- {x:38,y:13,w:3,h:3, roof:'#5a7a8a', wall:'#cdaa70'},
- {x:8, y:25,w:3,h:3, roof:'#7a8a4c', wall:'#d2ab74'},
- {x:40,y:31,w:3,h:3, roof:'#a06a4c', wall:'#cdaa70'},
+ {x:16,y:13,w:3,h:3, nat:'bigrock'},  // 苔むした大岩（富士見の古老）
+ {x:38,y:13,w:3,h:3, nat:'stump'},    // 古木の切り株（井戸尻の語り部）
+ {x:8, y:25,w:3,h:3, nat:'grove'},    // ちいさな木立（高原の農婦）
+ {x:40,y:31,w:3,h:3, nat:'bush'},     // 花の茂み（移住者）
 ];
-/* すべての家（夜に窓の灯りをともす対象） */
+/* 夜の灯りの対象（建物は窓灯り・nat の施設は入口のランタン） */
 const HOUSES=[...SPOTS,...DECO];
 /* large boulders (solid, decorative) — between 美術館 and 郵便屋 */
 const BOULDERS=[{x:28,y:15,w:3,h:2}];
