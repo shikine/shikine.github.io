@@ -1273,3 +1273,255 @@ footer {
   .nl-input { min-width: 0; flex: none; width: 100%; }
   .newsletter-btn { align-self: flex-start; }
 }
+
+/* ── 烏レター FLOATING BANNER ─────────────── */
+:root {
+  --kl-paper: #f4f2ed;
+  --kl-dim:   rgba(244, 242, 237, 0.60);
+  --kl-line:  rgba(244, 242, 237, 0.17);
+  --kl-gold:  #d8cf90;
+  --kl-mincho: 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', 'MS PMincho', serif;
+}
+
+#kl-banner {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  /* アプリのモーダル(200)・ライトボックス(400)より下、ナビ(100)より上 */
+  z-index: 150;
+  width: min(372px, calc(100vw - 32px));
+  opacity: 0;
+  transform: translateY(18px) scale(0.985);
+  pointer-events: none;
+  transition: opacity 0.62s cubic-bezier(0.22, 0.61, 0.36, 1),
+              transform 0.62s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+#kl-banner[hidden] { display: none; }
+#kl-banner.kl-open {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.kl-card {
+  position: relative;
+  overflow: hidden;
+  padding: 24px 24px 21px;
+  border-radius: 3px;
+  background: linear-gradient(157deg, #272319 0%, #1a1712 48%, #121009 100%);
+  color: var(--kl-paper);
+  box-shadow: 0 1px 1px rgba(28, 26, 23, 0.14),
+              0 14px 30px -10px rgba(28, 26, 23, 0.42),
+              0 40px 72px -28px rgba(28, 26, 23, 0.46);
+}
+/* 内側のヘアライン枠（活版の版面のような） */
+.kl-card::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px solid var(--kl-line);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.kl-crow {
+  position: absolute;
+  top: 18px;
+  right: 15px;
+  width: 124px;
+  height: auto;
+  color: var(--kl-paper);
+  opacity: 0.09;
+  pointer-events: none;
+}
+
+.kl-close {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  z-index: 3;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: rgba(244, 242, 237, 0.40);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+.kl-close:hover {
+  color: var(--kl-paper);
+  background: rgba(244, 242, 237, 0.09);
+}
+
+.kl-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding-right: 26px;
+  margin-bottom: 13px;
+}
+.kl-seal {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(216, 207, 144, 0.45);
+  border-radius: 50%;
+  color: var(--kl-gold);
+  font-family: var(--kl-mincho);
+  font-size: 17px;
+  line-height: 1;
+}
+.kl-kicker {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--kl-dim);
+  margin: 0 0 4px;
+  line-height: 1;
+}
+.kl-title {
+  /* グローバルな h2（下線・muted色・大文字化）を打ち消す */
+  font-family: var(--kl-mincho);
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  line-height: 1.15;
+  text-transform: none;
+  color: var(--kl-paper);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.kl-rule {
+  position: relative;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(to right,
+              rgba(216, 207, 144, 0.85) 0 28px,
+              var(--kl-line) 28px 100%);
+  margin: 0 0 13px;
+}
+
+.kl-desc {
+  position: relative;
+  font-size: 11.5px;
+  line-height: 1.9;
+  color: rgba(244, 242, 237, 0.68);
+  margin: 0 0 15px;
+}
+
+.kl-form {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 7px;
+}
+.kl-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--kl-paper);
+  background: rgba(244, 242, 237, 0.045);
+  border: 1px solid var(--kl-line);
+  border-radius: 2px;
+  padding: 9px 11px;
+  outline: none;
+  -webkit-appearance: none;
+  transition: border-color 0.22s, background 0.22s;
+}
+.kl-input::placeholder { color: rgba(244, 242, 237, 0.33); }
+.kl-input:focus {
+  border-color: rgba(216, 207, 144, 0.6);
+  background: rgba(244, 242, 237, 0.075);
+}
+.kl-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: #16140f;
+  background: var(--kl-paper);
+  border: 1px solid var(--kl-paper);
+  border-radius: 2px;
+  padding: 10px 13px;
+  cursor: pointer;
+  transition: background 0.22s, border-color 0.22s, transform 0.12s;
+}
+.kl-btn:hover {
+  background: var(--kl-gold);
+  border-color: var(--kl-gold);
+}
+.kl-btn:active { transform: translateY(1px); }
+.kl-btn:disabled { opacity: 0.5; cursor: default; }
+
+.kl-fine {
+  position: relative;
+  font-size: 9.5px;
+  letter-spacing: 0.03em;
+  line-height: 1.8;
+  color: rgba(244, 242, 237, 0.33);
+  margin: 11px 0 0;
+}
+
+.kl-msg {
+  position: relative;
+  font-size: 11.5px;
+  line-height: 1.9;
+  margin: 0;
+  opacity: 0;
+  transition: opacity 0.45s;
+}
+.kl-msg.kl-visible { opacity: 1; }
+.kl-msg.kl-err {
+  color: #e0a89c;
+  margin-top: 10px;
+}
+.kl-msg.kl-ok {
+  font-family: var(--kl-mincho);
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  line-height: 1.95;
+  color: var(--kl-gold);
+  padding: 2px 0 8px;
+}
+/* 登録完了後は説明文を伏せて、礼だけを残す */
+.kl-card.kl-done .kl-desc { display: none; }
+
+@media (max-width: 560px) {
+  #kl-banner {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    width: auto;
+    transform: translateY(24px);
+  }
+  .kl-card { padding: 20px 18px 18px; }
+  .kl-crow { width: 112px; top: 16px; right: 12px; }
+  .kl-close { top: 11px; right: 11px; }
+  .kl-head { margin-bottom: 11px; }
+  /* iOSのフォーカス時ズームを防ぐため16px */
+  .kl-input { font-size: 16px; padding: 10px 11px; }
+  .kl-btn { padding: 10px 11px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #kl-banner {
+    transform: none;
+    transition: opacity 0.2s linear;
+  }
+}

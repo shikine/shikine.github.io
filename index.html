@@ -655,8 +655,74 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </footer>
 
 </div>
+
+  <!-- ── 烏レター フローティングバナー ───────────── -->
+  <aside id="kl-banner" class="kl-banner" hidden aria-labelledby="kl-title" aria-describedby="kl-desc">
+    <div class="kl-card">
+      <svg class="kl-crow" viewBox="0 0 120 84" fill="currentColor" aria-hidden="true" focusable="false">
+        <path fill-rule="evenodd" d="M2.5 29.5
+          C10 27.4, 17.5 25.2, 24.5 23.6
+          C27 18.4, 33 15.2, 40.5 15.1
+          C50.5 14.9, 59 18.6, 65 24.8
+          C72.5 30.4, 80 36, 87.5 42
+          C97 48, 107.5 52.8, 117.5 57.2
+          L113.5 67.5
+          C103 63.5, 92.5 57.8, 84.5 52
+          C76 57.6, 63.5 61, 50.5 61
+          C39.5 61, 30 55.4, 25 46.2
+          C22.4 41.6, 21.3 38, 21.2 35.4
+          C14.6 34.4, 8.6 33.2, 4 32 Z
+          M36.5 22.8 a2.5 2.5 0 1 0 0.01 0 Z"/>
+        <g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M45.5 59.5 L44.5 74.5 L37.5 79 M44.5 74.5 L50 78.5"/>
+          <path d="M58 59 L57.5 74.5 L51.5 79 M57.5 74.5 L63.5 78.5"/>
+        </g>
+      </svg>
+
+      <button type="button" class="kl-close" id="kl-close" aria-label="閉じる">&#10005;</button>
+
+      <div class="kl-head">
+        <span class="kl-seal" aria-hidden="true">烏</span>
+        <div>
+          <p class="kl-kicker"><span class="t-ja">Karasu Letters</span><span class="t-en">Newsletter</span></p>
+          <h2 class="kl-title" id="kl-title"><span class="t-ja">烏レター</span><span class="t-en">Karasu Letters</span></h2>
+        </div>
+      </div>
+
+      <div class="kl-rule" aria-hidden="true"></div>
+
+      <p class="kl-desc" id="kl-desc">
+        <span class="t-ja">舞台美術・建築の現場から、最近の仕事と活動のたよりを。月に1〜2回、烏が運びます。</span>
+        <span class="t-en">Notes from the workshop &mdash; recent works and activities, once or twice a month.</span>
+      </p>
+
+      <form id="kl-form" class="kl-form" novalidate>
+        <input type="email" id="kl-email" class="kl-input" required
+          autocomplete="email"
+          placeholder="メールアドレス" data-placeholder-ja="メールアドレス" data-placeholder-en="Email Address">
+        <button type="submit" class="kl-btn" id="kl-btn">
+          <span class="t-ja">購読する</span><span class="t-en">Subscribe</span>
+        </button>
+      </form>
+
+      <p class="kl-msg kl-err" id="kl-error" hidden></p>
+
+      <p class="kl-msg kl-ok" id="kl-thanks" hidden>
+        <span class="t-ja">ご登録ありがとうございます。次の便りをお待ちください。</span>
+        <span class="t-en">Thank you for subscribing. The next letter is on its way.</span>
+      </p>
+
+      <p class="kl-fine">
+        <span class="t-ja">配信停止はいつでも。メールアドレスは他の目的には使いません。</span>
+        <span class="t-en">Unsubscribe anytime. Your address is never used for anything else.</span>
+      </p>
+    </div>
+  </aside>
   <script>
 (function () {
+  // 烏レター(karasuletters) 購読エンドポイント（本文フォーム／フローティングバナー共用）
+  var KARASU_GAS_URL = 'https://script.google.com/macros/s/AKfycbxc09CWmHQr9pjykGosCwf3hiCGWc5jT2vDZdiLdJ2Z0yUj9ThR1G5p495gNmOYZvAgzg/exec';
+
   var GENRES = [
     { key: 'stage', label: '舞台美術' },
     { key: 'mv',    label: 'MV / 映像美術' },
@@ -1164,7 +1230,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     });
 
     // newsletter form submit → GAS で重複チェック・登録・通知メール送信を一括処理
-    var GAS_URL = 'https://script.google.com/macros/s/AKfycbxc09CWmHQr9pjykGosCwf3hiCGWc5jT2vDZdiLdJ2Z0yUj9ThR1G5p495gNmOYZvAgzg/exec';
+    var GAS_URL = KARASU_GAS_URL;
 
     var nlForm = document.getElementById('nl-form');
     if (nlForm) {
@@ -1423,6 +1489,140 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape' && overlay.classList.contains('open')) closeAppModal();
     });
+  });
+
+  // ── 烏レター フローティングバナー ─────────────
+  document.addEventListener('DOMContentLoaded', function () {
+    var banner = document.getElementById('kl-banner');
+    if (!banner) return;
+
+    var STORE_KEY = 'kl_banner_state';
+    var SNOOZE_MS = 14 * 24 * 60 * 60 * 1000;  // 閉じたら14日は再表示しない
+    var DELAY_MS  = 600;                       // 入場から浮かび上がるまで（ふわっと即座に）
+
+    var form   = document.getElementById('kl-form');
+    var btn    = document.getElementById('kl-btn');
+    var errEl  = document.getElementById('kl-error');
+    var okEl   = document.getElementById('kl-thanks');
+    var btnHTML = btn.innerHTML;
+
+    function isEn() { return (document.documentElement.lang || 'ja') === 'en'; }
+
+    // hidden を外してから強制リフロー → 初期状態が確定するのでトランジションが必ず走る
+    // （背面タブでは requestAnimationFrame が止まるため、そちらには頼らない）
+    function reveal(el, cls) {
+      el.hidden = false;
+      void el.offsetWidth;
+      el.classList.add(cls);
+    }
+
+    function readState() {
+      try { return JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); }
+      catch (e) { return null; }
+    }
+    function writeState(s) {
+      try { localStorage.setItem(STORE_KEY, JSON.stringify({ s: s, t: Date.now() })); }
+      catch (e) {}
+    }
+    function shouldShow() {
+      var st = readState();
+      if (!st) return true;
+      if (st.s === 'done') return false;               // 登録済みは二度と出さない
+      return (Date.now() - (st.t || 0)) > SNOOZE_MS;   // 閉じただけならスヌーズ後に再表示
+    }
+
+    var openTimer = null;
+    function openBanner() {
+      reveal(banner, 'kl-open');
+    }
+    function closeBanner(state) {
+      clearTimeout(openTimer);
+      banner.classList.remove('kl-open');
+      writeState(state || 'closed');
+      setTimeout(function () { banner.hidden = true; }, 700);
+    }
+
+    function showError(msg) {
+      errEl.textContent = msg;
+      reveal(errEl, 'kl-visible');
+    }
+    function resetBtn() {
+      btn.disabled = false;
+      btn.innerHTML = btnHTML;
+    }
+
+    document.getElementById('kl-close').addEventListener('click', function () {
+      closeBanner('closed');
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !banner.hidden) closeBanner('closed');
+    });
+
+    // 本文のニュースレター欄まで自分でたどり着いた人には、被せない
+    var nlSection = document.getElementById('newsletter-section');
+    if (nlSection && 'IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (entries) {
+        if (entries.some(function (en) { return en.isIntersecting; })) {
+          if (banner.hidden) clearTimeout(openTimer);
+          io.disconnect();
+        }
+      });
+      io.observe(nlSection);
+    }
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var email = document.getElementById('kl-email').value.trim();
+      // 入力はメールのみ。名簿と自動返信の宛名にはアドレスの前半を充てる
+      var name  = email.split('@')[0];
+
+      errEl.hidden = true;
+      errEl.classList.remove('kl-visible');
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showError(isEn() ? 'Please check your email address.'
+                         : 'メールアドレスをご確認ください。');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = isEn() ? 'SENDING&hellip;' : '確認中&hellip;';
+
+      try {
+        var res = await fetch(KARASU_GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: 'register', name: name, email: email })
+        });
+        var result = await res.json();
+
+        if (result.duplicate) {
+          showError(isEn() ? 'This address is already subscribed.'
+                           : 'このメールアドレスはすでに登録されています。');
+          resetBtn();
+          return;
+        }
+        if (!result.ok) {
+          showError(isEn() ? 'Subscription failed. Please try again later.'
+                           : '登録に失敗しました。お手数ですが時間をおいて再度お試しください。');
+          resetBtn();
+          return;
+        }
+
+        form.style.display = 'none';
+        banner.querySelector('.kl-card').classList.add('kl-done');
+        reveal(okEl, 'kl-visible');
+        writeState('done');
+        setTimeout(function () { closeBanner('done'); }, 3600);
+
+      } catch (err) {
+        showError(isEn() ? 'A network error occurred. Please try again.'
+                         : '通信エラーが発生しました。もう一度お試しください。');
+        resetBtn();
+      }
+    });
+
+    if (shouldShow()) openTimer = setTimeout(openBanner, DELAY_MS);
   });
 
 })();
