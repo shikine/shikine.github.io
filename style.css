@@ -1276,10 +1276,10 @@ footer {
 
 /* ── 烏レター FLOATING BANNER ─────────────── */
 :root {
-  --kl-paper: #f4f2ed;
-  --kl-dim:   rgba(244, 242, 237, 0.60);
-  --kl-line:  rgba(244, 242, 237, 0.17);
-  --kl-gold:  #d8cf90;
+  --kl-paper: #202b30;
+  --kl-dim:   #526169;
+  --kl-line:  rgba(40, 65, 76, 0.20);
+  --kl-gold:  #315f65;
   --kl-mincho: 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', 'MS PMincho', serif;
 }
 
@@ -1307,20 +1307,20 @@ footer {
   position: relative;
   overflow: hidden;
   padding: 24px 24px 21px;
-  border-radius: 3px;
-  background: linear-gradient(157deg, #272319 0%, #1a1712 48%, #121009 100%);
+  border-radius: 20px;
+  background: #f1f5f5;
+  border: 1px solid rgba(255, 255, 255, 0.85);
   color: var(--kl-paper);
-  box-shadow: 0 1px 1px rgba(28, 26, 23, 0.14),
-              0 14px 30px -10px rgba(28, 26, 23, 0.42),
-              0 40px 72px -28px rgba(28, 26, 23, 0.46);
+  box-shadow: 0 16px 48px rgba(24, 48, 58, 0.16),
+              inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
-/* 内側のヘアライン枠（活版の版面のような） */
+/* 薄いガラスの輪郭 */
 .kl-card::after {
   content: "";
   position: absolute;
   inset: 7px;
   border: 1px solid var(--kl-line);
-  border-radius: 1px;
+  border-radius: 14px;
   pointer-events: none;
 }
 
@@ -1331,17 +1331,17 @@ footer {
   width: 124px;
   height: auto;
   color: var(--kl-paper);
-  opacity: 0.09;
+  opacity: 0.055;
   pointer-events: none;
 }
 
 .kl-close {
   position: absolute;
-  top: 13px;
-  right: 13px;
+  top: 5px;
+  right: 5px;
   z-index: 3;
-  width: 24px;
-  height: 24px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1349,7 +1349,7 @@ footer {
   border: none;
   border-radius: 50%;
   background: none;
-  color: rgba(244, 242, 237, 0.40);
+  color: #526169;
   font-size: 12px;
   line-height: 1;
   cursor: pointer;
@@ -1357,7 +1357,7 @@ footer {
 }
 .kl-close:hover {
   color: var(--kl-paper);
-  background: rgba(244, 242, 237, 0.09);
+  background: rgba(40, 65, 76, 0.09);
 }
 
 .kl-head {
@@ -1375,7 +1375,7 @@ footer {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(216, 207, 144, 0.45);
+  border: 1px solid rgba(49, 95, 101, 0.35);
   border-radius: 50%;
   color: var(--kl-gold);
   font-family: var(--kl-mincho);
@@ -1383,7 +1383,7 @@ footer {
   line-height: 1;
 }
 .kl-kicker {
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--kl-dim);
@@ -1409,16 +1409,16 @@ footer {
   width: 100%;
   height: 1px;
   background: linear-gradient(to right,
-              rgba(216, 207, 144, 0.85) 0 28px,
+              rgba(49, 95, 101, 0.75) 0 28px,
               var(--kl-line) 28px 100%);
   margin: 0 0 13px;
 }
 
 .kl-desc {
   position: relative;
-  font-size: 11.5px;
+  font-size: 13px;
   line-height: 1.9;
-  color: rgba(244, 242, 237, 0.68);
+  color: #43535b;
   margin: 0 0 15px;
 }
 
@@ -1432,32 +1432,36 @@ footer {
   flex: 1 1 auto;
   min-width: 0;
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: 16px;
+  min-height: 46px;
+  box-sizing: border-box;
   color: var(--kl-paper);
-  background: rgba(244, 242, 237, 0.045);
+  background: rgba(255, 255, 255, 0.85);
   border: 1px solid var(--kl-line);
-  border-radius: 2px;
+  border-radius: 9px;
   padding: 9px 11px;
   outline: none;
   -webkit-appearance: none;
   transition: border-color 0.22s, background 0.22s;
 }
-.kl-input::placeholder { color: rgba(244, 242, 237, 0.33); }
+.kl-input::placeholder { color: #526169; }
 .kl-input:focus {
-  border-color: rgba(216, 207, 144, 0.6);
-  background: rgba(244, 242, 237, 0.075);
+  border-color: #315f65;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(49, 95, 101, 0.16);
 }
 .kl-btn {
   flex: 0 0 auto;
   white-space: nowrap;
   font-family: inherit;
-  font-size: 11px;
+  font-size: 13px;
+  min-height: 46px;
   font-weight: 600;
-  letter-spacing: 0.16em;
-  color: #16140f;
+  letter-spacing: 0.04em;
+  color: #fff;
   background: var(--kl-paper);
   border: 1px solid var(--kl-paper);
-  border-radius: 2px;
+  border-radius: 9px;
   padding: 10px 13px;
   cursor: pointer;
   transition: background 0.22s, border-color 0.22s, transform 0.12s;
@@ -1471,16 +1475,16 @@ footer {
 
 .kl-fine {
   position: relative;
-  font-size: 9.5px;
+  font-size: 11px;
   letter-spacing: 0.03em;
   line-height: 1.8;
-  color: rgba(244, 242, 237, 0.33);
+  color: #526169;
   margin: 11px 0 0;
 }
 
 .kl-msg {
   position: relative;
-  font-size: 11.5px;
+  font-size: 13px;
   line-height: 1.9;
   margin: 0;
   opacity: 0;
@@ -1488,7 +1492,7 @@ footer {
 }
 .kl-msg.kl-visible { opacity: 1; }
 .kl-msg.kl-err {
-  color: #e0a89c;
+  color: #9d3030;
   margin-top: 10px;
 }
 .kl-msg.kl-ok {
@@ -1533,4 +1537,20 @@ footer {
 @media (max-width: 360px) {
   .kl-form { flex-direction: column; }
   .kl-input { width: 100%; box-sizing: border-box; }
+}
+
+/* 背景が透けても本文のコントラストを維持する */
+@supports ((backdrop-filter: blur(20px)) or (-webkit-backdrop-filter: blur(20px))) {
+  .kl-card {
+    background: linear-gradient(135deg, rgba(255,255,255,.94), rgba(235,244,245,.88));
+    -webkit-backdrop-filter: blur(20px) saturate(125%);
+    backdrop-filter: blur(20px) saturate(125%);
+  }
+}
+.kl-btn:focus-visible, .kl-close:focus-visible {
+  outline: 3px solid #315f65;
+  outline-offset: 3px;
+}
+@media (prefers-reduced-transparency: reduce) {
+  .kl-card { background: #f1f5f5; -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
