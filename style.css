@@ -1277,7 +1277,7 @@ footer {
 /* ── 烏レター FLOATING BANNER ─────────────── */
 :root {
   --kl-paper: #202b30;
-  --kl-dim:   #526169;
+  --kl-dim:   #43535b;
   --kl-line:  rgba(40, 65, 76, 0.20);
   --kl-gold:  #315f65;
   --kl-mincho: 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', 'MS PMincho', serif;
@@ -1349,7 +1349,7 @@ footer {
   border: none;
   border-radius: 50%;
   background: none;
-  color: #526169;
+  color: #43535b;
   font-size: 12px;
   line-height: 1;
   cursor: pointer;
@@ -1444,7 +1444,7 @@ footer {
   -webkit-appearance: none;
   transition: border-color 0.22s, background 0.22s;
 }
-.kl-input::placeholder { color: #526169; }
+.kl-input::placeholder { color: #43535b; }
 .kl-input:focus {
   border-color: #315f65;
   background: #fff;
@@ -1478,7 +1478,7 @@ footer {
   font-size: 11px;
   letter-spacing: 0.03em;
   line-height: 1.8;
-  color: #526169;
+  color: #43535b;
   margin: 11px 0 0;
 }
 
