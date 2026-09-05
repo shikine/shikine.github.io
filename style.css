@@ -1504,19 +1504,22 @@ footer {
 
 @media (max-width: 560px) {
   #kl-banner {
-    left: 10px;
-    right: 10px;
-    bottom: 10px;
+    left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right));
+    bottom: max(10px, env(safe-area-inset-bottom));
     width: auto;
+    max-height: calc(100dvh - 20px - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
     transform: translateY(24px);
   }
   .kl-card { padding: 20px 18px 18px; }
   .kl-crow { width: 112px; top: 16px; right: 12px; }
-  .kl-close { top: 11px; right: 11px; }
+  .kl-close { top: 3px; right: 3px; width: 44px; height: 44px; }
   .kl-head { margin-bottom: 11px; }
   /* iOSのフォーカス時ズームを防ぐため16px */
   .kl-input { font-size: 16px; padding: 10px 11px; }
-  .kl-btn { padding: 10px 11px; }
+  .kl-btn { min-height: 44px; padding: 10px 11px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1524,4 +1527,10 @@ footer {
     transform: none;
     transition: opacity 0.2s linear;
   }
+}
+
+/* 狭いスマホでは入力欄と登録ボタンを縦に並べる */
+@media (max-width: 360px) {
+  .kl-form { flex-direction: column; }
+  .kl-input { width: 100%; box-sizing: border-box; }
 }
