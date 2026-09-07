@@ -1506,7 +1506,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     if (!banner) return;
 
     var STORE_KEY = 'kl_banner_state';
-    var SNOOZE_MS = 14 * 24 * 60 * 60 * 1000;  // 閉じたら14日は再表示しない
     var DELAY_MS  = 600;                       // 入場から浮かび上がるまで（ふわっと即座に）
 
     var form   = document.getElementById('kl-form');
@@ -1535,19 +1534,18 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     }
     function shouldShow() {
       var st = readState();
-      if (!st) return true;
-      if (st.s === 'done') return false;               // 登録済みは二度と出さない
-      return (Date.now() - (st.t || 0)) > SNOOZE_MS;   // 閉じただけならスヌーズ後に再表示
+      // 以前の closed 状態も無視し、次のアクセスでは再表示する。登録済みだけ除外。
+      return !st || st.s !== 'done';
     }
 
     var openTimer = null;
     function openBanner() {
       reveal(banner, 'kl-open');
     }
-    function closeBanner(state) {
+    function closeBanner() {
       clearTimeout(openTimer);
       banner.classList.remove('kl-open');
-      writeState(state || 'closed');
+      // 閉じる操作はこのページ内だけ。次回の表示を妨げる状態は保存しない。
       setTimeout(function () { banner.hidden = true; }, 700);
     }
 
@@ -1561,10 +1559,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     }
 
     document.getElementById('kl-close').addEventListener('click', function () {
-      closeBanner('closed');
+      closeBanner();
     });
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && !banner.hidden) closeBanner('closed');
+      if (e.key === 'Escape' && !banner.hidden) closeBanner();
     });
 
     // 本文のニュースレター欄まで自分でたどり着いた人には、被せない
@@ -1622,7 +1620,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         banner.querySelector('.kl-card').classList.add('kl-done');
         reveal(okEl, 'kl-visible');
         writeState('done');
-        setTimeout(function () { closeBanner('done'); }, 3600);
+        setTimeout(function () { closeBanner(); }, 3600);
 
       } catch (err) {
         showError(isEn() ? 'A network error occurred. Please try again.'
