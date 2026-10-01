@@ -99,6 +99,26 @@
       .adm-tl-ops { grid-column: 1 / -1; justify-content: flex-end; }
       .adm-tag-row { grid-template-columns: minmax(0, 1fr); }
     }
+    .adm-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 8px; }
+    .adm-stat { border: 1px solid var(--rule); border-radius: 4px; padding: 10px 12px; display: flex; flex-direction: column; }
+    .adm-stat span { font-size: 11px; color: var(--muted); }
+    .adm-stat strong { font-size: 18px; font-weight: 400; }
+    .adm-row { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed var(--rule); }
+    .adm-row-main { display: flex; flex-direction: column; min-width: 0; }
+    .adm-row-ops { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    a.adm-btn { text-decoration: none; display: inline-block; }
+    .adm-sub { font-size: 12px; color: var(--muted); }
+    .adm-subs { max-height: 480px; overflow-y: auto; border-top: 1px solid var(--rule); }
+    .adm-sub-row { display: grid; grid-template-columns: 90px minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--rule); font-size: 13px; }
+    .adm-sub-mail { overflow-wrap: anywhere; }
+    @media (max-width: 720px) {
+      .adm-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .adm-sub-row { grid-template-columns: minmax(0, 1fr) auto; }
+      .adm-sub-row > .adm-sub { display: none; }
+      .adm-sub-row > span:nth-child(2) { grid-column: 1; }
+      .adm-sub-row > .adm-sub-mail { grid-column: 1; grid-row: 2; font-size: 12px; color: var(--muted); }
+      .adm-sub-row > button { grid-column: 2; grid-row: 1 / span 2; }
+    }
     .adm-pick-badge { flex: none; font-size: 10px; border: 1px solid var(--muted); border-radius: 10px; padding: 1px 8px; color: var(--muted); }
     .adm-preview { margin-top: 8px; }
     .adm-preview .featured-card { cursor: default; }
@@ -996,6 +1016,165 @@
     }
   };
 
+  /* ════════════════════════════════════════════════
+     モジュール：メルマガ（烏_letters / GAS バックエンド）
+     予約配信・下書き・購読者の管理。執筆は newsletter.html（エディタ）
+     ════════════════════════════════════════════════ */
+  var GAS_DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbxc09CWmHQr9pjykGosCwf3hiCGWc5jT2vDZdiLdJ2Z0yUj9ThR1G5p495gNmOYZvAgzg/exec';
+  var GAS = {
+    ready: function () { var c = GH.cfg(); return !!(c.gasUrl && c.gasSecret); },
+    post: function (body, cfg) {
+      var c = cfg || GH.cfg();
+      return fetch(c.gasUrl, {
+        method: 'POST', headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(Object.assign({}, body, { secret: c.gasSecret }))
+      }).then(function (r) { return r.json(); }).then(function (j) {
+        if (j && j.error) throw new Error(j.error === 'unauthorized' ? '合言葉が違うか、GAS が未更新です' : j.error);
+        return j;
+      });
+    }
+  };
+  function fmtDate(v) {
+    var d = new Date(v);
+    if (isNaN(d)) return String(v || '');
+    return d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate() + ' ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+  function toLocalInput(v) {
+    var d = new Date(v); if (isNaN(d)) return '';
+    var p = function (n) { return ('0' + n).slice(-2); };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  var nlModule = {
+    id: 'newsletter',
+    label: 'メルマガ',
+    render: function (main) {
+      var self = this;
+      main.appendChild(h('h2', { text: 'メルマガ（烏_letters）' }));
+      if (!GAS.ready()) {
+        main.appendChild(h('div', { class: 'adm-empty' }, [
+          'メルマガの接続先と合言葉が未設定です。 ',
+          h('button', { class: 'adm-btn small', text: '設定を開く', on: { click: function () { App.go('settings'); } } })
+        ]));
+        return;
+      }
+      var status = h('span', { class: 'adm-status' });
+      main.appendChild(h('div', { class: 'adm-bar' }, [
+        h('a', { class: 'adm-btn primary', href: 'newsletter.html', text: '新しい号を書く' }),
+        h('button', { class: 'adm-btn', text: '再読み込み', on: { click: function () { App.go('newsletter'); } } }),
+        status
+      ]));
+      this.stats = h('div', { class: 'adm-stats' });
+      this.schedEl = h('div'); this.draftEl = h('div'); this.subEl = h('div');
+      main.appendChild(this.stats);
+      main.appendChild(h('div', { class: 'adm-h3', text: '予約配信' })); main.appendChild(this.schedEl);
+      main.appendChild(h('div', { class: 'adm-h3', text: '下書き' })); main.appendChild(this.draftEl);
+      main.appendChild(h('div', { class: 'adm-h3', text: '購読者' })); main.appendChild(this.subEl);
+
+      setStatus(status, '読み込み中…');
+      Promise.all([
+        GAS.post({ action: 'getScheduleStatus' }),
+        GAS.post({ action: 'listDrafts' }),
+        GAS.post({ action: 'listSubscribers' }),
+        GAS.post({ action: 'getNextIssue' }).catch(function () { return {}; })
+      ]).then(function (r) {
+        self.data = { schedules: r[0].schedules || [], drafts: r[1].drafts || [], subs: r[2].subscribers || [], next: r[3].next };
+        setStatus(status, '');
+        self.draw();
+      }).catch(function (e) { setStatus(status, '読み込み失敗: ' + e.message, 'err'); });
+    },
+    draw: function () {
+      var self = this, d = this.data;
+      this.stats.innerHTML = '';
+      [['購読者', d.subs.length + '人'], ['予約', d.schedules.length + '件'], ['下書き', d.drafts.length + '件'], ['次の号', d.next ? 'No.' + ('00' + d.next).slice(-3) : '—']]
+        .forEach(function (s) { self.stats.appendChild(h('div', { class: 'adm-stat' }, [h('span', { text: s[0] }), h('strong', { text: s[1] })])); });
+
+      // 予約配信
+      this.schedEl.innerHTML = '';
+      var sched = d.schedules.slice().sort(function (a, b) { return new Date(a.scheduledAt) - new Date(b.scheduledAt); });
+      if (!sched.length) this.schedEl.appendChild(h('p', { class: 'adm-note', text: '予約はありません。' }));
+      sched.forEach(function (s) {
+        var dt = h('input', { type: 'datetime-local', class: 'adm-select', value: toLocalInput(s.scheduledAt) });
+        var st = h('span', { class: 'adm-status' });
+        self.schedEl.appendChild(h('div', { class: 'adm-row' }, [
+          h('div', { class: 'adm-row-main' }, [h('strong', { text: s.subject || '（件名なし）' }), h('span', { class: 'adm-sub', text: fmtDate(s.scheduledAt) + ' に配信予定' + (s.calEventId ? '（カレンダー登録済み）' : '') })]),
+          h('div', { class: 'adm-row-ops' }, [
+            dt,
+            h('button', { class: 'adm-btn small', text: '日時を変更', on: { click: function (ev) {
+              if (!dt.value) return;
+              ev.target.disabled = true; setStatus(st, '変更中…');
+              GAS.post({ action: 'updateSchedule', id: s.id, scheduledAt: new Date(dt.value).toISOString() })
+                .then(function () { s.scheduledAt = new Date(dt.value).toISOString(); self.draw(); })
+                .catch(function (e) { setStatus(st, e.message, 'err'); ev.target.disabled = false; });
+            } } }),
+            h('button', { class: 'adm-btn small', text: '予約を取り消す', on: { click: function (ev) {
+              if (!confirm('「' + s.subject + '」の予約配信を取り消しますか？')) return;
+              ev.target.disabled = true;
+              GAS.post({ action: 'cancelSchedule', id: s.id })
+                .then(function () { d.schedules.splice(d.schedules.indexOf(s), 1); self.draw(); })
+                .catch(function (e) { setStatus(st, e.message, 'err'); ev.target.disabled = false; });
+            } } }),
+            st
+          ])
+        ]));
+      });
+
+      // 下書き
+      this.draftEl.innerHTML = '';
+      var drafts = d.drafts.slice().sort(function (a, b) { return String(b.issue).localeCompare(String(a.issue)); });
+      if (!drafts.length) this.draftEl.appendChild(h('p', { class: 'adm-note', text: '下書きはありません。' }));
+      drafts.forEach(function (dr) {
+        var st = h('span', { class: 'adm-status' });
+        self.draftEl.appendChild(h('div', { class: 'adm-row' }, [
+          h('div', { class: 'adm-row-main' }, [h('strong', { text: dr.issue + '　' + (dr.subject || '（件名なし）') }),
+            h('span', { class: 'adm-sub', text: [dr.date, dr.updated ? '更新 ' + fmtDate(dr.updated) : ''].filter(Boolean).join('　') })]),
+          h('div', { class: 'adm-row-ops' }, [
+            h('a', { class: 'adm-btn small', href: 'newsletter.html?draft=' + encodeURIComponent(dr.issue), text: 'エディタで開く' }),
+            h('button', { class: 'adm-btn small', text: '削除', on: { click: function (ev) {
+              if (!confirm(dr.issue + '「' + dr.subject + '」の下書きを削除しますか？（Google ドライブのゴミ箱に移動します）')) return;
+              ev.target.disabled = true;
+              GAS.post({ action: 'deleteDraft', issue: dr.issue })
+                .then(function () { d.drafts.splice(d.drafts.indexOf(dr), 1); self.draw(); })
+                .catch(function (e) { setStatus(st, e.message, 'err'); ev.target.disabled = false; });
+            } } }),
+            st
+          ])
+        ]));
+      });
+
+      // 購読者
+      this.subEl.innerHTML = '';
+      var q = h('input', { type: 'search', class: 'adm-search', placeholder: '名前・メールで絞り込み', value: this.subQuery || '' });
+      var table = h('div', { class: 'adm-subs' });
+      var drawSubs = function () {
+        self.subQuery = q.value;
+        var w = q.value.trim().toLowerCase();
+        table.innerHTML = '';
+        var rows = d.subs.slice().reverse().filter(function (s) { return !w || (s.name + ' ' + s.email).toLowerCase().indexOf(w) >= 0; });
+        rows.forEach(function (s) {
+          table.appendChild(h('div', { class: 'adm-sub-row' }, [
+            h('span', { class: 'adm-sub', text: fmtDate(s.date).split(' ')[0] }),
+            h('span', { text: s.name || '—' }),
+            h('span', { class: 'adm-sub-mail', text: s.email }),
+            h('button', { class: 'adm-btn small', text: '配信停止', on: { click: function (ev) {
+              if (!confirm((s.name || s.email) + ' さんを購読者リストから外しますか？（シートの行を削除します）')) return;
+              ev.target.disabled = true;
+              GAS.post({ action: 'deleteSubscriber', email: s.email }).then(function (r) {
+                if (!r.ok) throw new Error('見つかりませんでした');
+                d.subs.splice(d.subs.indexOf(s), 1); self.draw();
+              }).catch(function (e) { alert(e.message); ev.target.disabled = false; });
+            } } })
+          ]));
+        });
+        if (!rows.length) table.appendChild(h('p', { class: 'adm-note', text: '該当する購読者はいません。' }));
+      };
+      q.addEventListener('input', drawSubs);
+      this.subEl.appendChild(h('div', { class: 'adm-bar' }, [q]));
+      this.subEl.appendChild(table);
+      drawSubs();
+    }
+  };
+
   /* ── トークンの作り方（初期設定・設定画面で共用）── */
   function tokenHelp() {
     var note = h('div', { class: 'adm-note' });
@@ -1076,6 +1255,32 @@
       ]));
       main.appendChild(tokenHelp());
 
+      // メルマガ接続（GAS の URL と合言葉。GitHub トークンと一緒に暗号化して保存）
+      main.appendChild(h('div', { class: 'adm-h3', text: 'メルマガ接続' }));
+      var gu = field('GAS ウェブアプリ URL（/exec）', 'url', c.gasUrl || GAS_DEFAULT_URL);
+      var gs = field('合言葉（GAS の createAdminSecret で作成）', 'password', '', { placeholder: c.gasSecret ? '設定済み（変更するときだけ入力）' : '' });
+      var pw4 = field('現在のパスワード（再暗号化に使います）', 'password');
+      var st3 = h('span', { class: 'adm-status' });
+      main.appendChild(h('div', { class: 'adm-form' }, [gu.el, gs.el, pw4.el]));
+      main.appendChild(h('div', { class: 'adm-bar', style: 'margin-top:12px' }, [
+        h('button', { class: 'adm-btn primary', text: '接続テストして保存', on: { click: function (ev) {
+          var next = Object.assign({}, GH.cfg(), { gasUrl: gu.input.value.trim(), gasSecret: gs.input.value.trim() || GH.cfg().gasSecret || '' });
+          var pw = pw4.input.value;
+          if (!next.gasUrl || !next.gasSecret || !pw) return setStatus(st3, 'URL・合言葉・パスワードを入力してください', 'err');
+          ev.target.disabled = true; setStatus(st3, '確認中…');
+          Auth.fetchBlob().then(function (blob) { return blob ? Auth.decrypt(blob, pw) : null; })
+            .then(function () { return GAS.post({ action: 'getNextIssue' }, next); })
+            .then(function () { setStatus(st3, '暗号化して保存中…'); return Auth.save(next, pw, '管理画面のメルマガ接続を設定'); })
+            .then(function () { Auth.login(next); gs.input.value = pw4.input.value = ''; setStatus(st3, '接続できました。保存しました', 'ok'); })
+            .catch(function (e) { setStatus(st3, '失敗: ' + e.message, 'err'); })
+            .then(function () { ev.target.disabled = false; });
+        } } }),
+        st3
+      ]));
+      var gnote = h('div', { class: 'adm-note' });
+      gnote.innerHTML = '合言葉の作り方：Apps Script エディタで関数 <code>createAdminSecret</code> を選んで実行 → 実行ログに出た値をコピーして上に貼る。';
+      main.appendChild(gnote);
+
       main.appendChild(h('div', { class: 'adm-h3', text: 'ログアウト' }));
       main.appendChild(h('button', { class: 'adm-btn', text: 'ログアウト', on: { click: function () { App.logout(); } } }));
     }
@@ -1089,6 +1294,7 @@
   var MODULES = [
     kvModule,
     tlModule,
+    nlModule,
     { id: 'news',    label: 'お知らせ',   soon: true },
     settingsModule
   ];

@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>烏_letters — editor</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black: #111110;
+  --black2: #1a1a18;
+  --cream: #f0ede6;
+  --gold: #c8b89a;
+  --mid: #888880;
+  --border: #2a2a28;
+  --surface: #1e1e1c;
+}
+
+html, body {
+  height: 100%;
+  background: var(--black);
+  color: var(--cream);
+  font-family: 'EB Garamond', Georgia, serif;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 0 80px;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 28px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.top-logo { font-size: 11px; letter-spacing: 0.3em; color: var(--gold); text-transform: uppercase; }
+.top-mode { display: flex; gap: 4px; }
+.mode-btn {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  padding: 6px 14px; background: transparent; border: 1px solid var(--border);
+  color: var(--mid); cursor: pointer; transition: all 0.2s;
+}
+.mode-btn.active { background: var(--cream); color: var(--black); border-color: var(--cream); }
+
+/* ===== SCHEDULE LIST ===== */
+.schedule-list-wrap {
+  margin: 20px 28px 0;
+  display: none;
+}
+.schedule-list-wrap.visible { display: block; }
+.schedule-list-title {
+  font-size: 10px; letter-spacing: 0.25em; color: var(--gold);
+  text-transform: uppercase; margin-bottom: 10px;
+}
+.schedule-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px;
+  background: var(--surface); border: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+.schedule-item-info { flex: 1; min-width: 0; }
+.schedule-item-subject { font-size: 15px; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.schedule-item-date { font-size: 11px; color: var(--mid); letter-spacing: 0.05em; font-style: italic; }
+.schedule-cancel-btn {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
+  padding: 6px 12px; background: transparent;
+  border: 1px solid #c87a7a; color: #c87a7a;
+  cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+}
+.schedule-cancel-btn:hover { background: #c87a7a; color: var(--black); }
+.schedule-preview-btn {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
+  padding: 6px 12px; background: transparent;
+  border: 1px solid var(--gold); color: var(--gold);
+  cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+}
+.schedule-preview-btn:hover { background: var(--gold); color: var(--black); }
+
+/* ===== SCHEDULE PREVIEW MODAL ===== */
+.sched-preview-meta { font-size: 11px; color: var(--mid); font-style: italic; margin-bottom: 12px; }
+.sched-preview-frame {
+  border: 1px solid var(--border); background: #f0ede6;
+  width: 100%; overflow-y: auto; max-height: 52vh; margin: 4px 0 16px;
+}
+.sched-preview-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.fields { padding: 28px 28px 0; display: flex; flex-direction: column; gap: 20px; }
+.field-label { font-size: 10px; letter-spacing: 0.25em; color: var(--gold); text-transform: uppercase; display: block; margin-bottom: 8px; }
+input[type="text"], input[type="datetime-local"], textarea {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  color: var(--cream); font-family: 'EB Garamond', Georgia, serif;
+  font-size: 16px; padding: 12px 16px; outline: none;
+  transition: border-color 0.2s; resize: none; -webkit-appearance: none;
+}
+input[type="text"]:focus, input[type="datetime-local"]:focus, textarea:focus { border-color: var(--gold); }
+input[type="text"]::placeholder, textarea::placeholder { color: #444440; }
+
+.claude-panel { padding: 28px 28px 0; }
+.claude-prompt-wrap { display: flex; gap: 8px; }
+.claude-prompt-wrap textarea { flex: 1; height: 80px; }
+.claude-btn {
+  font-family: 'EB Garamond', Georgia, serif; font-size: 11px;
+  letter-spacing: 0.2em; text-transform: uppercase; padding: 0 18px;
+  background: var(--surface); border: 1px solid var(--gold); color: var(--gold);
+  cursor: pointer; transition: all 0.2s; white-space: nowrap; align-self: stretch;
+}
+.claude-btn:hover { background: var(--gold); color: var(--black); }
+.claude-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.claude-status { font-size: 11px; color: var(--mid); letter-spacing: 0.1em; margin-top: 10px; min-height: 18px; font-style: italic; }
+
+.divider { margin: 28px 28px 0; border: none; border-top: 1px solid var(--border); }
+
+.body-wrap { padding: 24px 28px 0; }
+.body-toolbar {
+  display: flex; gap: 4px; margin-bottom: 6px; flex-wrap: wrap;
+}
+.toolbar-btn {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 13px; font-weight: normal;
+  padding: 4px 10px; background: var(--surface);
+  border: 1px solid var(--border); color: var(--mid);
+  cursor: pointer; transition: all 0.15s; line-height: 1.4;
+  min-width: 32px; text-align: center;
+}
+.toolbar-btn:hover { border-color: var(--gold); color: var(--gold); }
+.toolbar-btn b { font-weight: bold; }
+.toolbar-btn i { font-style: italic; }
+.toolbar-sep {
+  width: 1px; background: var(--border); margin: 2px 2px; align-self: stretch;
+}
+#body-editor {
+  width: 100%; min-height: 320px; background: var(--surface);
+  border: 1px solid var(--border); color: var(--cream);
+  font-family: 'EB Garamond', Georgia, serif; font-size: 17px;
+  line-height: 1.9; padding: 20px; outline: none;
+  transition: border-color 0.2s; overflow-y: auto;
+}
+#body-editor:focus { border-color: var(--gold); }
+#body-editor:empty::before {
+  content: 'ここに本文を書いてください。\A\AClaudeで生成した文章をそのまま使うか、自分で書き換えて仕上げてください。';
+  white-space: pre; color: #444440; pointer-events: none;
+}
+#body-editor img {
+  max-width: 100%; height: auto; display: block; margin: 12px 0;
+  cursor: pointer; outline: 2px solid transparent; transition: outline 0.15s;
+}
+#body-editor img:hover { outline-color: var(--gold); }
+#body-editor img.selected { outline-color: var(--gold); }
+#body-editor h2 {
+  font-size: 18px; font-weight: normal; letter-spacing: 0.05em;
+  margin: 0 0 16px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+  color: var(--cream);
+}
+#body-editor hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+#preview-wrap { display: none; }
+
+.send-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
+  background: var(--black2); border-top: 1px solid var(--border);
+  padding: 16px 28px; display: flex; align-items: center; gap: 12px;
+  max-width: 680px; margin: 0 auto;
+}
+.send-btn {
+  font-family: 'EB Garamond', Georgia, serif; font-size: 12px;
+  letter-spacing: 0.25em; text-transform: uppercase; padding: 14px 28px;
+  background: var(--cream); color: var(--black); border: none;
+  cursor: pointer; transition: background 0.2s; flex-shrink: 0;
+}
+.send-btn:hover { background: var(--gold); }
+.send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.send-status { font-size: 13px; color: var(--mid); font-style: italic; flex: 1; }
+.send-status.ok { color: #7ab87a; }
+.send-status.err { color: #c87a7a; }
+
+/* ===== TOAST ===== */
+#schedule-toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: #1e2e1e; border: 1px solid #7ab87a; border-radius: 10px;
+  padding: 16px 24px; min-width: 280px; max-width: 480px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 300; text-align: center;
+}
+#schedule-toast.show {
+  opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto;
+}
+#schedule-toast .toast-icon { font-size: 28px; margin-bottom: 6px; }
+#schedule-toast .toast-title { font-size: 14px; color: #7ab87a; letter-spacing: 0.05em; margin-bottom: 4px; }
+#schedule-toast .toast-body  { font-size: 13px; color: var(--fg); line-height: 1.6; }
+#schedule-toast .toast-cal   { font-size: 11px; color: var(--mid); margin-top: 6px; }
+
+/* ===== MODAL ===== */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7); z-index: 100;
+  align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--black2); border: 1px solid var(--border);
+  width: 90%; max-width: 420px; max-height: 70vh; overflow-y: auto; padding: 28px;
+}
+.modal-title { font-size: 11px; letter-spacing: 0.25em; color: var(--gold); text-transform: uppercase; margin-bottom: 20px; }
+.draft-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.draft-item-info { flex: 1; min-width: 0; cursor: pointer; }
+.draft-item-info:hover .draft-item-name { color: var(--gold); }
+.draft-item-name { font-size: 15px; margin-bottom: 4px; transition: color 0.2s; }
+.draft-item-date { font-size: 11px; color: var(--mid); letter-spacing: 0.05em; }
+.draft-delete-btn {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
+  padding: 5px 10px; background: transparent;
+  border: 1px solid #c87a7a; color: #c87a7a;
+  cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+}
+.draft-delete-btn:hover { background: #c87a7a; color: var(--black); }
+.modal-close {
+  font-family: 'EB Garamond', Georgia, serif; font-size: 11px;
+  letter-spacing: 0.2em; text-transform: uppercase; padding: 10px 20px;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--mid); cursor: pointer; margin-top: 20px; width: 100%;
+}
+.draft-empty { font-size: 14px; color: var(--mid); font-style: italic; }
+
+@media (max-width: 600px) {
+  .app { padding-bottom: 120px; }
+  .top-bar { padding: 14px 16px; flex-wrap: wrap; gap: 8px; }
+  .top-logo { font-size: 10px; letter-spacing: 0.2em; }
+  .top-mode { gap: 3px; flex-wrap: wrap; }
+  .mode-btn { font-size: 9px; padding: 5px 10px; letter-spacing: 0.12em; }
+  .schedule-list-wrap { margin: 16px 16px 0; }
+  .fields { padding: 20px 16px 0; gap: 16px; }
+  .claude-panel { padding: 20px 16px 0; }
+  .body-wrap { padding: 18px 16px 0; }
+  .divider { margin: 20px 16px 0; }
+  #preview-wrap { padding: 18px 16px 0; }
+  input[type="text"], input[type="datetime-local"], textarea { font-size: 15px; padding: 10px 14px; }
+  #body-editor { font-size: 16px; min-height: 240px; }
+  .claude-prompt-wrap { flex-direction: column; }
+  .claude-prompt-wrap textarea { height: 72px; }
+  .claude-btn { width: 100%; padding: 12px; align-self: auto; }
+  .send-bar { padding: 10px 16px; flex-wrap: wrap; gap: 8px; left: 0; right: 0; max-width: 100%; }
+  .send-btn { font-size: 10px; letter-spacing: 0.15em; padding: 10px 14px; flex: 1; text-align: center; }
+  .send-status { font-size: 11px; width: 100%; flex: none; text-align: center; padding: 2px 0 4px; }
+  .modal { padding: 20px 18px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="top-bar">
+    <span class="top-logo"><a href="./#newsletter" style="color:inherit;text-decoration:none;" title="HP管理画面へ戻る">← 管理</a>&ensp;烏_letters — editor</span>
+    <div class="top-mode">
+      <button class="mode-btn active" id="btn-edit" onclick="setMode('edit')">編集</button>
+      <button class="mode-btn" id="btn-preview" onclick="setMode('preview')">プレビュー</button>
+      <button class="mode-btn" id="save-draft-btn" onclick="saveDraftToDrive()">保存</button>
+      <button class="mode-btn" onclick="showDraftList()">下書き</button>
+    </div>
+  </div>
+
+  <!-- 予約一覧 -->
+  <div class="schedule-list-wrap" id="schedule-list-wrap">
+    <p class="schedule-list-title" style="margin: 0 0 10px; font-size:10px; letter-spacing:0.25em; color:var(--gold); text-transform:uppercase;">配信予約一覧</p>
+    <div id="schedule-list"></div>
+  </div>
+
+  <div class="fields">
+    <div>
+      <label class="field-label">号数 / Issue</label>
+      <div style="display:flex;gap:0;align-items:stretch;">
+        <input type="text" id="issue-prefix" value="No." style="width:80px;flex-shrink:0;border-right:none;text-align:center;letter-spacing:0.1em;">
+        <button class="toolbar-btn" onclick="stepIssue(-1)" style="border-right:none;padding:0 12px;font-size:16px;flex-shrink:0;">−</button>
+        <input type="number" id="issue-num" value="1" min="1" max="999" style="width:64px;flex-shrink:0;border-right:none;text-align:center;font-size:17px;-moz-appearance:textfield;" oninput="syncIssue()">
+        <button class="toolbar-btn" onclick="stepIssue(1)" style="padding:0 12px;font-size:16px;flex-shrink:0;">＋</button>
+        <input type="text" id="issue" style="display:none;">
+      </div>
+    </div>
+    <div>
+      <label class="field-label">件名 / Subject</label>
+      <input type="text" id="subject" placeholder="【烏_letters】近況とお知らせ">
+    </div>
+    <div>
+      <label class="field-label">日付 / Date</label>
+      <input type="text" id="date" placeholder="2026年6月">
+    </div>
+    <div>
+      <label class="field-label">配信予定日時 / Schedule</label>
+      <input type="datetime-local" id="schedule-dt" style="color-scheme:dark;">
+    </div>
+    <div>
+      <label class="field-label">署名 / Sign-off</label>
+      <input type="text" id="signoff" placeholder="Shikine Watanabe" value="Shikine Watanabe">
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <div class="body-wrap" id="edit-wrap">
+    <label class="field-label">本文</label>
+    <div class="body-toolbar">
+      <button class="toolbar-btn" onmousedown="event.preventDefault();applyStyle('bold')" title="太字 (Ctrl+B)"><b>B</b></button>
+      <button class="toolbar-btn" onmousedown="event.preventDefault();applyStyle('italic')" title="斜体 (Ctrl+I)"><i>I</i></button>
+      <button class="toolbar-btn" onmousedown="event.preventDefault();applyStyle('underline')" title="下線 (Ctrl+U)"><span style="text-decoration:underline;">U</span></button>
+      <div class="toolbar-sep"></div>
+      <button class="toolbar-btn" onmousedown="event.preventDefault();applyStyle('h2')" title="見出し">H</button>
+      <button class="toolbar-btn" onmousedown="event.preventDefault();applyStyle('hr')" title="区切り線">—</button>
+      <div class="toolbar-sep"></div>
+      <label class="toolbar-btn" title="画像をファイルから挿入（エディタのみ・メール非対応）" style="cursor:pointer;">
+        🖼 <input type="file" accept="image/*" style="display:none;" onchange="insertImageFile(this)">
+      </label>
+      <button class="toolbar-btn" onmousedown="event.preventDefault();insertImageByUrl()" title="URLで画像を挿入">🔗</button>
+      <button class="toolbar-btn" onmousedown="event.preventDefault();insertAudioBlock()" title="音源リンクを挿入">🎵</button>
+    </div>
+    <div id="body-editor" contenteditable="true" spellcheck="false"></div>
+  </div>
+
+  <div class="claude-panel" id="claude-panel-wrap" style="padding: 16px 28px 0;">
+    <button class="toolbar-btn" onclick="toggleClaudePanel()" id="claude-toggle-btn" style="font-size:11px;letter-spacing:0.15em;text-transform:uppercase;padding:6px 14px;">Claude で原稿を生成 ▸</button>
+    <div id="claude-panel-inner" style="display:none;margin-top:12px;">
+      <div class="claude-prompt-wrap">
+        <textarea id="claude-prompt" placeholder="例：今月は豊岡演劇祭に参加しました。舞台美術について書いてください。"></textarea>
+        <button class="claude-btn" id="claude-gen-btn" onclick="generateWithClaude()">生成</button>
+      </div>
+      <p class="claude-status" id="claude-status"></p>
+    </div>
+  </div>
+
+
+</div>
+
+<!-- AUDIO MODAL -->
+<div class="modal-overlay" id="audio-modal">
+  <div class="modal" style="max-width:400px;">
+    <p class="modal-title">音源リンクを挿入</p>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <label class="field-label">音源URL</label>
+        <input type="text" id="audio-url" placeholder="https://soundcloud.com/...">
+      </div>
+      <div>
+        <label class="field-label">曲名 / タイトル</label>
+        <input type="text" id="audio-title" placeholder="曲名">
+      </div>
+      <div>
+        <label class="field-label">サムネイル画像URL（任意）</label>
+        <input type="text" id="audio-thumb" placeholder="https://... （省略可）">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:20px;">
+      <button class="send-btn" style="flex:1;padding:10px;" onclick="confirmInsertAudio()">挿入</button>
+      <button class="modal-close" style="flex:1;margin:0;" onclick="closeAudioModal()">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<!-- PREVIEW MODAL -->
+<div class="modal-overlay" id="preview-modal">
+  <div class="modal" style="max-width:640px;width:95%;max-height:90vh;padding:0;display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <span class="modal-title" style="margin:0;">プレビュー</span>
+      <button class="modal-close" style="margin:0;width:auto;padding:6px 16px;" onclick="closePreviewModal()">閉じる</button>
+    </div>
+    <div style="overflow-y:auto;flex:1;">
+      <div style="background:#f0ede6;">
+        <div id="preview-inner"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DRAFT MODAL -->
+<div class="modal-overlay" id="draft-modal">
+  <div class="modal">
+    <p class="modal-title">下書き一覧</p>
+    <div id="draft-list"></div>
+    <button class="modal-close" onclick="closeDraftModal()">閉じる</button>
+  </div>
+</div>
+
+<!-- SCHEDULE PREVIEW MODAL -->
+<div class="modal-overlay" id="schedule-preview-modal">
+  <div class="modal" style="max-width:640px;max-height:88vh;">
+    <p class="modal-title" id="sched-preview-title"></p>
+    <p class="sched-preview-meta" id="sched-preview-date"></p>
+    <div class="sched-preview-frame">
+      <div id="sched-preview-inner"></div>
+    </div>
+    <div id="reschedule-area" style="display:none;padding:8px 0 4px;display:none;">
+      <input type="datetime-local" id="reschedule-dt" style="font-size:13px;padding:4px 8px;border:1px solid var(--gold);background:#1a1a1a;color:var(--fg);border-radius:4px;">
+      <button class="schedule-preview-btn" onclick="submitReschedule()" style="margin-left:6px;">変更を保存</button>
+      <button class="modal-close" style="margin:0 0 0 4px;padding:4px 10px;" onclick="closeRescheduleArea()">閉じる</button>
+    </div>
+    <div class="sched-preview-actions">
+      <button class="schedule-preview-btn" onclick="loadScheduleToEditor()">編集に読み込む</button>
+      <button class="schedule-preview-btn" onclick="openRescheduleArea()">日時を変更</button>
+      <button class="schedule-preview-btn" onclick="saveScheduleAsDraft()">下書きに保存</button>
+      <button class="schedule-cancel-btn" onclick="cancelScheduleFromPreview()">予約をキャンセル</button>
+      <button class="modal-close" style="margin:0;flex:1;" onclick="closeSchedulePreview()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCHEDULE TOAST -->
+<div id="schedule-toast">
+  <div class="toast-icon">📅</div>
+  <div class="toast-title">予約配信が完了しました</div>
+  <div class="toast-body" id="toast-body"></div>
+  <div class="toast-cal" id="toast-cal"></div>
+</div>
+
+<!-- SEND BAR -->
+<div class="send-bar">
+  <button class="send-btn" id="test-btn" onclick="sendTestMail()" style="background:transparent;border:1px solid var(--mid);color:var(--mid);">テスト</button>
+  <button class="send-btn" id="send-btn" onclick="sendMail()">今すぐ配信</button>
+  <button class="send-btn" id="schedule-btn" onclick="scheduleMail()" style="background:transparent;border:1px solid var(--gold);color:var(--gold);">予約配信</button>
+  <span class="send-status" id="send-status">配信日時を設定して予約するか、今すぐ配信できます</span>
+</div>
+
+<script>
+// HP管理画面のログイン情報（同じタブの sessionStorage）から接続先と合言葉を取る
+const ADM = (() => { try { return JSON.parse(sessionStorage.getItem('adm.session') || 'null'); } catch (e) { return null; } })();
+if (!ADM || !ADM.gasUrl || !ADM.gasSecret) {
+  location.replace('./#newsletter');
+  throw new Error('管理画面にログインしてください');
+}
+const GAS_URL     = ADM.gasUrl;
+const GAS_HEADERS = { 'Content-Type': 'text/plain' };
+const scheduleCache = {}; // id -> { subject, html, scheduledAt }
+let currentPreviewId = null;
+
+function gasPost(body) {
+  return fetch(GAS_URL, { method: 'POST', headers: GAS_HEADERS, body: JSON.stringify(Object.assign({}, body, { secret: ADM.gasSecret })) })
+    .then(r => r.json())
+    .then(r => {
+      if (r && r.error === 'unauthorized') alert('メルマガの合言葉が違います。管理画面の「設定 → メルマガ接続」を確認してください。');
+      return r;
+    });
+}
+
+// ===== 予約一覧 =====
+async function loadScheduleStatus() {
+  try {
+    const result = await gasPost({ action: 'getScheduleStatus' });
+    renderScheduleList(result.schedules || []);
+  } catch(e) {}
+}
+
+function renderScheduleList(schedules) {
+  const wrap   = document.getElementById('schedule-list-wrap');
+  const listEl = document.getElementById('schedule-list');
+  // キャッシュ更新
+  Object.keys(scheduleCache).forEach(k => delete scheduleCache[k]);
+  if (!schedules || schedules.length === 0) { wrap.classList.remove('visible'); return; }
+  schedules.forEach(s => scheduleCache[s.id] = s);
+  wrap.classList.add('visible');
+  listEl.innerHTML = schedules.map(s => {
+    const dateStr = new Date(s.scheduledAt).toLocaleString('ja-JP', {
+      year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+    return `<div class="schedule-item" id="sched-${escAttr(s.id)}">
+      <div class="schedule-item-info" onclick="openSchedulePreview('${escAttr(s.id)}')" style="cursor:pointer;">
+        <div class="schedule-item-subject">${escHtml(s.subject)}</div>
+        <div class="schedule-item-date">${dateStr}</div>
+      </div>
+      <button class="schedule-preview-btn" onclick="openSchedulePreview('${escAttr(s.id)}')">プレビュー</button>
+      <button class="schedule-cancel-btn" onclick="cancelScheduleById('${escAttr(s.id)}', this)">取消</button>
+    </div>`;
+  }).join('');
+}
+
+// ===== SCHEDULE PREVIEW =====
+function openSchedulePreview(id) {
+  const s = scheduleCache[id];
+  if (!s) return;
+  currentPreviewId = id;
+  const dateStr = new Date(s.scheduledAt).toLocaleString('ja-JP', {
+    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+  document.getElementById('sched-preview-title').textContent = s.subject;
+  document.getElementById('sched-preview-date').textContent = '配信予定: ' + dateStr;
+  document.getElementById('sched-preview-inner').innerHTML = s.html;
+  document.getElementById('schedule-preview-modal').classList.add('open');
+}
+
+function closeSchedulePreview() {
+  document.getElementById('schedule-preview-modal').classList.remove('open');
+  currentPreviewId = null;
+  closeRescheduleArea();
+}
+
+function openRescheduleArea() {
+  const s = scheduleCache[currentPreviewId];
+  if (!s) return;
+  const area = document.getElementById('reschedule-area');
+  const dt = new Date(s.scheduledAt);
+  const pad = n => String(n).padStart(2, '0');
+  document.getElementById('reschedule-dt').value =
+    `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+  area.style.display = 'flex';
+  area.style.alignItems = 'center';
+  area.style.flexWrap = 'wrap';
+  area.style.gap = '4px';
+}
+
+function closeRescheduleArea() {
+  document.getElementById('reschedule-area').style.display = 'none';
+}
+
+async function submitReschedule() {
+  const id = currentPreviewId;
+  const newDt = document.getElementById('reschedule-dt').value;
+  if (!id || !newDt) return;
+  setStatus('カレンダー更新中…', '');
+  try {
+    const res = await gasPost({ action: 'updateSchedule', id, scheduledAt: new Date(newDt).toISOString() });
+    if (res.ok) {
+      scheduleCache[id].scheduledAt = new Date(newDt).toISOString();
+      const dateStr = new Date(newDt).toLocaleString('ja-JP', {
+        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+      document.getElementById('sched-preview-date').textContent = '配信予定: ' + dateStr;
+      closeRescheduleArea();
+      setStatus('✓ 配信日時を変更しました', 'ok');
+      loadScheduleStatus();
+    } else {
+      setStatus('⚠ 更新に失敗しました', 'error');
+    }
+  } catch(e) {
+    setStatus('⚠ 通信エラー', 'error');
+  }
+}
+
+function loadScheduleToEditor() {
+  const s = scheduleCache[currentPreviewId];
+  if (!s) return;
+  document.getElementById('subject').value = s.subject;
+  const dt  = new Date(s.scheduledAt);
+  const pad = n => String(n).padStart(2, '0');
+  document.getElementById('schedule-dt').value =
+    `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+  closeSchedulePreview();
+  setMode('edit');
+  setStatus('✓ 件名・配信予定日時を読み込みました。本文を編集してください。', 'ok');
+}
+
+async function saveScheduleAsDraft() {
+  const s = scheduleCache[currentPreviewId];
+  if (!s) return;
+  const issue = document.getElementById('issue').value || ('sched_' + currentPreviewId.slice(-6));
+  const data = {
+    issue,
+    subject:  s.subject,
+    date:     document.getElementById('date').value,
+    signoff:  document.getElementById('signoff').value,
+    body:     document.getElementById('body-editor').innerHTML,
+    schedule: document.getElementById('schedule-dt').value,
+  };
+  try {
+    const result = await gasPost({ action: 'saveDraft', data });
+    if (result.ok) {
+      closeSchedulePreview();
+      setStatus('✓ 下書きに保存しました（号数: ' + issue + '）', 'ok');
+    } else {
+      setStatus('エラー: 保存に失敗しました', 'err');
+    }
+  } catch(e) { setStatus('通信エラーが発生しました', 'err'); }
+}
+
+async function cancelScheduleFromPreview() {
+  if (!confirm('この予約をキャンセルしますか？')) return;
+  try {
+    const result = await gasPost({ action: 'cancelSchedule', id: currentPreviewId });
+    if (result.ok) {
+      document.getElementById('sched-' + currentPreviewId)?.remove();
+      if (!document.querySelector('.schedule-item')) {
+        document.getElementById('schedule-list-wrap').classList.remove('visible');
+      }
+      delete scheduleCache[currentPreviewId];
+      closeSchedulePreview();
+      setStatus('✓ 予約をキャンセルしました。', 'ok');
+    } else {
+      setStatus('エラー: キャンセルに失敗しました', 'err');
+    }
+  } catch(e) { setStatus('通信エラーが発生しました', 'err'); }
+}
+
+async function cancelScheduleById(id, btn) {
+  if (!confirm('この予約をキャンセルしますか？')) return;
+  btn.disabled = true; btn.textContent = '取消中...';
+  try {
+    const result = await gasPost({ action: 'cancelSchedule', id });
+    if (result.ok) {
+      document.getElementById('sched-' + id)?.remove();
+      if (!document.querySelector('.schedule-item')) document.getElementById('schedule-list-wrap').classList.remove('visible');
+      setStatus('✓ 予約をキャンセルしました。', 'ok');
+    } else {
+      btn.disabled = false; btn.textContent = '取消';
+      setStatus('エラー: キャンセルに失敗しました', 'err');
+    }
+  } catch(e) { btn.disabled = false; btn.textContent = '取消'; setStatus('通信エラーが発生しました', 'err'); }
+}
+
+// ===== MODE =====
+function setMode(mode) {
+  if (mode === 'preview') {
+    document.getElementById('preview-inner').innerHTML = buildHTML();
+    document.getElementById('preview-modal').classList.add('open');
+  }
+}
+
+function closePreviewModal() {
+  document.getElementById('preview-modal').classList.remove('open');
+}
+
+// ===== BUILD HTML =====
+function serializeBodyForEmail() {
+  const editor = document.getElementById('body-editor');
+  const clone  = editor.cloneNode(true);
+  const pStyle = 'font-size:16px;line-height:1.9;color:#2a2a2a;margin:0 0 24px;font-family:Georgia,serif;';
+  const h2Style = 'font-size:18px;color:#1a1a1a;font-family:Georgia,serif;font-weight:normal;letter-spacing:0.05em;margin:0 0 20px;padding-bottom:6px;border-bottom:1px solid #d4ccc0;';
+  const hrStyle = 'border:none;border-top:1px solid #c8b89a;margin:24px 0;';
+  const imgStyle = 'max-width:100%;height:auto;display:block;margin:16px 0;';
+
+  // data URL 画像はメール送信時に除去（ペイロード過大のため）
+  clone.querySelectorAll('img').forEach(el => {
+    if (el.src.startsWith('data:')) { el.remove(); return; }
+    el.setAttribute('style', imgStyle);
+  });
+  clone.querySelectorAll('h2').forEach(el => el.setAttribute('style', h2Style));
+  clone.querySelectorAll('hr').forEach(el => el.setAttribute('style', hrStyle));
+
+  let html = '';
+  for (const node of clone.childNodes) {
+    if (node.nodeType === 3) {
+      const t = node.textContent.trim();
+      if (t) html += `<p style="${pStyle}">${t}</p>`;
+    } else if (node.dataset?.audioBlock) {
+      // 音源ブロック → メール用に再生成
+      const aUrl   = node.dataset.audioUrl   || '';
+      const aTitle = node.dataset.audioTitle || '音源を聴く';
+      const aThumb = node.dataset.audioThumb || '';
+      html += `<div style="margin:16px 0;">${buildAudioBlockInner(aUrl, aTitle, aThumb, false)}</div>`;
+    } else if (node.nodeName === 'DIV' || node.nodeName === 'P') {
+      const inner = node.innerHTML;
+      if (!inner || inner === '<br>' || inner.trim() === '') continue;
+      html += `<p style="${pStyle}">${inner}</p>`;
+    } else if (node.nodeName === 'H2') {
+      html += node.outerHTML;
+    } else if (node.nodeName === 'HR') {
+      html += `<hr style="${hrStyle}">`;
+    } else if (node.nodeName === 'IMG') {
+      html += node.outerHTML;
+    } else if (node.nodeName !== 'BR') {
+      html += node.outerHTML || '';
+    }
+  }
+  return html;
+}
+
+function buildHTML() {
+  const issue   = document.getElementById('issue').value   || 'No.001';
+  const date    = document.getElementById('date').value    || '';
+  const signoff = document.getElementById('signoff').value || '';
+  const bodyHTML = serializeBodyForEmail();
+  return `
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f0ede6;padding:40px 0;">
+<tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;background-color:#faf9f5;">
+  <tr><td style="background-color:#1a1a1a;padding:40px 48px 32px;border-bottom:3px solid #c8b89a;">
+    <p style="font-size:11px;letter-spacing:0.35em;color:#c8b89a;text-transform:uppercase;margin:0 0 12px;font-family:Georgia,serif;">letters from 烏</p>
+    <h1 style="font-size:28px;color:#faf9f5;margin:0;font-weight:normal;font-family:Georgia,serif;letter-spacing:0.05em;">烏_letters</h1>
+    <p style="font-size:11px;letter-spacing:0.2em;color:#888;text-transform:uppercase;margin:16px 0 0;font-family:Georgia,serif;">${issue}</p>
+  </td></tr>
+  <tr><td style="background-color:#e8e2d8;padding:10px 48px;border-bottom:1px solid #d4ccc0;">
+    <p style="margin:0;font-size:11px;letter-spacing:0.15em;color:#888;font-family:Georgia,serif;text-transform:uppercase;">${date}</p>
+  </td></tr>
+  <tr><td style="padding:48px 48px 0;">${bodyHTML}</td></tr>
+  <tr><td style="padding:0 48px 48px;">
+    <p style="font-size:14px;color:#555;font-family:Georgia,serif;font-style:italic;margin:0;">with love,</p>
+    <p style="font-size:16px;color:#1a1a1a;font-family:Georgia,serif;margin:8px 0 0;letter-spacing:0.05em;">${signoff}</p>
+  </td></tr>
+  <tr><td style="background-color:#1a1a1a;padding:32px 48px;">
+    <p style="font-size:10px;letter-spacing:0.3em;color:#c8b89a;text-transform:uppercase;font-family:Georgia,serif;margin:0 0 16px;">烏_letters</p>
+    <p style="font-size:11px;color:#666;line-height:1.7;font-family:Georgia,serif;margin:0 0 8px;">このメールは購読を申し込まれた方にお送りしています。</p>
+    <p style="font-size:11px;color:#666;line-height:1.7;font-family:Georgia,serif;margin:8px 0 0;">
+      配信停止をご希望の方は <a href="mailto:watanabeshikine@gmail.com" style="color:#888;text-decoration:underline;">watanabeshikine@gmail.com</a> に空メールをお送りください。
+    </p>
+  </td></tr>
+</table>
+</td></tr>
+</table>`;
+}
+
+// ===== CLAUDE =====
+async function generateWithClaude() {
+  const prompt = document.getElementById('claude-prompt').value.trim();
+  if (!prompt) return;
+  const btn = document.getElementById('claude-gen-btn');
+  const status = document.getElementById('claude-status');
+  btn.disabled = true; status.textContent = '生成中...';
+  try {
+    const res  = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514', max_tokens: 1000,
+        system: 'あなたはメールマガジン「烏_letters」の編集アシスタントです。舞台美術家・建築家・美術作家として活動する渡辺志鬼根さんのメルマガの本文を書きます。文体は一人称・エッセイ調・ていねい語。改行は段落ごとに空行を入れてください。HTMLタグは使わないこと。',
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    const text = data.content?.[0]?.text || '';
+    const editor = document.getElementById('body-editor');
+    editor.innerHTML = text.split(/\n\n+/).map(p => p.trim() ? `<div>${p.replace(/\n/g,'<br>')}</div>` : '').join('');
+    status.textContent = '✓ 生成しました。本文を確認・編集してください。';
+  } catch(e) { status.textContent = 'エラーが発生しました。もう一度お試しください。'; }
+  btn.disabled = false;
+}
+
+// ===== TEST SEND =====
+async function sendTestMail() {
+  const subject = document.getElementById('subject').value.trim();
+  const body    = document.getElementById('body-editor').innerText.trim();
+  if (!subject) { setStatus('件名を入力してください', 'err'); return; }
+  if (!body)    { setStatus('本文を入力してください', 'err'); return; }
+  const btn = document.getElementById('test-btn');
+  btn.disabled = true; setStatus('テスト送信中...', '');
+  try {
+    const data = await gasPost({ action: 'sendTest', subject: '[TEST] ' + subject, html: buildHTML() });
+    if (data.ok) { setStatus('✓ テストメールを送信しました', 'ok'); }
+    else         { setStatus(`エラー: ${data.error || 'テスト送信に失敗しました'}`, 'err'); }
+  } catch(e) { setStatus('通信エラーが発生しました。', 'err'); }
+  btn.disabled = false;
+}
+
+// ===== SEND =====
+async function sendMail() {
+  const subject = document.getElementById('subject').value.trim();
+  const body    = document.getElementById('body-editor').innerText.trim();
+  if (!subject) { setStatus('件名を入力してください', 'err'); return; }
+  if (!body)    { setStatus('本文を入力してください', 'err'); return; }
+  if (!confirm(`件名：${subject}\n\nGoogle Sheets の全読者にメールを送信します。よろしいですか？`)) return;
+  const btn = document.getElementById('send-btn');
+  btn.disabled = true; setStatus('送信中...', '');
+  try {
+    const data = await gasPost({ subject, html: buildHTML() });
+    if (data.ok) { setStatus(`✓ ${data.sent} 件のメールを送信しました！`, 'ok'); }
+    else         { setStatus(`エラー: ${data.error || '送信に失敗しました'}`, 'err'); }
+  } catch(e) { setStatus('通信エラーが発生しました。', 'err'); }
+  btn.disabled = false;
+}
+
+// ===== SCHEDULE =====
+async function scheduleMail() {
+  const subject    = document.getElementById('subject').value.trim();
+  const body       = document.getElementById('body-editor').innerText.trim();
+  const scheduleDt = document.getElementById('schedule-dt').value;
+  if (!subject)    { setStatus('件名を入力してください', 'err'); return; }
+  if (!body)       { setStatus('本文を入力してください', 'err'); return; }
+  if (!scheduleDt) { setStatus('配信予定日時を入力してください', 'err'); return; }
+  const scheduleDate = new Date(scheduleDt);
+  if (scheduleDate <= new Date()) { setStatus('配信日時は未来の日時を指定してください', 'err'); return; }
+  const dateStr = scheduleDate.toLocaleString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  if (!confirm(`件名：${subject}\n配信日時：${dateStr}\n\nこの日時に予約配信します。よろしいですか？`)) return;
+  const btn = document.getElementById('schedule-btn');
+  btn.disabled = true; setStatus('予約中...', '');
+  try {
+    const data = await gasPost({ action: 'schedule', subject, html: buildHTML(), scheduledAt: scheduleDate.toISOString() });
+    if (data.ok) {
+      setStatus(`✓ ${dateStr} に予約しました`, 'ok');
+      showScheduleToast(subject, dateStr, true);
+      document.getElementById('schedule-dt').value = '';
+      loadScheduleStatus();
+    } else { setStatus(`エラー: ${data.error || '予約に失敗しました'}`, 'err'); }
+  } catch(e) { setStatus('通信エラーが発生しました。', 'err'); }
+  btn.disabled = false;
+}
+
+// ===== DRAFT: SAVE =====
+async function saveDraftToDrive() {
+  const data = {
+    issue:    document.getElementById('issue').value,
+    subject:  document.getElementById('subject').value,
+    date:     document.getElementById('date').value,
+    signoff:  document.getElementById('signoff').value,
+    body:     document.getElementById('body-editor').innerHTML,
+    schedule: document.getElementById('schedule-dt').value,
+  };
+  const btn = document.getElementById('save-draft-btn');
+  btn.textContent = '保存中...';
+  try {
+    const result = await gasPost({ action: 'saveDraft', data });
+    if (result.ok) { btn.textContent = '✓ 保存'; setTimeout(() => btn.textContent = '保存', 2000); }
+    else           { btn.textContent = '保存'; alert('保存に失敗しました: ' + (result.error || '不明なエラー')); }
+  } catch(e) { btn.textContent = '保存'; alert('通信エラーが発生しました'); }
+}
+
+// ===== DRAFT: LIST =====
+async function showDraftList() {
+  document.getElementById('draft-modal').classList.add('open');
+  const listEl = document.getElementById('draft-list');
+  listEl.innerHTML = '<p class="draft-empty">読み込み中...</p>';
+  try {
+    const result = await gasPost({ action: 'listDrafts' });
+    if (result.drafts && result.drafts.length > 0) {
+      renderDraftList(result.drafts);
+    } else {
+      listEl.innerHTML = '<p class="draft-empty">下書きはまだありません</p>';
+    }
+  } catch(e) { listEl.innerHTML = '<p class="draft-empty">読み込みに失敗しました</p>'; }
+}
+
+function renderDraftList(drafts) {
+  const listEl = document.getElementById('draft-list');
+  listEl.innerHTML = drafts.map(d => {
+    const issue   = d.issue || '不明';
+    const dateStr = d.updated ? new Date(d.updated).toLocaleString('ja-JP') : '—';
+    return `<div class="draft-item" id="draft-${escAttr(issue)}">
+      <div class="draft-item-info" onclick="loadDraftFromDrive('${escAttr(issue)}')">
+        <div class="draft-item-name">${escHtml(issue)}</div>
+        <div class="draft-item-date">${dateStr}</div>
+      </div>
+      <button class="draft-delete-btn" onclick="deleteDraft('${escAttr(issue)}', this)">削除</button>
+    </div>`;
+  }).join('');
+}
+
+// ===== DRAFT: DELETE =====
+async function deleteDraft(issue, btn) {
+  if (!confirm(`「${issue}」を削除しますか？この操作は取り消せません。`)) return;
+  btn.disabled = true; btn.textContent = '削除中...';
+  try {
+    const result = await gasPost({ action: 'deleteDraft', issue });
+    if (result.ok) {
+      document.getElementById('draft-' + issue)?.remove();
+      if (!document.querySelector('.draft-item')) {
+        document.getElementById('draft-list').innerHTML = '<p class="draft-empty">下書きはまだありません</p>';
+      }
+    } else {
+      btn.disabled = false; btn.textContent = '削除';
+      alert('削除に失敗しました');
+    }
+  } catch(e) { btn.disabled = false; btn.textContent = '削除'; alert('通信エラーが発生しました'); }
+}
+
+// ===== DRAFT: LOAD =====
+async function loadDraftFromDrive(issue) {
+  try {
+    const result = await gasPost({ action: 'loadDraft', issue });
+    if (result.data) {
+      const d = result.data;
+      setIssueFromString(d.issue || '');
+      document.getElementById('subject').value     = d.subject  || '';
+      document.getElementById('date').value        = d.date     || '';
+      document.getElementById('signoff').value     = d.signoff  || '';
+      document.getElementById('body-editor').innerHTML = d.body || '';
+      document.getElementById('schedule-dt').value = d.schedule || '';
+      closeDraftModal();
+      setStatus('✓ 下書きを読み込みました', 'ok');
+    }
+  } catch(e) { alert('読み込みに失敗しました'); }
+}
+
+function closeDraftModal() { document.getElementById('draft-modal').classList.remove('open'); }
+
+let toastTimer = null;
+function showScheduleToast(subject, dateStr, hasCalendar) {
+  document.getElementById('toast-body').textContent = `「${subject}」\n${dateStr}`;
+  document.getElementById('toast-cal').textContent = hasCalendar ? '📆 Google カレンダーに追加しました' : '';
+  const el = document.getElementById('schedule-toast');
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 6000);
+  el.onclick = () => el.classList.remove('show');
+}
+
+function setStatus(msg, cls) {
+  const el = document.getElementById('send-status');
+  el.textContent = msg;
+  el.className = 'send-status ' + cls;
+}
+
+// ===== ISSUE NUMBER =====
+function setIssueFromString(str) {
+  const m = str.match(/^(.*?)(\d+)$/);
+  if (m) {
+    document.getElementById('issue-prefix').value = m[1];
+    document.getElementById('issue-num').value    = parseInt(m[2]);
+  } else {
+    document.getElementById('issue-prefix').value = str;
+    document.getElementById('issue-num').value    = 1;
+  }
+  syncIssue();
+}
+function syncIssue() {
+  const prefix = document.getElementById('issue-prefix').value;
+  const num    = parseInt(document.getElementById('issue-num').value) || 1;
+  document.getElementById('issue').value = prefix + String(num).padStart(3, '0');
+}
+function stepIssue(delta) {
+  const el = document.getElementById('issue-num');
+  el.value = Math.max(1, (parseInt(el.value) || 1) + delta);
+  syncIssue();
+}
+document.getElementById('issue-prefix').addEventListener('input', syncIssue);
+
+// ===== CLAUDE PANEL TOGGLE =====
+function toggleClaudePanel() {
+  const inner = document.getElementById('claude-panel-inner');
+  const btn   = document.getElementById('claude-toggle-btn');
+  const open  = inner.style.display === 'none';
+  inner.style.display = open ? 'block' : 'none';
+  btn.textContent = open ? 'Claude で原稿を生成 ▾' : 'Claude で原稿を生成 ▸';
+}
+
+// ===== IMAGE INSERT =====
+const IMG_MAX_WIDTH  = 800;  // px
+const IMG_MAX_BYTES  = 300 * 1024; // 300KB 上限
+const IMG_QUALITY    = 0.82;
+
+function compressImage(dataUrl, callback) {
+  const img = new Image();
+  img.onload = () => {
+    let { width, height } = img;
+    if (width > IMG_MAX_WIDTH) {
+      height = Math.round(height * IMG_MAX_WIDTH / width);
+      width  = IMG_MAX_WIDTH;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width  = width;
+    canvas.height = height;
+    canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+    // まず JPEG で試す
+    let result = canvas.toDataURL('image/jpeg', IMG_QUALITY);
+    // それでも大きければ quality を下げる
+    if (result.length > IMG_MAX_BYTES * 1.37) { // base64 は約 1.37 倍
+      result = canvas.toDataURL('image/jpeg', 0.6);
+    }
+    callback(result);
+  };
+  img.src = dataUrl;
+}
+
+function insertImageAtCursor(dataUrl) {
+  // まずプレースホルダーを挿入
+  const editor = document.getElementById('body-editor');
+  editor.focus();
+  const placeholder = document.createElement('span');
+  placeholder.textContent = '⏳ 画像をアップロード中...';
+  placeholder.style.cssText = 'color:#888;font-size:13px;font-style:italic;';
+  const sel = window.getSelection();
+  let range = null;
+  if (sel && sel.rangeCount) {
+    range = sel.getRangeAt(0);
+    range.deleteContents();
+    range.insertNode(placeholder);
+  } else {
+    editor.appendChild(placeholder);
+  }
+
+  compressImage(dataUrl, async compressed => {
+    try {
+      const mimeMatch = compressed.match(/^data:([^;]+);/);
+      const mimeType  = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+      const result = await gasPost({ action: 'uploadImage', imageData: compressed, mimeType });
+      if (!result.ok) throw new Error(result.error || 'upload failed');
+
+      // Drive の uc?export=view URL を CDN 直リンクに変換（img タグで表示できるように）
+      const fileId = result.url.match(/[?&]id=([^&]+)/)?.[1];
+      const imgUrl = fileId ? `https://lh3.googleusercontent.com/d/${fileId}` : result.url;
+
+      const img = document.createElement('img');
+      img.src = imgUrl;
+      placeholder.replaceWith(img);
+    } catch(e) {
+      placeholder.textContent = '⚠ 画像のアップロードに失敗しました';
+      placeholder.style.color = '#c87a7a';
+    }
+  });
+}
+
+function insertImageFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => insertImageAtCursor(e.target.result);
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+// ===== AUDIO BLOCK =====
+let _audioRange = null;
+
+function insertAudioBlock() {
+  // カーソル位置を保存
+  const sel = window.getSelection();
+  _audioRange = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+  document.getElementById('audio-url').value   = '';
+  document.getElementById('audio-title').value = '';
+  document.getElementById('audio-thumb').value = '';
+  document.getElementById('audio-modal').classList.add('open');
+  setTimeout(() => document.getElementById('audio-url').focus(), 50);
+}
+
+function closeAudioModal() {
+  document.getElementById('audio-modal').classList.remove('open');
+}
+
+function confirmInsertAudio() {
+  const url   = document.getElementById('audio-url').value.trim();
+  const title = document.getElementById('audio-title').value.trim() || '音源を聴く';
+  const thumb = document.getElementById('audio-thumb').value.trim();
+  if (!url) { document.getElementById('audio-url').focus(); return; }
+  closeAudioModal();
+
+  // エディタ内プレビュー用ブロック
+  const block = document.createElement('div');
+  block.setAttribute('data-audio-block', '1');
+  block.setAttribute('data-audio-url', url);
+  block.setAttribute('data-audio-title', title);
+  block.setAttribute('data-audio-thumb', thumb);
+  block.contentEditable = 'false';
+  block.style.cssText = 'display:block;margin:16px 0;cursor:default;';
+  block.innerHTML = buildAudioBlockInner(url, title, thumb, true);
+
+  const editor = document.getElementById('body-editor');
+  const p = document.createElement('p'); p.innerHTML = '<br>';
+  if (_audioRange) {
+    _audioRange.collapse(false);
+    _audioRange.insertNode(p);
+    _audioRange.insertNode(block);
+  } else {
+    editor.appendChild(block);
+    editor.appendChild(p);
+  }
+  _audioRange = null;
+}
+
+function buildAudioBlockInner(url, title, thumb, forEditor) {
+  const bg    = forEditor ? '#1e1e1c' : '#1a1a1a';
+  const border = forEditor ? '#2a2a28' : '#333';
+  const thumbHtml = thumb
+    ? `<img src="${thumb}" style="width:72px;height:72px;object-fit:cover;flex-shrink:0;" alt="">`
+    : `<div style="width:72px;height:72px;background:#2a2a28;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:28px;">🎵</div>`;
+  return `<a href="${url}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:16px;padding:16px;background:${bg};border:1px solid ${border};text-decoration:none;color:inherit;">
+    ${thumbHtml}
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:11px;letter-spacing:0.2em;color:#c8b89a;text-transform:uppercase;margin-bottom:6px;font-family:Georgia,serif;">▶ 音源</div>
+      <div style="font-size:16px;color:#f0ede6;font-family:Georgia,serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
+      <div style="font-size:11px;color:#888;margin-top:4px;font-family:Georgia,serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${url}</div>
+    </div>
+  </a>`;
+}
+
+function insertImageByUrl() {
+  const url = prompt('画像のURLを入力してください:');
+  if (!url || !url.trim()) return;
+  insertImageAtCursor(url.trim());
+}
+
+// 画像ペースト処理
+document.getElementById('body-editor').addEventListener('paste', e => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      e.preventDefault();
+      const file = item.getAsFile();
+      const reader = new FileReader();
+      reader.onload = ev => insertImageAtCursor(ev.target.result);
+      reader.readAsDataURL(file);
+      return;
+    }
+  }
+});
+
+// ===== TEXT STYLE =====
+function applyStyle(type) {
+  const editor = document.getElementById('body-editor');
+  editor.focus();
+  if (type === 'bold')      { document.execCommand('bold',      false); return; }
+  if (type === 'italic')    { document.execCommand('italic',    false); return; }
+  if (type === 'underline') { document.execCommand('underline', false); return; }
+  if (type === 'h2') {
+    document.execCommand('formatBlock', false, 'h2'); return;
+  }
+  if (type === 'hr') {
+    const hr = document.createElement('hr');
+    const p  = document.createElement('p');
+    p.innerHTML = '<br>';
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount) {
+      const range = sel.getRangeAt(0);
+      range.collapse(false);
+      range.insertNode(p);
+      range.insertNode(hr);
+      range.setStartAfter(p);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } else {
+      editor.appendChild(hr);
+      editor.appendChild(p);
+    }
+  }
+}
+
+// キーボードショートカット（contenteditable はブラウザがCtrl+B/I/Uをネイティブ処理）
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && document.activeElement.id === 'body-editor') {
+    if (e.key === 'b') { e.preventDefault(); applyStyle('bold'); }
+    if (e.key === 'i') { e.preventDefault(); applyStyle('italic'); }
+    if (e.key === 'u') { e.preventDefault(); applyStyle('underline'); }
+  }
+});
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(str) {
+  return String(str).replace(/'/g, "\\'");
+}
+
+// ===== INIT =====
+syncIssue();
+const now = new Date();
+document.getElementById('date').value = `${now.getFullYear()}年${now.getMonth()+1}月`;
+loadScheduleStatus();
+// 管理画面の下書き一覧から ?draft=No.004 で開かれたらその下書きを読む
+const draftParam = new URLSearchParams(location.search).get('draft');
+if (draftParam) {
+  loadDraftFromDrive(draftParam);
+} else {
+  gasPost({ action: 'getNextIssue' }).then(r => {
+    if (r.ok && r.next) {
+      document.getElementById('issue-num').value = r.next;
+      syncIssue();
+    }
+  }).catch(() => {});
+}
+</script>
+</body>
+</html>
