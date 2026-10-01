@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>HP管理</title>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <script src="../theme.js?v=20260905-theme"></script>
+  <!-- プレビューを本番と同じ見た目にするためサイトのCSSを読む（管理画面は adm- 接頭辞で分離） -->
+  <link rel="stylesheet" href="../style.css?v=20260905-theme">
+  <style>
+    html { font-size: 14px; }
+    body { padding: 0; margin: 0; background: var(--bg); color: var(--ink); }
+    .adm { display: grid; grid-template-columns: 200px 1fr; min-height: 100vh; }
+    .adm-side { border-right: 1px solid var(--rule); padding: 20px 0; position: sticky; top: 0; height: 100vh; }
+    .adm-brand { padding: 0 20px 16px; font-size: 13px; letter-spacing: .12em; }
+    .adm-brand small { display: block; color: var(--muted); letter-spacing: 0; }
+    .adm-nav button { display: block; width: 100%; text-align: left; padding: 9px 20px; border: 0; background: none; color: var(--ink); font: inherit; cursor: pointer; }
+    .adm-nav button:hover { background: var(--rule); }
+    .adm-nav button[aria-current="page"] { font-weight: 700; box-shadow: inset 3px 0 0 var(--ink); }
+    .adm-nav button:disabled { color: var(--muted); cursor: default; background: none; }
+    .adm-nav .soon { font-size: 10px; margin-left: 6px; }
+    .adm-main { padding: 28px 32px 80px; max-width: 980px; min-width: 0; }
+    .adm-main h2 { font-size: 18px; font-weight: 400; margin: 0 0 4px; }
+    .adm-lead { color: var(--muted); margin: 0 0 24px; }
+    .adm-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 20px; }
+    .adm-btn { font: inherit; padding: 7px 14px; border: 1px solid var(--ink); background: transparent; color: var(--ink); cursor: pointer; border-radius: 3px; }
+    .adm-btn:hover { background: var(--rule); }
+    .adm-btn.primary { background: var(--ink); color: var(--bg); }
+    .adm-btn.primary:hover { opacity: .85; }
+    .adm-btn.small { padding: 3px 9px; font-size: 12px; }
+    .adm-btn:disabled { opacity: .4; cursor: default; }
+    .adm-status { font-size: 12px; color: var(--muted); }
+    .adm-status.err { color: #c0392b; }
+    .adm-status.ok { color: #2e7d4f; }
+    :root[data-theme="dark"] .adm-status.err { color: #ffb4ad; }
+    :root[data-theme="dark"] .adm-status.ok { color: #9fd8b4; }
+    .adm-h3 { font-size: 11px; letter-spacing: .14em; color: var(--muted); margin: 28px 0 10px; text-transform: uppercase; }
+    .adm-card { display: grid; grid-template-columns: 160px 1fr auto; gap: 16px; padding: 14px; border: 1px solid var(--rule); border-radius: 4px; margin-bottom: 10px; }
+    .adm-card.dirty { border-color: var(--ink); }
+    .adm-thumb { aspect-ratio: 4/3; background: var(--rule); overflow: hidden; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 11px; }
+    .adm-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .adm-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; min-width: 0; }
+    .adm-fields label { display: flex; flex-direction: column; font-size: 11px; color: var(--muted); gap: 2px; min-width: 0; }
+    .adm-fields label.wide { grid-column: 1 / -1; }
+    .adm-fields input { font: inherit; font-size: 13px; color: var(--ink); background: transparent; border: 1px solid var(--rule); border-radius: 3px; padding: 5px 7px; min-width: 0; }
+    .adm-fields input:focus { outline: none; border-color: var(--ink); }
+    .adm-img-row { display: flex; gap: 6px; }
+    .adm-img-row input { flex: 1; min-width: 0; }
+    .adm-ops { display: flex; flex-direction: column; gap: 6px; }
+    .adm-preview { margin-top: 8px; }
+    .adm-preview .featured-card { cursor: default; }
+    .adm-empty { padding: 40px; text-align: center; color: var(--muted); border: 1px dashed var(--rule); }
+    .adm-note { font-size: 12px; color: var(--muted); line-height: 1.8; }
+    .adm-note code { font-size: 11px; background: var(--rule); padding: 1px 4px; border-radius: 2px; }
+    .adm-form { display: grid; gap: 12px; max-width: 520px; }
+    .adm-form label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+    .adm-form input { font: inherit; color: var(--ink); background: transparent; border: 1px solid var(--rule); border-radius: 3px; padding: 7px 9px; }
+    @media (max-width: 720px) {
+      .adm { grid-template-columns: minmax(0, 1fr); }
+      .adm-side { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--rule); padding: 12px 0 0; }
+      .adm-nav { display: flex; overflow-x: auto; }
+      .adm-nav button { white-space: nowrap; width: auto; }
+      .adm-nav button[aria-current="page"] { box-shadow: inset 0 -3px 0 var(--ink); }
+      .adm-main { padding: 20px 16px 60px; }
+      .adm-card { grid-template-columns: minmax(0, 1fr); }
+      .adm-ops { flex-direction: row; flex-wrap: wrap; }
+      .adm-fields { grid-template-columns: minmax(0, 1fr); }
+    }
+  </style>
+</head>
+<body>
+<div class="adm">
+  <aside class="adm-side">
+    <div class="adm-brand">HP管理<small>shikine.github.io</small></div>
+    <nav class="adm-nav" id="adm-nav"></nav>
+  </aside>
+  <main class="adm-main" id="adm-main"></main>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ── 共通ユーティリティ ───────────────────────── */
+  var $ = function (sel, root) { return (root || document).querySelector(sel); };
+  function h(tag, attrs, children) {
+    var el = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) {
+      if (k === 'on') Object.keys(attrs.on).forEach(function (ev) { el.addEventListener(ev, attrs.on[ev]); });
+      else if (k === 'text') el.textContent = attrs[k];
+      else if (attrs[k] !== false && attrs[k] != null) el.setAttribute(k, attrs[k] === true ? '' : attrs[k]);
+    });
+    (children || []).forEach(function (c) { if (c != null) el.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return el;
+  }
+  function escAttr(s) { return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function escText(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function setStatus(el, msg, kind) { el.textContent = msg || ''; el.className = 'adm-status' + (kind ? ' ' + kind : ''); }
+
+  /* ── 認証：GitHubトークンをパスワードで暗号化して admin/auth.json に置く ──
+     PBKDF2(SHA-256) で鍵を作り AES-GCM で暗号化。復号した接続情報は
+     sessionStorage にだけ置く（タブを閉じるとログアウト）。 */
+  var AUTH_PATH = 'admin/auth.json';
+  var SESSION_KEY = 'adm.session';
+  var PBKDF2_ITER = 600000;
+  var DEFAULT_CFG = { owner: 'shikine', repo: 'shikine.github.io', branch: 'main', token: '' };
+  try { localStorage.removeItem('adm.gh.token'); } catch (e) {} // 旧方式の平文トークンを消す
+
+  function b64(bytes) { var s = ''; bytes = new Uint8Array(bytes); for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]); return btoa(s); }
+  function unb64(str) { return Uint8Array.from(atob(str), function (c) { return c.charCodeAt(0); }); }
+  function deriveKey(password, salt, iter) {
+    return crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']).then(function (base) {
+      return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: salt, iterations: iter, hash: 'SHA-256' },
+        base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    });
+  }
+  var Auth = {
+    encrypt: function (cfg, password) {
+      var salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+      return deriveKey(password, salt, PBKDF2_ITER).then(function (key) {
+        return crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, new TextEncoder().encode(JSON.stringify(cfg)));
+      }).then(function (ct) {
+        return JSON.stringify({ v: 1, kdf: 'PBKDF2-SHA256', iter: PBKDF2_ITER, salt: b64(salt), iv: b64(iv), data: b64(ct) }, null, 2) + '\n';
+      });
+    },
+    decrypt: function (blob, password) {
+      return deriveKey(password, unb64(blob.salt), blob.iter).then(function (key) {
+        return crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(blob.iv) }, key, unb64(blob.data));
+      }).then(function (pt) { return JSON.parse(new TextDecoder().decode(pt)); },
+              function () { throw new Error('パスワードが違います'); });
+    },
+    /* 公開中の auth.json（無ければ null） */
+    fetchBlob: function () {
+      return fetch('auth.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) {
+        if (r.status === 404) return null;
+        if (!r.ok) throw new Error('auth.json を読めません (HTTP ' + r.status + ')');
+        return r.json();
+      });
+    },
+    session: function () { try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch (e) { return null; } },
+    login: function (cfg) { try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(cfg)); } catch (e) {} },
+    logout: function () { try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {} },
+    /* 暗号化して GitHub にコミット（ログイン中の接続情報を使う） */
+    save: function (cfg, password, message) {
+      return Auth.encrypt(cfg, password).then(function (json) {
+        return GH.req('GET', AUTH_PATH).then(function (j) { return j.sha; }, function (e) { if (e.status === 404) return null; throw e; })
+          .then(function (sha) { return GH.putText(AUTH_PATH, json, sha, message); });
+      });
+    }
+  };
+
+  /* ── GitHub 連携（Contents API）────────────────── */
+  var GH = {
+    override: null, // 初期設定中だけ未保存の接続情報を使う
+    cfg: function () { return GH.override || Auth.session() || DEFAULT_CFG; },
+    ready: function () { return !!GH.cfg().token; },
+    req: function (method, path, body) {
+      var c = GH.cfg();
+      var url = 'https://api.github.com/repos/' + c.owner + '/' + c.repo + '/contents/' +
+                path.split('/').map(encodeURIComponent).join('/') +
+                (method === 'GET' ? '?ref=' + encodeURIComponent(c.branch) + '&t=' + Date.now() : '');
+      return fetch(url, {
+        method: method,
+        headers: { 'Authorization': 'Bearer ' + c.token, 'Accept': 'application/vnd.github+json' },
+        body: body ? JSON.stringify(body) : undefined,
+        cache: 'no-store'
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (!r.ok) {
+            var e = new Error((j && j.message) || ('HTTP ' + r.status));
+            e.status = r.status; throw e;
+          }
+          return j;
+        });
+      });
+    },
+    /* テキストファイル取得（BOM も保持） */
+    getText: function (path) {
+      return GH.req('GET', path).then(function (j) {
+        var bin = atob(j.content.replace(/\n/g, ''));
+        var bytes = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return { sha: j.sha, text: new TextDecoder('utf-8', { ignoreBOM: true }).decode(bytes) };
+      });
+    },
+    putText: function (path, text, sha, message) {
+      return GH.putBytes(path, new TextEncoder().encode(text), sha, message);
+    },
+    putBytes: function (path, bytes, sha, message) {
+      var bin = '';
+      for (var i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+      var body = { message: message, content: btoa(bin), branch: GH.cfg().branch };
+      if (sha) body.sha = sha;
+      return GH.req('PUT', path, body);
+    }
+  };
+
+  /* ── 画像を縮小して JPEG 化 ─────────────────────── */
+  function resizeImage(file, maxSide) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.onload = function () {
+        var s = Math.min(1, maxSide / Math.max(img.width, img.height));
+        var c = document.createElement('canvas');
+        c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(img.src);
+        c.toBlob(function (blob) {
+          if (!blob) return reject(new Error('画像の変換に失敗しました'));
+          blob.arrayBuffer().then(function (buf) { resolve({ blob: blob, bytes: new Uint8Array(buf) }); });
+        }, 'image/jpeg', 0.86);
+      };
+      img.onerror = function () { reject(new Error('画像を読み込めませんでした')); };
+      img.src = URL.createObjectURL(file);
+    });
+  }
+  function slug(s) {
+    return String(s || '').toLowerCase().replace(/\.[a-z0-9]+$/, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'kv';
+  }
+
+  /* ════════════════════════════════════════════════
+     モジュール：キービジュアル（トップの注目作品カード）
+     index.html の <!-- KV:START --> 〜 <!-- KV:END --> を書き換える
+     ════════════════════════════════════════════════ */
+  var KV_START = /<!-- KV:START[^>]*-->\n?/;
+  var KV_END = /[ \t]*<!-- KV:END -->/;
+  var KV_FIELDS = [
+    ['titleJa', 'タイトル（日本語）'], ['titleEn', 'Title (English)'],
+    ['catJa', 'カテゴリ（日本語）'],    ['catEn', 'Category (English)'],
+    ['year', '年'],                    ['album', 'アルバムURL']
+  ];
+
+  function kvParse(html) {
+    var s = html.search(KV_START), e = html.search(KV_END);
+    if (s < 0 || e < 0 || e < s) throw new Error('index.html に KV:START / KV:END マーカーが見つかりません');
+    var doc = new DOMParser().parseFromString('<div>' + html.slice(s, e) + '</div>', 'text/html');
+    return Array.prototype.map.call(doc.querySelectorAll('.featured-card'), function (c) {
+      return {
+        img: c.getAttribute('data-img') || '',
+        titleJa: c.getAttribute('data-title-ja') || '', titleEn: c.getAttribute('data-title-en') || '',
+        catJa: c.getAttribute('data-cat-ja') || '',     catEn: c.getAttribute('data-cat-en') || '',
+        year: c.getAttribute('data-year') || '',        album: c.getAttribute('data-album') || ''
+      };
+    });
+  }
+
+  function kvCardHtml(c, i) {
+    var I = '      ';
+    var note = (c.titleJa + ' ' + c.year).replace(/--+/g, '-').trim();
+    var out = I + '<!-- card ' + (i + 1) + ': ' + note + ' -->\n' +
+      I + '<div class="featured-card"\n' +
+      I + '     data-img="' + escAttr(c.img) + '"\n' +
+      I + '     data-title-ja="' + escAttr(c.titleJa) + '"\n' +
+      I + '     data-title-en="' + escAttr(c.titleEn) + '"\n' +
+      I + '     data-cat-ja="' + escAttr(c.catJa) + '" data-cat-en="' + escAttr(c.catEn) + '"\n' +
+      I + '     data-year="' + escAttr(c.year) + '"\n' +
+      I + '     data-album="' + escAttr(c.album) + '">\n';
+    if (c.img) out += I + '  <img src="' + escAttr(c.img) + '" alt="' + escAttr(c.titleJa) + '" loading="lazy">\n';
+    out += I + '  <div class="featured-card-info">\n' +
+      I + '    <div class="featured-card-cat"><span class="t-ja">' + escText(c.catJa) + '</span><span class="t-en">' + escText(c.catEn) + '</span></div>\n' +
+      I + '    <div class="featured-card-title"><span class="t-ja">' + escText(c.titleJa) + '</span><span class="t-en">' + escText(c.titleEn) + '</span></div>\n' +
+      I + '    <div class="featured-card-year">' + escText(c.year) + '</div>\n' +
+      I + '  </div>\n' +
+      I + '</div>\n';
+    return out;
+  }
+
+  function kvApply(html, cards) {
+    var m = html.match(KV_START), s = m.index + m[0].length, e = html.search(KV_END);
+    return html.slice(0, s) + cards.map(kvCardHtml).join('') + html.slice(e);
+  }
+
+  var kvModule = {
+    id: 'keyvisual',
+    label: 'キービジュアル',
+    state: null, // { sha, html, cards, staged: {idx: {bytes, url, name}} }
+    render: function (main) {
+      var self = this;
+      main.appendChild(h('h2', { text: 'キービジュアル' }));
+      main.appendChild(h('p', { class: 'adm-lead', text: 'トップページの注目作品カード。PCは3枚並び、スマホは先頭2枚が表示されます。' }));
+      var status = h('span', { class: 'adm-status' });
+      var saveBtn = h('button', { class: 'adm-btn primary', text: '保存して公開', disabled: true, on: { click: function () { self.save(status, saveBtn); } } });
+      main.appendChild(h('div', { class: 'adm-bar' }, [
+        saveBtn,
+        h('button', { class: 'adm-btn', text: 'カードを追加', on: { click: function () {
+          self.state.cards.push({ img: '', titleJa: '', titleEn: '', catJa: '舞台美術', catEn: 'Stage Design', year: String(new Date().getFullYear()), album: '' });
+          self.markDirty(); self.draw();
+        } } }),
+        h('button', { class: 'adm-btn', text: '再読み込み', on: { click: function () { self.state = null; App.go('keyvisual'); } } }),
+        status
+      ]));
+      this.saveBtn = saveBtn;
+      this.listEl = h('div');
+      this.previewEl = h('div', { class: 'adm-preview featured-works' });
+      main.appendChild(this.listEl);
+      main.appendChild(h('div', { class: 'adm-h3', text: 'プレビュー' }));
+      main.appendChild(this.previewEl);
+
+      if (this.state) { this.draw(); return; }
+      setStatus(status, '読み込み中…');
+      GH.getText('index.html').then(function (f) {
+        self.state = { sha: f.sha, html: f.text, cards: kvParse(f.text), staged: {}, dirty: false };
+        setStatus(status, '');
+        self.draw();
+      }).catch(function (e) { setStatus(status, '読み込み失敗: ' + e.message, 'err'); });
+    },
+    markDirty: function () { this.state.dirty = true; if (this.saveBtn) this.saveBtn.disabled = false; },
+    imgSrc: function (c, i) {
+      var st = this.state.staged[i];
+      if (st) return st.url;
+      return c.img;
+    },
+    draw: function () {
+      var self = this, st = this.state;
+      this.saveBtn.disabled = !st.dirty;
+      this.listEl.innerHTML = '';
+      if (!st.cards.length) this.listEl.appendChild(h('div', { class: 'adm-empty', text: 'カードがありません。「カードを追加」から作成してください。' }));
+      st.cards.forEach(function (c, i) {
+        var src = self.imgSrc(c, i);
+        var thumb = h('div', { class: 'adm-thumb' }, [src ? h('img', { src: src, alt: '' }) : '画像なし（準備中表示）']);
+        var fileInput = h('input', { type: 'file', accept: 'image/*', hidden: true, on: { change: function () {
+          var file = fileInput.files[0]; if (!file) return;
+          resizeImage(file, 1600).then(function (r) {
+            if (st.staged[i]) URL.revokeObjectURL(st.staged[i].url);
+            var name = 'img/kv/' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + slug(c.titleEn || file.name) + '-' + Math.random().toString(36).slice(2, 6) + '.jpg';
+            st.staged[i] = { bytes: r.bytes, url: URL.createObjectURL(r.blob), name: name };
+            c.img = '/' + name;
+            self.markDirty(); self.draw();
+          }).catch(function (e) { alert(e.message); });
+        } } });
+        var imgInput = h('input', { type: 'url', value: c.img, placeholder: 'https://… または /thumnail/xxx.jpg', on: { change: function () {
+          c.img = imgInput.value.trim(); delete st.staged[i]; self.markDirty(); self.draw();
+        } } });
+        var fields = h('div', { class: 'adm-fields' }, [
+          h('label', { class: 'wide' }, ['画像', h('span', { class: 'adm-img-row' }, [
+            imgInput,
+            h('button', { class: 'adm-btn small', type: 'button', text: 'アップロード', on: { click: function () { fileInput.click(); } } }),
+            fileInput
+          ])])
+        ].concat(KV_FIELDS.map(function (f) {
+          var inp = h('input', { type: 'text', value: c[f[0]], on: { input: function () {
+            c[f[0]] = inp.value; self.markDirty(); self.drawPreview();
+          } } });
+          return h('label', { class: f[0] === 'album' ? 'wide' : null }, [f[1], inp]);
+        })));
+        var ops = h('div', { class: 'adm-ops' }, [
+          h('button', { class: 'adm-btn small', text: '↑', title: '上へ', disabled: i === 0, on: { click: function () { self.move(i, -1); } } }),
+          h('button', { class: 'adm-btn small', text: '↓', title: '下へ', disabled: i === st.cards.length - 1, on: { click: function () { self.move(i, 1); } } }),
+          h('button', { class: 'adm-btn small', text: '削除', on: { click: function () {
+            if (!confirm('「' + (c.titleJa || '無題') + '」を削除しますか？（保存するまで公開には反映されません）')) return;
+            st.cards.splice(i, 1); self.reindexStaged(i, null); self.markDirty(); self.draw();
+          } } })
+        ]);
+        self.listEl.appendChild(h('div', { class: 'adm-card' }, [thumb, fields, ops]));
+      });
+      this.drawPreview();
+    },
+    /* 並べ替え・削除時にアップロード待ち画像の対応を付け替える */
+    reindexStaged: function (from, to) {
+      var old = this.state.staged, next = {};
+      Object.keys(old).forEach(function (k) {
+        k = +k;
+        if (to === null) { if (k < from) next[k] = old[k]; else if (k > from) next[k - 1] = old[k]; }
+        else next[k === from ? to : k === to ? from : k] = old[k];
+      });
+      this.state.staged = next;
+    },
+    move: function (i, d) {
+      var a = this.state.cards, t = a[i]; a[i] = a[i + d]; a[i + d] = t;
+      this.reindexStaged(i, i + d); this.markDirty(); this.draw();
+    },
+    drawPreview: function () {
+      var self = this, lang = document.documentElement.lang;
+      this.previewEl.innerHTML = '';
+      var grid = h('div', { class: 'featured-grid' });
+      this.state.cards.forEach(function (c, i) {
+        var src = self.imgSrc(c, i);
+        grid.appendChild(h('div', { class: 'featured-card' }, [
+          src ? h('img', { src: src, alt: '' }) : null,
+          h('div', { class: 'featured-card-info' }, [
+            h('div', { class: 'featured-card-cat', text: c.catJa }),
+            h('div', { class: 'featured-card-title', text: c.titleJa }),
+            h('div', { class: 'featured-card-year', text: c.year })
+          ])
+        ]));
+      });
+      this.previewEl.appendChild(grid);
+    },
+    save: function (status, btn) {
+      var self = this, st = this.state;
+      var bad = st.cards.filter(function (c) { return !c.titleJa.trim(); }).length;
+      if (bad) { setStatus(status, 'タイトル（日本語）が空のカードがあります', 'err'); return; }
+      btn.disabled = true;
+      var staged = Object.keys(st.staged).map(function (k) { return st.staged[k]; });
+      var chain = Promise.resolve();
+      staged.forEach(function (s, n) {
+        chain = chain.then(function () {
+          setStatus(status, '画像をアップロード中… (' + (n + 1) + '/' + staged.length + ')');
+          return GH.putBytes(s.name, s.bytes, null, 'キービジュアル画像を追加: ' + s.name.split('/').pop());
+        });
+      });
+      chain.then(function () {
+        setStatus(status, 'index.html を保存中…');
+        // 最新版を取り直して KV 範囲だけ差し替える（他の更新を潰さない）
+        return GH.getText('index.html');
+      }).then(function (f) {
+        var html = kvApply(f.text, st.cards);
+        if (html === f.text) return f;
+        var titles = st.cards.map(function (c) { return c.titleJa; }).join(' / ');
+        return GH.putText('index.html', html, f.sha, 'キービジュアルを更新: ' + titles).then(function (r) {
+          return { sha: r.content.sha, text: html };
+        });
+      }).then(function (f) {
+        st.sha = f.sha; st.html = f.text; st.staged = {}; st.dirty = false;
+        setStatus(status, '保存しました。1〜2分で公開サイトに反映されます。', 'ok');
+        self.draw();
+      }).catch(function (e) {
+        btn.disabled = false;
+        setStatus(status, '保存失敗: ' + e.message + (e.status === 409 ? '（他で更新されています。再読み込みしてください）' : ''), 'err');
+      });
+    },
+    leaveGuard: function () { return this.state && this.state.dirty; }
+  };
+
+  /* ── トークンの作り方（初期設定・設定画面で共用）── */
+  function tokenHelp() {
+    var note = h('div', { class: 'adm-note' });
+    note.innerHTML =
+      '1. GitHub → Settings → Developer settings → <b>Fine-grained tokens</b> → Generate new token<br>' +
+      '2. Repository access: <code>Only select repositories</code> → <code>shikine.github.io</code><br>' +
+      '3. Permissions → Repository permissions → <b>Contents: Read and write</b>（他は不要）<br>' +
+      '4. 期限が切れたら作り直し、「設定」→「トークンを更新」で貼り直す';
+    return note;
+  }
+  function field(label, type, value, extra) {
+    var inp = h('input', Object.assign({ type: type, value: value || '', autocomplete: type === 'password' ? 'new-password' : 'off' }, extra || {}));
+    return { el: h('label', null, [label, inp]), input: inp };
+  }
+  function checkPassword(p1, p2) {
+    if (p1.length < 12) return 'パスワードは12文字以上にしてください';
+    if (p1 !== p2) return 'パスワード（確認）が一致しません';
+    return '';
+  }
+
+  /* ════════════════════════════════════════════════
+     モジュール：設定（パスワード・トークン・ログアウト）
+     ════════════════════════════════════════════════ */
+  var settingsModule = {
+    id: 'settings',
+    label: '設定',
+    render: function (main) {
+      var c = GH.cfg();
+      main.appendChild(h('h2', { text: '設定' }));
+      main.appendChild(h('p', { class: 'adm-lead', text: '接続先: ' + c.owner + '/' + c.repo + '（' + c.branch + '）' }));
+
+      // パスワード変更
+      main.appendChild(h('div', { class: 'adm-h3', text: 'パスワードを変更' }));
+      var pw1 = field('新しいパスワード（12文字以上）', 'password'), pw2 = field('新しいパスワード（確認）', 'password');
+      var st1 = h('span', { class: 'adm-status' });
+      main.appendChild(h('div', { class: 'adm-form' }, [pw1.el, pw2.el]));
+      main.appendChild(h('div', { class: 'adm-bar', style: 'margin-top:12px' }, [
+        h('button', { class: 'adm-btn primary', text: '変更する', on: { click: function (ev) {
+          var err = checkPassword(pw1.input.value, pw2.input.value);
+          if (err) return setStatus(st1, err, 'err');
+          ev.target.disabled = true; setStatus(st1, '暗号化して保存中…');
+          Auth.save(GH.cfg(), pw1.input.value, '管理画面のパスワードを変更').then(function () {
+            pw1.input.value = pw2.input.value = '';
+            setStatus(st1, '変更しました（公開サイトへの反映に1〜2分かかります）', 'ok');
+          }).catch(function (e) { setStatus(st1, '失敗: ' + e.message, 'err'); })
+            .then(function () { ev.target.disabled = false; });
+        } } }),
+        st1
+      ]));
+
+      // トークン更新
+      main.appendChild(h('div', { class: 'adm-h3', text: 'トークンを更新' }));
+      var tk = field('新しいアクセストークン', 'password', '', { placeholder: 'github_pat_…' });
+      var pw3 = field('現在のパスワード（再暗号化に使います）', 'password');
+      var st2 = h('span', { class: 'adm-status' });
+      main.appendChild(h('div', { class: 'adm-form' }, [tk.el, pw3.el]));
+      main.appendChild(h('div', { class: 'adm-bar', style: 'margin-top:12px' }, [
+        h('button', { class: 'adm-btn primary', text: '更新する', on: { click: function (ev) {
+          var token = tk.input.value.trim(), pw = pw3.input.value;
+          if (!token || !pw) return setStatus(st2, 'トークンとパスワードを入力してください', 'err');
+          ev.target.disabled = true; setStatus(st2, '確認中…');
+          var cur = GH.cfg();
+          Auth.fetchBlob().then(function (blob) {
+            // 現在のパスワードが正しいか確認してから差し替える
+            return blob ? Auth.decrypt(blob, pw) : null;
+          }).then(function () {
+            var next = Object.assign({}, cur, { token: token });
+            GH.override = next;
+            return GH.getText('index.html').then(function () { return Auth.save(next, pw, '管理画面のトークンを更新'); })
+              .then(function () { Auth.login(next); });
+          }).then(function () {
+            tk.input.value = pw3.input.value = '';
+            setStatus(st2, '更新しました', 'ok');
+          }).catch(function (e) { setStatus(st2, '失敗: ' + e.message, 'err'); })
+            .then(function () { GH.override = null; ev.target.disabled = false; });
+        } } }),
+        st2
+      ]));
+      main.appendChild(tokenHelp());
+
+      main.appendChild(h('div', { class: 'adm-h3', text: 'ログアウト' }));
+      main.appendChild(h('button', { class: 'adm-btn', text: 'ログアウト', on: { click: function () { App.logout(); } } }));
+    }
+  };
+
+  /* ════════════════════════════════════════════════
+     モジュール登録
+     新しい管理項目を追加するときは { id, label, render(main) } を
+     この配列に足すだけ。soon: true でメニューに「準備中」表示。
+     ════════════════════════════════════════════════ */
+  var MODULES = [
+    kvModule,
+    { id: 'works',   label: '作品年表',   soon: true },
+    { id: 'news',    label: 'お知らせ',   soon: true },
+    settingsModule
+  ];
+
+  var App = {
+    current: null,
+    drawNav: function () {
+      var nav = $('#adm-nav'); nav.innerHTML = '';
+      MODULES.forEach(function (m) {
+        nav.appendChild(h('button', {
+          'aria-current': m.id === App.current ? 'page' : false,
+          disabled: !!m.soon,
+          on: { click: function () { App.go(m.id); } }
+        }, [m.label, m.soon ? h('span', { class: 'soon', text: '準備中' }) : null]));
+      });
+    },
+    go: function (id) {
+      if (!GH.ready()) return App.gate();
+      var m = MODULES.filter(function (x) { return x.id === id && !x.soon; })[0] || MODULES[0];
+      App.current = m.id;
+      if (location.hash !== '#' + m.id) history.replaceState(null, '', '#' + m.id);
+      var main = $('#adm-main'); main.innerHTML = '';
+      m.render(main);
+      App.drawNav();
+    },
+    logout: function () {
+      if (MODULES.some(function (m) { return m.leaveGuard && m.leaveGuard(); }) && !confirm('未保存の変更があります。ログアウトしますか？')) return;
+      Auth.logout(); kvModule.state = null; App.gate();
+    },
+    /* ログイン前の画面：auth.json があればログイン、無ければ初期設定 */
+    gate: function () {
+      $('#adm-nav').innerHTML = '';
+      var main = $('#adm-main'); main.innerHTML = '';
+      var status = h('span', { class: 'adm-status', text: '確認中…' });
+      main.appendChild(status);
+      Auth.fetchBlob().then(function (blob) {
+        main.innerHTML = '';
+        if (blob) App.loginForm(main, blob); else App.setupForm(main);
+      }).catch(function (e) { setStatus(status, e.message, 'err'); });
+    },
+    loginForm: function (main, blob) {
+      main.appendChild(h('h2', { text: 'ログイン' }));
+      main.appendChild(h('p', { class: 'adm-lead', text: '管理画面のパスワードを入力してください。' }));
+      var pw = field('パスワード', 'password', '', { autocomplete: 'current-password' });
+      var status = h('span', { class: 'adm-status' });
+      var btn = h('button', { class: 'adm-btn primary', type: 'submit', text: 'ログイン' });
+      main.appendChild(h('form', { class: 'adm-form', on: { submit: function (ev) {
+        ev.preventDefault();
+        btn.disabled = true; setStatus(status, '確認中…');
+        Auth.decrypt(blob, pw.input.value).then(function (cfg) {
+          Auth.login(cfg);
+          App.go(location.hash.slice(1) || 'keyvisual');
+        }).catch(function (e) { btn.disabled = false; pw.input.value = ''; setStatus(status, e.message, 'err'); });
+      } } }, [pw.el, h('div', { class: 'adm-bar' }, [btn, status])]));
+      pw.input.focus();
+    },
+    setupForm: function (main) {
+      main.appendChild(h('h2', { text: '初期設定' }));
+      main.appendChild(h('p', { class: 'adm-lead', text: 'GitHubトークンを管理画面のパスワードで暗号化して保存します。以後はパスワードだけでログインできます。' }));
+      var tk = field('GitHubアクセストークン', 'password', '', { placeholder: 'github_pat_…' });
+      var pw1 = field('管理画面のパスワード（12文字以上）', 'password'), pw2 = field('パスワード（確認）', 'password');
+      var status = h('span', { class: 'adm-status' });
+      var btn = h('button', { class: 'adm-btn primary', type: 'submit', text: '設定して始める' });
+      main.appendChild(h('form', { class: 'adm-form', on: { submit: function (ev) {
+        ev.preventDefault();
+        var err = checkPassword(pw1.input.value, pw2.input.value);
+        if (!tk.input.value.trim()) err = 'トークンを入力してください';
+        if (err) return setStatus(status, err, 'err');
+        var cfg = Object.assign({}, DEFAULT_CFG, { token: tk.input.value.trim() });
+        btn.disabled = true; setStatus(status, 'トークンを確認中…');
+        GH.override = cfg;
+        GH.getText('index.html').then(function () {
+          setStatus(status, '暗号化して保存中…');
+          return Auth.save(cfg, pw1.input.value, '管理画面のパスワードを設定');
+        }).then(function () {
+          Auth.login(cfg);
+          GH.override = null;
+          App.go('keyvisual');
+        }).catch(function (e) {
+          GH.override = null; btn.disabled = false;
+          setStatus(status, '失敗: ' + e.message, 'err');
+        });
+      } } }, [tk.el, pw1.el, pw2.el, h('div', { class: 'adm-bar' }, [btn, status])]));
+      main.appendChild(h('div', { class: 'adm-h3', text: 'トークンの作り方' }));
+      main.appendChild(tokenHelp());
+    }
+  };
+
+  window.addEventListener('beforeunload', function (e) {
+    if (MODULES.some(function (m) { return m.leaveGuard && m.leaveGuard(); })) { e.preventDefault(); e.returnValue = ''; }
+  });
+  window.addEventListener('hashchange', function () { if (GH.ready()) App.go(location.hash.slice(1)); });
+  if (GH.ready()) App.go(location.hash.slice(1) || 'keyvisual'); else App.gate();
+})();
+</script>
+</body>
+</html>
