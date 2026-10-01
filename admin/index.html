@@ -49,6 +49,30 @@
     .adm-img-row { display: flex; gap: 6px; }
     .adm-img-row input { flex: 1; min-width: 0; }
     .adm-ops { display: flex; flex-direction: column; gap: 6px; }
+    .adm-sum-meta { font-size: 11px; color: var(--muted); letter-spacing: .06em; }
+    .adm-sum-title { font-size: 15px; line-height: 1.5; }
+    .adm-sum-en { font-size: 12px; color: var(--muted); }
+    .adm-detail { margin-top: 12px; }
+    .adm-detail summary { cursor: pointer; font-size: 12px; color: var(--muted); }
+    .adm-detail[open] summary { margin-bottom: 10px; }
+    .adm-dialog { width: min(720px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0; border: 1px solid var(--rule); border-radius: 6px; background: var(--bg); color: var(--ink); display: flex; flex-direction: column; }
+    .adm-dialog:not([open]) { display: none; }
+    .adm-dialog::backdrop { background: rgba(0,0,0,.45); }
+    .adm-dialog-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px 0; }
+    .adm-dialog-tools { display: flex; gap: 12px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--rule); }
+    .adm-dialog-tools input[type=search] { flex: 1; min-width: 0; font: inherit; color: var(--ink); background: transparent; border: 1px solid var(--rule); border-radius: 3px; padding: 6px 9px; }
+    .adm-check { display: flex; gap: 5px; align-items: center; font-size: 12px; color: var(--muted); white-space: nowrap; }
+    .adm-pick-list { overflow-y: auto; padding: 4px 16px 16px; }
+    .adm-pick-year { font-size: 12px; font-weight: 700; margin: 14px 0 6px; }
+    .adm-pick-item { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 6px; border: 1px solid transparent; border-radius: 4px; background: none; color: var(--ink); font: inherit; cursor: pointer; }
+    .adm-pick-item:hover, .adm-pick-item:focus-visible { border-color: var(--ink); outline: none; }
+    .adm-pick-item.used { opacity: .55; }
+    .adm-pick-thumb { flex: none; width: 72px; aspect-ratio: 4/3; background: var(--rule); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--muted); overflow: hidden; border-radius: 2px; }
+    .adm-pick-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .adm-pick-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+    .adm-pick-meta { font-size: 11px; color: var(--muted); }
+    .adm-pick-title { font-size: 13px; line-height: 1.5; }
+    .adm-pick-badge { flex: none; font-size: 10px; border: 1px solid var(--muted); border-radius: 10px; padding: 1px 8px; color: var(--muted); }
     .adm-preview { margin-top: 8px; }
     .adm-preview .featured-card { cursor: default; }
     .adm-empty { padding: 40px; text-align: center; color: var(--muted); border: 1px dashed var(--rule); }
@@ -272,6 +296,52 @@
     return html.slice(0, s) + cards.map(kvCardHtml).join('') + html.slice(e);
   }
 
+  /* 年表（#timeline-view）から候補一覧を作る。サイト側の liToItem と同じ読み方 */
+  var TL_TAGS = ['t-foto', 't-mv', 't-filmart', 't-spatial', 't-arch', 't-exhibition'];
+  var TL_SEL = TL_TAGS.map(function (t) { return '.tag.' + t; }).join(', ');
+  function bigImg(u) {
+    // Google フォトの縮小URLはサイズ指定を書き換えると大きい画像になる
+    return /googleusercontent\.com/.test(u) ? u.replace(/=w\d+-h\d+/, '=w1600-h1200') : u;
+  }
+  function sameImg(a, b) {
+    var norm = function (u) { return String(u || '').replace(/=w\d+-h\d+.*$/, ''); };
+    return !!a && norm(a) === norm(b);
+  }
+  function kvTimeline(html) {
+    var doc = new DOMParser().parseFromString(html, 'text/html');
+    var out = [];
+    doc.querySelectorAll('#timeline-view .year-block').forEach(function (block) {
+      var year = (block.querySelector('h3') || {}).textContent || '';
+      block.querySelectorAll('.work-list > li').forEach(function (li) {
+        var entry = li.querySelector('.entry') || li;
+        var ja = entry.querySelector(':scope > .t-ja') || entry, en = entry.querySelector(':scope > .t-en');
+        var jaTags = ja.querySelectorAll(TL_SEL), enTags = en ? en.querySelectorAll(TL_SEL) : [];
+        var idx = Array.prototype.findIndex.call(jaTags, function (t) { return t.getAttribute('data-preview'); });
+        var pick = idx >= 0 ? idx : 0, tag = jaTags[pick], enTag = enTags[pick];
+        var text = function (span) {
+          if (!span) return '';
+          var c = span.cloneNode(true);
+          c.querySelectorAll('.tag, .collab').forEach(function (t) { t.remove(); });
+          return c.textContent.replace(/\s+/g, ' ').trim();
+        };
+        var fullJa = text(ja), fullEn = text(en);
+        out.push({
+          year: year.trim(),
+          month: ((li.querySelector('.month') || {}).textContent || '').trim(),
+          fullJa: fullJa,
+          titleJa: fullJa.split('＠')[0].trim(),
+          titleEn: fullEn.split(/\s*@/)[0].trim(),
+          catJa: tag ? tag.textContent.trim() : '',
+          catEn: enTag ? enTag.textContent.trim() : '',
+          thumb: tag ? tag.getAttribute('data-preview') || '' : '',
+          img: tag ? bigImg(tag.getAttribute('data-preview') || '') : '',
+          album: tag ? tag.getAttribute('href') || '' : ''
+        });
+      });
+    });
+    return out;
+  }
+
   var kvModule = {
     id: 'keyvisual',
     label: 'キービジュアル',
@@ -284,9 +354,11 @@
       var saveBtn = h('button', { class: 'adm-btn primary', text: '保存して公開', disabled: true, on: { click: function () { self.save(status, saveBtn); } } });
       main.appendChild(h('div', { class: 'adm-bar' }, [
         saveBtn,
-        h('button', { class: 'adm-btn', text: 'カードを追加', on: { click: function () {
-          self.state.cards.push({ img: '', titleJa: '', titleEn: '', catJa: '舞台美術', catEn: 'Stage Design', year: String(new Date().getFullYear()), album: '' });
-          self.markDirty(); self.draw();
+        h('button', { class: 'adm-btn', text: '年表からカードを追加', on: { click: function () {
+          self.openPicker(null, function (item) {
+            self.state.cards.push(self.fromItem(item));
+            self.markDirty(); self.draw();
+          });
         } } }),
         h('button', { class: 'adm-btn', text: '再読み込み', on: { click: function () { self.state = null; App.go('keyvisual'); } } }),
         status
@@ -301,7 +373,7 @@
       if (this.state) { this.draw(); return; }
       setStatus(status, '読み込み中…');
       GH.getText('index.html').then(function (f) {
-        self.state = { sha: f.sha, html: f.text, cards: kvParse(f.text), staged: {}, dirty: false };
+        self.state = { sha: f.sha, html: f.text, cards: kvParse(f.text), timeline: kvTimeline(f.text), staged: {}, dirty: false };
         setStatus(status, '');
         self.draw();
       }).catch(function (e) { setStatus(status, '読み込み失敗: ' + e.message, 'err'); });
@@ -333,6 +405,20 @@
         var imgInput = h('input', { type: 'url', value: c.img, placeholder: 'https://… または /thumnail/xxx.jpg', on: { change: function () {
           c.img = imgInput.value.trim(); delete st.staged[i]; self.markDirty(); self.draw();
         } } });
+        var summary = h('div', { class: 'adm-summary' }, [
+          h('div', { class: 'adm-sum-meta', text: [c.catJa, c.year].filter(Boolean).join(' · ') }),
+          h('div', { class: 'adm-sum-title', text: c.titleJa || '（未選択）' }),
+          h('div', { class: 'adm-sum-en', text: c.titleEn }),
+          h('div', { class: 'adm-bar', style: 'margin:10px 0 0' }, [
+            h('button', { class: 'adm-btn small primary', type: 'button', text: '年表から選ぶ', on: { click: function () {
+              self.openPicker(i, function (item) {
+                if (st.staged[i]) { URL.revokeObjectURL(st.staged[i].url); delete st.staged[i]; }
+                st.cards[i] = self.fromItem(item);
+                self.markDirty(); self.draw();
+              });
+            } } })
+          ])
+        ]);
         var fields = h('div', { class: 'adm-fields' }, [
           h('label', { class: 'wide' }, ['画像', h('span', { class: 'adm-img-row' }, [
             imgInput,
@@ -353,9 +439,66 @@
             st.cards.splice(i, 1); self.reindexStaged(i, null); self.markDirty(); self.draw();
           } } })
         ]);
-        self.listEl.appendChild(h('div', { class: 'adm-card' }, [thumb, fields, ops]));
+        var detail = h('details', { class: 'adm-detail' }, [h('summary', { text: '細かく編集（画像の差し替え・文言の調整）' }), fields]);
+        self.listEl.appendChild(h('div', { class: 'adm-card' }, [thumb, h('div', { style: 'min-width:0' }, [summary, detail]), ops]));
       });
       this.drawPreview();
+    },
+    fromItem: function (it) {
+      return { img: it.img, titleJa: it.titleJa, titleEn: it.titleEn, catJa: it.catJa, catEn: it.catEn, year: it.year, album: it.album };
+    },
+    /* 年表から作品を選ぶダイアログ。current = 差し替え対象のカード番号（追加時は null） */
+    openPicker: function (current, onPick) {
+      var cards = this.state.cards, tl = this.state.timeline;
+      var usedBy = function (it) {
+        for (var k = 0; k < cards.length; k++) {
+          if ((it.album && it.album === cards[k].album) || sameImg(it.img, cards[k].img)) return k;
+        }
+        return -1;
+      };
+      var q = h('input', { type: 'search', placeholder: '作品名・場所・カテゴリで検索' });
+      var onlyImg = h('input', { type: 'checkbox', checked: true });
+      var list = h('div', { class: 'adm-pick-list' });
+      var dlg = h('dialog', { class: 'adm-dialog' }, [
+        h('div', { class: 'adm-dialog-head' }, [
+          h('strong', { text: current == null ? '年表からカードを追加' : 'カード' + (current + 1) + 'を年表から選ぶ' }),
+          h('button', { class: 'adm-btn small', type: 'button', text: '閉じる', on: { click: function () { dlg.close(); } } })
+        ]),
+        h('div', { class: 'adm-dialog-tools' }, [q, h('label', { class: 'adm-check' }, [onlyImg, '写真ありのみ'])]),
+        list
+      ]);
+      function drawList() {
+        var words = q.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+        list.innerHTML = '';
+        var lastYear = null, n = 0;
+        tl.forEach(function (it) {
+          if (onlyImg.checked && !it.img) return;
+          var hay = (it.year + ' ' + it.fullJa + ' ' + it.titleEn + ' ' + it.catJa).toLowerCase();
+          if (!words.every(function (w) { return hay.indexOf(w) >= 0; })) return;
+          if (it.year !== lastYear) { list.appendChild(h('div', { class: 'adm-pick-year', text: it.year })); lastYear = it.year; }
+          var used = usedBy(it);
+          list.appendChild(h('button', { type: 'button', class: 'adm-pick-item' + (used >= 0 ? ' used' : ''), on: { click: function () {
+            dlg.close(); onPick(it);
+          } } }, [
+            h('span', { class: 'adm-pick-thumb' }, [it.thumb ? h('img', { src: it.thumb, alt: '', loading: 'lazy' }) : '写真なし']),
+            h('span', { class: 'adm-pick-text' }, [
+              h('span', { class: 'adm-pick-meta', text: [it.month, it.catJa].filter(Boolean).join('  ') }),
+              h('span', { class: 'adm-pick-title', text: it.fullJa })
+            ]),
+            used >= 0 ? h('span', { class: 'adm-pick-badge', text: used === current ? '選択中' : 'カード' + (used + 1) + 'で掲載中' }) : null
+          ]));
+          n++;
+        });
+        if (!n) list.appendChild(h('div', { class: 'adm-empty', text: '該当する作品がありません' }));
+      }
+      q.addEventListener('input', drawList);
+      onlyImg.addEventListener('change', drawList);
+      dlg.addEventListener('close', function () { dlg.remove(); });
+      dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });
+      document.body.appendChild(dlg);
+      drawList();
+      dlg.showModal();
+      q.focus();
     },
     /* 並べ替え・削除時にアップロード待ち画像の対応を付け替える */
     reindexStaged: function (from, to) {
